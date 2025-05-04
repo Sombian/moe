@@ -1,0 +1,12 @@
+{
+	"files.exclude":
+	{
+		// c/c++
+		"build": true,
+		".cache": true,
+		// OS system files
+		".*.gitignore": true,
+		// 3rd party submodules
+		"3rd-party/*/*": true
+	}
+}

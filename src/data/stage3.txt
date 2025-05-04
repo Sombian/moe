@@ -1,0 +1,6 @@
+constexpr const std::array<props, 3> stage3
+{
+	props {false, false},
+	props {false, true},
+	props {true, true},
+};

@@ -1,0 +1,10 @@
+Index:
+    Background: Build
+    StandardLibrary: Yes
+
+Hover:
+    ShowAKA: Yes
+
+InlayHints:
+    DeducedTypes: Off
+    ParameterNames: Off

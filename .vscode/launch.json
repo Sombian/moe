@@ -1,0 +1,28 @@
+{
+	"configurations":
+	[
+		{
+			"name": "GCC",
+			// mandatory
+			"type": "cppdbg",
+			"request": "launch",
+			// current working directory
+			"cwd": "${workspaceFolder}",
+			// full path to the executable
+			"program": "${command:cmake.launchTargetPath}",
+			"environment": [{ "name": "GCC", "value": "ok" }]
+		},
+		{
+			"name": "MSVC",
+			// mandatory
+			"type": "cppvsdbg",
+			"request": "launch",
+			// current working directory
+			"cwd": "${workspaceFolder}",
+			// full path to the executable
+			"program": "${command:cmake.launchTargetPath}",
+			"environment": [{ "name": "MSVC", "value": "ok" }]
+		},
+	],
+	"version": "0.2.0",
+}
