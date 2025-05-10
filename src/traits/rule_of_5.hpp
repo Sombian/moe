@@ -36,5 +36,5 @@ namespace traits
 //| chores |
 //|--------|
 
-#define COPY_CALL($type) friend auto copy(const $type& from, $type& dest) noexcept
-#define SWAP_CALL($type) friend auto swap($type& from, $type& dest) noexcept
+#define COPY_CALL($type) friend void copy(const $type& from, $type& dest) noexcept
+#define SWAP_CALL($type) friend void swap($type& from, $type& dest) noexcept

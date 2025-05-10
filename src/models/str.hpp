@@ -226,7 +226,7 @@ public:
 
 	[[nodiscard]]
 	// setter
-	auto size(const size_t value)
+	void size(const size_t value)
 	{
 		if (this->capacity() < value)
 		{
@@ -318,7 +318,7 @@ public:
 
 	[[nodiscard]]
 	// setter
-	auto capacity(const size_t value)
+	void capacity(const size_t value)
 	{
 		if (this->capacity() < value)
 		{
@@ -624,7 +624,7 @@ private:
 	};
 
 	[[nodiscard]]
-	friend auto drop(text<T>& to)
+	friend void drop(text<T>& to)
 	{
 		switch (to.mode())
 		{
@@ -1056,6 +1056,10 @@ public:
 	[[nodiscard]]
 	auto to_utf8() const -> text<char8_t>
 	{
+		if constexpr (std::is_same_v<T, char8_t>)
+		{
+			return text<char8_t> {*this};
+		}
 		text<char8_t> rvalue {this->length() * 4};
 
 		char8_t* ptr {rvalue.c_str()};
@@ -1075,6 +1079,10 @@ public:
 	[[nodiscard]]
 	auto to_utf16() const -> text<char16_t>
 	{
+		if constexpr (std::is_same_v<T, char16_t>)
+		{
+			return text<char16_t> {*this};
+		}
 		text<char16_t> rvalue {this->length() * 2};
 
 		char16_t* ptr {rvalue.c_str()};
@@ -1094,6 +1102,10 @@ public:
 	[[nodiscard]]
 	auto to_utf32() const -> text<char32_t>
 	{
+		if constexpr (std::is_same_v<T, char32_t>)
+		{
+			return text<char32_t> {*this};
+		}
 		text<char32_t> rvalue {this->length() * 1};
 
 		char32_t* ptr {rvalue.c_str()};

@@ -569,19 +569,19 @@ private:
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
 		{
-			ast.name = tkn->data.to_utf8();
+			ast.name = tkn->data.to_utf8(); this->next();
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::SYMBOL"); }
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::COLON)
 		{
-			// syntax, nothing to do here...
+			/* syntax, nothing to do here...*/ this->next();
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::COLON"); }
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
 		{
-			ast.type = tkn->data.to_utf8();
+			ast.type = tkn->data.to_utf8(); this->next();
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::SYMBOL"); }
 
@@ -602,15 +602,23 @@ private:
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
 		{
-			ast.name = tkn->data.to_utf8();
+			ast.name = tkn->data.to_utf8(); this->next();
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::SYMBOL"); }
 	
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::L_PAREN)
 		{
-			// syntax, nothing to do here...
+			/* syntax, nothing to do here...*/ this->next();
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::L_PAREN"); }
+
+		// TODO: args
+
+		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::R_PAREN)
+		{
+			/* syntax, nothing to do here...*/ this->next();
+		}
+		else { throw E(u8"[parser.hpp] expects lexeme::R_PAREN"); }
 
 		return std::make_unique<decltype(ast)>(std::move(ast));
 	}
