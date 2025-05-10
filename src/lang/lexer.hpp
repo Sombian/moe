@@ -37,22 +37,86 @@ class lexer
 
 	#define T($value) token<B> \
 	{                          \
-		.type {$value},        \
-		.x {this->x},          \
-		.y {this->y},          \
+		.type                  \
+		{                      \
+			$value             \
+		},                     \
+		.x                     \
+		{                      \
+			this->x            \
+		},                     \
+		.y                     \
+		{                      \
+			this->y            \
+		},                     \
 		.data                  \
 		{                      \
 			this->ptr,         \
-			&this->it          \
-		}                      \
+			&this->it,         \
+		},                     \
 	}                          \
 
 	#define E($value) error \
 	{                       \
-		.msg {$value},      \
-		.x {this->x},       \
-		.y {this->y},       \
+		.msg                \
+		{                   \
+			$value          \
+		},                  \
+		.x                  \
+		{                   \
+			this->x         \
+		},                  \
+		.y                  \
+		{                   \
+			this->y         \
+		},                  \
 	}                       \
+
+	auto next() -> char32_t
+	{
+		//---------------------//
+		this->out = *this->it; //
+		//---------------------//
+		++this->it;
+
+		switch (this->out)
+		{
+			case '\n':
+			{
+				++this->span.y();
+				break;
+			}
+			default:
+			{
+				++this->span.x();
+				break;
+			}
+		}
+		return this->out;
+	}
+
+	auto back() -> char32_t
+	{
+		--this->it;
+		//---------------------//
+		this->out = *this->it; //
+		//---------------------//
+
+		switch (this->out)
+		{
+			case '\n':
+			{
+				--this->span.y();
+				break;
+			}
+			default:
+			{
+				--this->span.x();
+				break;
+			}
+		}
+		return this->out;
+	}
 
 public:
 
@@ -161,16 +225,16 @@ public:
 
 		while (std::visit([&](auto&& arg) -> bool
 		{
-			using T = std::decay_t<decltype(arg)>;
+			typedef std::decay_t<decltype(arg)> T;
 
-			if constexpr (std::is_same_v<T, token<B>>)
+			if constexpr (std::is_same_v<T, error>)
 			{
 				//-----------------------------//
 				std::cout << arg << std::endl; //
 				//-----------------------------//
 				return true;
 			}
-			if constexpr (std::is_same_v<T, error>)
+			if constexpr (std::is_same_v<T, token<B>>)
 			{
 				//-----------------------------//
 				std::cout << arg << std::endl; //
@@ -184,55 +248,9 @@ public:
 
 private:
 
-	auto next() -> char32_t
-	{
-		//---------------------//
-		this->out = *this->it; //
-		//---------------------//
-		++this->it;
-
-		switch (this->out)
-		{
-			case '\n':
-			{
-				++this->span.y();
-				break;
-			}
-			default:
-			{
-				++this->span.x();
-				break;
-			}
-		}
-		return this->out;
-	}
-
-	auto back() -> char32_t
-	{
-		--this->it;
-		//---------------------//
-		this->out = *this->it; //
-		//---------------------//
-
-		switch (this->out)
-		{
-			case '\n':
-			{
-				--this->span.y();
-				break;
-			}
-			default:
-			{
-				--this->span.x();
-				break;
-			}
-		}
-		return this->out;
-	}
-
-	//|---------------|
-	//| skip comments |
-	//|---------------|
+	//|----------|
+	//| comments |
+	//|----------|
 
 	[[nodiscard]]
 	auto skip_1_line_comment()
@@ -504,11 +522,10 @@ private:
 		
 		static const tst<lexeme> TBL
 		{
-			fundamentals(macro)
 			delimeters(macro)
-			operator_l(macro)
-			operator_r(macro)
+			operator_u(macro)
 			operator_b(macro)
+			operator_c(macro)
 			keywords(macro)
 			special(macro)
 		};

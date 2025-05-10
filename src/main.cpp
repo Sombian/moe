@@ -1,6 +1,3 @@
-#include <cstdlib>
-#include <variant>
-
 #include "core/fs.hpp"
 
 #include "lang/lexer.hpp"
@@ -20,26 +17,58 @@ auto main() -> int
 
 	if (auto sys {fs::open(u8"sample/main.moe")})
 	{
-		std::visit([](auto&& arg)
+		std::visit([&](auto&& file)
 		{
-			std::cout << arg.path << std::endl;
-			std::cout << arg.data << std::endl;
-
 			lexer
 			<
-				decltype(arg.path),
-				decltype(arg.data)
+				decltype(file.path),
+				decltype(file.data)
 			>
-			lexer {arg};
+			lexer {file};
 			lexer.print();
 
 			parser
 			<
-				decltype(arg.path),
-				decltype(arg.data)
+				decltype(file.path),
+				decltype(file.data)
 			>
 			parser {lexer};
 			parser.print();
+
+			std::visit([&](auto&& result)
+			{
+				typedef std::decay_t<decltype(result)> T;
+
+				//----------------|
+				// error count: 0 |
+				//----------------|
+				if constexpr (std::is_same_v<T, program>)
+				{
+					for (const auto& decl : result.body)
+					{
+						//---------------------------//
+						const auto ptr {decl.get()}; // <- get raw ptr
+						//---------------------------//
+
+						if (const auto* var {dynamic_cast<lang::_var*>(ptr)})
+						{
+							std::cout << "variable" << std::endl;
+						}
+						if (const auto* fun {dynamic_cast<lang::_fun*>(ptr)})
+						{
+							std::cout << "function" << std::endl;
+						}
+					}
+				}
+				//----------------|
+				// error count: N |
+				//----------------|
+				if constexpr (std::is_same_v<T, error>)
+				{
+					std::cout << result << std::endl;
+				}
+			},
+			parser.pull());
 		},
 		sys.value());
 	}

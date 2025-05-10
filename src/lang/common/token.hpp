@@ -10,39 +10,6 @@
 
 namespace lang
 {
-	#define fundamentals(macro) \
-	/*|----------------|*/      \
-	/*| signed integer |*/      \
-	/*|----------------|*/      \
-	macro(I8, u8"i8")           \
-	macro(I16, u8"i16")         \
-	macro(I32, u8"i32")         \
-	macro(I64, u8"i64")         \
-	/*|------------------|*/    \
-	/*| unsigned integer |*/    \
-	/*|------------------|*/    \
-	macro(U8, u8"u8")           \
-	macro(U16, u8"u16")         \
-	macro(U32, u8"u32")         \
-	macro(U64, u8"u64")         \
-	/*|-----------------|*/     \
-	/*| floating points |*/     \
-	/*|-----------------|*/     \
-	macro(F32, u8"f32")         \
-	macro(F64, u8"f64")         \
-	/*|------------------|*/    \
-	/*| other data types |*/    \
-	/*|------------------|*/    \
-	macro(CODE, u8"code")       \
-	macro(BOOL, u8"bool")       \
-	macro(WORD, u8"word")       \
-	/*|-----------------|*/     \
-	/*| string storages |*/     \
-	/*|-----------------|*/     \
-	macro(UTF8, u8"utf8")       \
-	macro(UTF16, u8"utf16")     \
-	macro(UTF32, u8"utf32")     \
-
 	#define delimeters(macro) \
 	/*|------------|*/        \
 	/*| punctuator |*/        \
@@ -57,12 +24,12 @@ namespace lang
 	macro(L_BRACK, u8"[")     \
 	macro(R_BRACK, u8"]")     \
 
-	#define operator_l(macro) \
+	#define operator_u(macro) \
 	/*|---------|*/           \
 	/*| pointer |*/           \
 	/*|---------|*/           \
-	macro(PTR_AT, u8"@")      \
-	macro(PTR_OF, u8"&")      \
+	macro(AD_AT, u8"@")       \
+	macro(AD_OF, u8"&")       \
 	/*|---------|*/           \
 	/*| logical |*/           \
 	/*|---------|*/           \
@@ -72,20 +39,11 @@ namespace lang
 	/*|---------|*/           \
 	macro(B_NOT, u8"not")     \
 
-	#define operator_r(macro) \
-	/*|--------|*/            \
-	/*| callee |*/            \
-	/*|--------|*/            \
-	macro(CALL_M, u8".")      \
-	macro(CALL_S, u8"?.")     \
-	macro(CALL_U, u8"!.")     \
-	macro(CALL_F, u8"::")     \
-
 	#define operator_b(macro) \
 	/*|------------|*/        \
 	/*| assignment |*/        \
 	/*|------------|*/        \
-	macro(ASSIGN, u8"=")      \
+	macro(ASSIGN_STD, u8"=")  \
 	macro(ASSIGN_ADD, u8"+=") \
 	macro(ASSIGN_SUB, u8"-=") \
 	macro(ASSIGN_MUL, u8"*=") \
@@ -105,13 +63,11 @@ namespace lang
 	/*| logical |*/           \
 	/*|---------|*/           \
 	macro(L_OR, u8"||")       \
-	macro(L_XOR, u8"~~")      \
 	macro(L_AND, u8"&&")      \
 	/*|---------|*/           \
 	/*| bitwise |*/           \
 	/*|---------|*/           \
 	macro(B_OR, u8"or")       \
-	macro(B_XOR, u8"xor")     \
 	macro(B_AND, u8"and")     \
 	/*|-------|*/             \
 	/*| shift |*/             \
@@ -134,6 +90,15 @@ namespace lang
 	/*| ptr safety |*/        \
 	/*|------------|*/        \
 	macro(COALESCE, u8"??")   \
+
+	#define operator_c(macro) \
+	/*|--------|*/            \
+	/*| callee |*/            \
+	/*|--------|*/            \
+	macro(CALL_M, u8".")      \
+	macro(CALL_S, u8"?.")     \
+	macro(CALL_U, u8"!.")     \
+	macro(CALL_N, u8"::")     \
 
 	#define keywords(macro)       \
 	/*|---------|*/               \
@@ -209,10 +174,10 @@ namespace lang
 	/*| number |*/          \
 	/*|--------|*/          \
 	macro(INT, nullptr)     \
-	macro(DEC, nullptr)     \
 	macro(BIN, nullptr)     \
 	macro(OCT, nullptr)     \
 	macro(HEX, nullptr)     \
+	macro(DEC, nullptr)     \
 	/*|--------|*/          \
 	/*| string |*/          \
 	/*|--------|*/          \
@@ -224,11 +189,10 @@ namespace lang
 enum class lexeme : uint8_t
 #define macro(K, V) K,
 {
-	fundamentals(macro)
 	delimeters(macro)
-	operator_l(macro)
-	operator_r(macro)
+	operator_u(macro)
 	operator_b(macro)
+	operator_c(macro)
 	keywords(macro)
 	special(macro)
 };
@@ -245,12 +209,11 @@ auto operator<<(std::ostream& os, const lexeme data) -> std::ostream&
 			return os << #K; \
 		}                    \
 		/*|---------------|*/\
-	
-		fundamentals(macro)
+
 		delimeters(macro)
-		operator_l(macro)
-		operator_r(macro)
+		operator_u(macro)
 		operator_b(macro)
+		operator_c(macro)
 		keywords(macro)
 		special(macro)
 		#undef macro

@@ -8,43 +8,68 @@
 
 #include "models/str.hpp"
 
-struct ast
-{
-	// codegen	
-};
-struct stmt : ast { virtual ~stmt() = default; };
-struct expr : ast { virtual ~expr() = default; };
-struct decl : ast { virtual ~decl() = default; };
-
 namespace
 {
-	//-------------------------------------//
-	template<typename T>                   //
-	using single = std::unique_ptr<T>;     //
-	//-------------------------------------//
-	template<typename T>                   //
-	using vector = std::vector<single<T>>; //
-	//-------------------------------------//
+	struct stmt_base { virtual ~stmt_base() = default; };
+	struct expr_base { virtual ~expr_base() = default; };
+	struct decl_base { virtual ~decl_base() = default; };
+
+	//-------------------//|
+	template<typename T> //|
+	using single =       //|
+	//----//-------------//|
+	   T; //             //|
+	//----//-------------//|
+	template<typename T> //|
+	using vector =       //|
+	//-------------------//|
+	std::vector<T>;      //|
+	//-------------------//|
 }
 
-#define macro(K, V) K,
+typedef std::unique_ptr<stmt_base> stmt;
+typedef std::unique_ptr<expr_base> expr;
+typedef std::unique_ptr<decl_base> decl;
+
 enum class data : uint8_t
 {
-	fundamentals(macro)
+	//|----------------|
+	//| signed integer |
+	//|----------------|
+	I8,
+	I16,
+	I32,
+	I64,
+	//|------------------|
+	//| unsigned integer |
+	//|------------------|
+	U8,
+	U16,
+	U32,
+	U64,
+	//|-----------------|
+	//| floating points |
+	//|-----------------|
+	F32,
+	F64,
+	//|------------------|
+	//| other data types |
+	//|------------------|
+	CODE,
+	BOOL,
+	WORD,
+	//|-----------------|
+	//| string storages |
+	//|-----------------|
+	UTF8,
+	UTF16,
+	UTF32,
 };
-#undef macro
 
-enum class op_l : uint8_t
+enum class op_u : uint8_t
 #define macro(K, V) K,
 {
-	operator_l(macro)
-};
-#undef macro
-
-enum class op_r : uint8_t
-#define macro(K, V) K,
-{
-	operator_r(macro)
+	operator_u(macro)
 };
 #undef macro
 
@@ -55,13 +80,20 @@ enum class op_b : uint8_t
 };
 #undef macro
 
+enum class op_c : uint8_t
+#define macro(K, V) K,
+{
+	operator_c(macro)
+};
+#undef macro
+
 //|---------|
 //| program |
 //|---------|
 
 struct program
 {
-	vector<stmt> body;
+	vector<decl> body;
 };
 
 //|------------|
@@ -74,27 +106,27 @@ namespace lang
 	//| loop |
 	//|------|
 
-	struct _for final : stmt
+	struct _for final : public stmt_base
 	{
 		single<expr> a;
 		single<expr> b;
 		single<expr> c;
-		single<stmt> body;
+		single<stmt> block;
 	};
 
-	struct _while final : stmt
+	struct _while final : public stmt_base
 	{
-		single<expr> a;
+		single<expr> in;
 		// single<expr> b;
 		// single<expr> c;
-		single<stmt> body;
+		single<stmt> block;
 	};
 
 	//|--------|
 	//| branch |
 	//|--------|
 
-	struct _if final : stmt
+	struct _if final : public stmt_base
 	{
 		single<expr> in;
 		single<stmt> if_block;
@@ -102,7 +134,7 @@ namespace lang
 		vector<stmt> else_if_block;
 	};
 
-	struct _match final : stmt
+	struct _match final : public stmt_base
 	{
 		single<expr> in;
 		vector<expr> match_cases;
@@ -113,17 +145,17 @@ namespace lang
 	//| control |
 	//|---------|
 
-	struct _break final : stmt
+	struct _break final : public stmt_base
 	{
 		single<utf8> label;
 	};
 
-	struct _return final : stmt
+	struct _return final : public stmt_base
 	{
 		single<expr> value;
 	};
 
-	struct _continue final : stmt
+	struct _continue final : public stmt_base
 	{
 		single<utf8> label;
 	};
@@ -135,43 +167,38 @@ namespace lang
 
 namespace lang
 {
-	struct _unary_l final : expr
+	struct _unary final : public expr
 	{
-		single<op_l> op;
+		single<op_u> op;
 		single<expr> rhs;
 	};
 
-	struct _unary_r final : expr
+	struct _binary final : public expr
 	{
-		single<op_r> op;
 		single<expr> lhs;
-	};
-
-	struct _binary final : expr
-	{
 		single<op_b> op;
-		single<expr> lhs;
 		single<expr> rhs;
 	};
 
-	struct _literal final : expr
+	struct _literal final : public expr
 	{
 		single<data> type;
 		single<utf8> data;
 	};
 
-	struct _symbol final : expr
+	struct _symbol final : public expr
 	{
 		single<utf8> name;
 	};
 
-	struct _group final : expr
+	struct _group final : public expr
 	{
 		single<expr> body;
 	};
 
-	struct _call final : expr
+	struct _call final : public expr
 	{
+		single<op_c> op;
 		single<utf8> name;
 		vector<expr> args;
 	};
@@ -183,7 +210,7 @@ namespace lang
 
 namespace lang
 {
-	struct _var final : decl
+	struct _var final : public decl_base
 	{
 		//-------------//
 		bool is_const; //
@@ -192,7 +219,7 @@ namespace lang
 		single<data> type;
 		single<expr> init;
 	};
-	struct _fun final : decl
+	struct _fun final : public decl_base
 	{
 		//------------//
 		bool is_pure; //

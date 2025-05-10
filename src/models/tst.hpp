@@ -517,12 +517,6 @@ private:
 					{
 						case utils::ordering::LESS:
 						{
-							// if ((*ptr)->left == nullptr)
-							// {
-							// 	(*ptr)->left = new node(code);
-							// 	// then we re-balance it
-							// 	(*ptr) = node::repair(*ptr);
-							// }
 							ptr = &((*ptr)->left);
 							break;
 						}
@@ -536,12 +530,6 @@ private:
 						}
 						case utils::ordering::GREATER:
 						{
-							// if ((*ptr)->right == nullptr)
-							// {
-							// 	(*ptr)->right = new node(code);
-							// 	// then we re-balance it
-							// 	(*ptr) = node::repair(*ptr);
-							// }
 							ptr = &((*ptr)->right);
 							break;
 						}
@@ -658,16 +646,3 @@ public:
 		// TODO
 	}
 };
-
-//|--------------|
-//| useful stuff |
-//|--------------|
-
-namespace type
-{
-	template<typename T>
-	concept tst =
-	(
-		std::convertible_to<T, tst<T>>
-	);
-}

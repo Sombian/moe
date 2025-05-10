@@ -1,23 +1,19 @@
 # expr
 
 ```bnf
-expr ::= binary
-       | unary_l
-       | unary_r
+expr ::= unary
+       | binary
        | literal
        | symbol
        | group
        | call
 
+unary ::= op_u
+          expr
+
 binary ::= expr
            op_b
            expr
-
-unary_l ::= op_l
-            expr
-
-unary_r ::= expr
-            op_r
 
 literal ::= NUMBER
           | STRING
@@ -32,71 +28,74 @@ group ::= "("
           expr
           ")"
 
-call ::= symbol
+call ::= expr
+         duty
+         symbol
          "("
          args?
          ")"
+
+duty ::= "."
+         |
+         "?."
+         |
+         "!."
+         |
+         "::"
+
+args ::= expr ("," expr)*
 ```
 
 *left recursion fix: from the lowest to the highest priority*
 
 ```bnf
-expr ::= expr_assign
+expr ::= expr_12
 
 ######
-# 01 # assignment
+# 12 # assignment
 ######
 
-expr_assign ::= expr_nil ( assign_op expr_assign )?
+expr_12 ::= expr_11 ( set_op expr_12 )?
 
-assign_op ::= "="
-            | "+="
-            | "-="
-            | "*="
-            | "/="
-            | "%="
-            | "^="
+set_op ::= "="
+         | "+="
+         | "-="
+         | "*="
+         | "/="
+         | "%="
+         | "^="
 
 ######
-# 02 # coalescing
+# 11 # nullptr coalescing
 ######
 
-expr_nil ::= expr_or ( nil_op expr_or )*
+expr_11 ::= expr_10 ( nil_op expr_10 )*
 
 nil_op ::= "??"
 
 ######
-# 03 # logical/bitwise or
+# 10 # logical/bitwise or
 ######
 
-expr_or ::= expr_xor ( or_op expr_xor )*
+expr_10 ::= expr_09 ( or_op expr_09 )*
 
 or_op ::= "or"
         | "||"
 
 ######
-# 04 # logical/bitwise xor
+# 09 # logical/bitwise and
 ######
 
-expr_xor ::= expr_and ( xor_op expr_and )*
-
-xor_op ::= "xor"
-         | "~~"
-
-######
-# 05 # logical/bitwise and
-######
-
-expr_and ::= expr_eql ( and_op expr_eql )*
+expr_09 ::= expr_08 ( and_op expr_08 )*
 
 and_op ::= "and"
          | "&&"
 
 ######
-# 06 # equality
+# 08 # equality
 ######
 
-expr_eql ::= expr_rel ( eql_op expr_rel )*
+expr_08 ::= expr_07 ( eql_op expr_07 )*
 
 eql_op ::= "=="
          | "!="
@@ -105,7 +104,7 @@ eql_op ::= "=="
 # 07 # relation
 ######
 
-expr_rel ::= expr_sft ( rel_op expr_sft )*
+expr_07 ::= expr_06 ( rel_op expr_06 )*
 
 rel_op ::= "<"
          | ">"
@@ -113,66 +112,92 @@ rel_op ::= "<"
          | ">="
 
 ######
-# 08 # bit-shift
+# 06 # bit-shift
 ######
 
-expr_sft ::= expr_add ( sft_op expr_add )*
+expr_06 ::= expr_05 ( sft_op expr_05 )*
 
 sft_op ::= "shl"
          | "shr"
 
 ######
-# 09 # 
+# 05 # arithmetic 3
 ######
 
-expr_add ::= expr_mul ( add_op expr_mul )*
+expr_05 ::= expr_04 ( add_op expr_04 )*
 
 add_op ::= "+"
          | "-"
 
 ######
-# 10 #
+# 04 # arithmetic 2
 ######
 
-expr_mul ::= expr_pow ( mul_op expr_pow )*
+expr_04 ::= expr_03 ( mul_op expr_03 )*
 
 mul_op ::= "*"
          | "/"
          | "%"
 
 ######
-# 11 #
+# 03 # arithmetic 1
 ######
 
-expr_pow ::= expr_unary ( pow_op expr_unary )?
+expr_03 ::= expr_02 ( pow_op expr_03 )?
 
 pow_op ::= "^"
 
 ######
-# 12 #
+# 02 # unary prefix
 ######
 
-expr_unary ::= ( pre_op )* primary ( pst_op )*
+expr_02 ::= ( pre_op )* expr_01
 
 pre_op ::= "@"
          | "&"
          | "!"
          | "not"
 
-pst_op ::= "."
-         | "?."
-         | "!."
-         | "::"
-
 ######
-# 13 #
+# 01 # primary
 ######
 
-primary ::= literal
+expr_01 ::= literal
           | symbol
           | group
           | call
+```
 
+# decl
+
+```bnf
+decl := fun
+      | pure_fun
+      | var
+      | const_var
+
+fun := "fun"
+       symbol
+       block
+
+pure_fun := "fun!"
+            symbol
+            block
+
+var := "let"
+       symbol
+       ":"
+       type
+       ("=" expr)?
+       ";"
+
+const_var := "let!"
+             symbol
+             ":"
+             type
+             "="
+             expr
+             ";"
 ```
 
 # stmt
@@ -210,36 +235,8 @@ match ::= "match"
           expr
           ")"
           block
-```
 
-# decl
-
-```bnf
-decl := fun
-      | pure_fun
-      | var
-      | const_var
-
-fun := "fun"
-       symbol
-       block
-
-pure_fun := "fun!"
-            symbol
-            block
-
-var := "let"
-       symbol
-       ":"
-       type
-       ("=" expr)?
-       ";"
-
-const_var := "let!"
-             symbol
-             ":"
-             type
-             "="
-             expr
-             ";"
+block ::= "{"
+          (expr | stmt)*
+          "}"
 ```

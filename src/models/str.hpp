@@ -23,11 +23,6 @@
 //|                                                                                        |
 //| c-style string has null-terminator at the end to denote the end of the string.         |
 //| here, spare capacity is written to the RMB, and once fully occupied, RMB becomes zero. |
-//|                                                                                        |
-//| this impl will not feature string interning. because,                                  |
-//| hashing cost at is best O(N), and if cache miss occurs,                                |
-//| copying must be done which is another O(N) operation.                                  |
-//| plus string must be immutable. so, id rather not.                                      |
 //|----------------------------------------------------------------------------------------|
 
 auto operator<<(std::ostream& os, const char32_t code) -> std::ostream&
