@@ -52,11 +52,11 @@ auto main() -> int
 
 						if (const auto* var {dynamic_cast<lang::_var*>(ptr)})
 						{
-							std::cout << "variable" << std::endl;
+							std::cout << "variable:" << var->name << std::endl;
 						}
 						if (const auto* fun {dynamic_cast<lang::_fun*>(ptr)})
 						{
-							std::cout << "function" << std::endl;
+							std::cout << "function:" << fun->name << std::endl;
 						}
 					}
 				}

@@ -564,6 +564,27 @@ private:
 		// update metadata
 		ast.is_const = is_const;
 
+		// let name: T = init?;
+		// let! name: T = init;
+
+		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
+		{
+			ast.name = tkn->data.to_utf8();
+		}
+		else { throw E(u8"[parser.hpp] expects lexeme::SYMBOL"); }
+
+		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::COLON)
+		{
+			// syntax, nothing to do here...
+		}
+		else { throw E(u8"[parser.hpp] expects lexeme::COLON"); }
+
+		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
+		{
+			ast.type = tkn->data.to_utf8();
+		}
+		else { throw E(u8"[parser.hpp] expects lexeme::SYMBOL"); }
+
 		return std::make_unique<decltype(ast)>(std::move(ast));
 	}
 
@@ -575,6 +596,21 @@ private:
 		lang::_fun ast;
 		// update metadata
 		ast.is_pure = is_pure;
+
+		// fun name(param?) block
+		// fun! name(param?) block
+
+		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
+		{
+			ast.name = tkn->data.to_utf8();
+		}
+		else { throw E(u8"[parser.hpp] expects lexeme::SYMBOL"); }
+	
+		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::L_PAREN)
+		{
+			// syntax, nothing to do here...
+		}
+		else { throw E(u8"[parser.hpp] expects lexeme::L_PAREN"); }
 
 		return std::make_unique<decltype(ast)>(std::move(ast));
 	}

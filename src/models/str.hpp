@@ -830,10 +830,10 @@ public:
 		auto width(const char32_t code) -> width_t;
 
 		[[nodiscard]] static
-		auto encode(const char32_t in, T* out, width_t width);
+		void encode(const char32_t in, T* out, width_t width);
 
 		[[nodiscard]] static
-		auto decode(const T* in, char32_t& out, width_t width);
+		void decode(const T* in, char32_t& out, width_t width);
 	};
 
 	class slice
@@ -857,6 +857,63 @@ public:
 		//|-----------------|
 		//| member function |
 		//|-----------------|
+
+		[[nodiscard]]
+		auto to_utf8() const -> text<char8_t>
+		{
+			text<char8_t> rvalue {this->length() * 4};
+
+			char8_t* ptr {rvalue.c_str()};
+
+			for (const auto code : *this)
+			{
+				auto width {text<char8_t>::codec::width(code)};
+				text<char8_t>::codec::encode(code, ptr, width);
+				ptr += width; // move to next code point slot
+			}
+			// update size
+			rvalue.size(ptr - rvalue.c_str());
+
+			return rvalue;
+		}
+
+		[[nodiscard]]
+		auto to_utf16() const -> text<char16_t>
+		{
+			text<char16_t> rvalue {this->length() * 2};
+
+			char16_t* ptr {rvalue.c_str()};
+
+			for (const auto code : *this)
+			{
+				auto width {text<char16_t>::codec::width(code)};
+				text<char16_t>::codec::encode(code, ptr, width);
+				ptr += width; // move to next code point slot
+			}
+			// update size
+			rvalue.size(ptr - rvalue.c_str());
+
+			return rvalue;
+		}
+
+		[[nodiscard]]
+		auto to_utf32() const -> text<char32_t>
+		{
+			text<char32_t> rvalue {this->length() * 1};
+
+			char32_t* ptr {rvalue.c_str()};
+
+			for (const auto code : *this)
+			{
+				auto width {text<char32_t>::codec::width(code)};
+				text<char32_t>::codec::encode(code, ptr, width);
+				ptr += width; // move to next code point slot
+			}
+			// update size
+			rvalue.size(ptr - rvalue.c_str());
+
+			return rvalue;
+		}
 
 		[[nodiscard]]
 		auto substr(const size_t start, const size_t count) const -> slice
@@ -995,6 +1052,63 @@ public:
 			for (const auto code : str) { os << code; } return os; // STL support :3
 		}
 	};
+
+	[[nodiscard]]
+	auto to_utf8() const -> text<char8_t>
+	{
+		text<char8_t> rvalue {this->length() * 4};
+
+		char8_t* ptr {rvalue.c_str()};
+
+		for (const auto code : *this)
+		{
+			auto width {text<char8_t>::codec::width(code)};
+			text<char8_t>::codec::encode(code, ptr, width);
+			ptr += width; // move to next code point slot
+		}
+		// update size
+		rvalue.size(ptr - rvalue.c_str());
+
+		return rvalue;
+	}
+
+	[[nodiscard]]
+	auto to_utf16() const -> text<char16_t>
+	{
+		text<char16_t> rvalue {this->length() * 2};
+
+		char16_t* ptr {rvalue.c_str()};
+
+		for (const auto code : *this)
+		{
+			auto width {text<char16_t>::codec::width(code)};
+			text<char16_t>::codec::encode(code, ptr, width);
+			ptr += width; // move to next code point slot
+		}
+		// update size
+		rvalue.size(ptr - rvalue.c_str());
+
+		return rvalue;
+	}
+
+	[[nodiscard]]
+	auto to_utf32() const -> text<char32_t>
+	{
+		text<char32_t> rvalue {this->length() * 1};
+
+		char32_t* ptr {rvalue.c_str()};
+
+		for (const auto code : *this)
+		{
+			auto width {text<char32_t>::codec::width(code)};
+			text<char32_t>::codec::encode(code, ptr, width);
+			ptr += width; // move to next code point slot
+		}
+		// update size
+		rvalue.size(ptr - rvalue.c_str());
+
+		return rvalue;
+	}
 
 	[[nodiscard]]
 	auto substr(const size_t start, const size_t count) const -> slice
@@ -1332,7 +1446,7 @@ auto utf8::codec::width(const char32_t code) -> width_t
 };
 
 template<>
-auto utf8::codec::encode(const char32_t in, char8_t* out, width_t width)
+void utf8::codec::encode(const char32_t in, char8_t* out, width_t width)
 {
 	switch (width)
 	{
@@ -1375,7 +1489,7 @@ auto utf8::codec::encode(const char32_t in, char8_t* out, width_t width)
 }
 
 template<>
-auto utf8::codec::decode(const char8_t* in, char32_t& out, width_t width)
+void utf8::codec::decode(const char8_t* in, char32_t& out, width_t width)
 {
 	switch (width)
 	{
@@ -1453,7 +1567,7 @@ auto utf16::codec::width(const char32_t code) -> width_t
 };
 
 template<>
-auto utf16::codec::encode(const char32_t in, char16_t* out, width_t width)
+void utf16::codec::encode(const char32_t in, char16_t* out, width_t width)
 {
 	switch (width)
 	{
@@ -1480,7 +1594,7 @@ auto utf16::codec::encode(const char32_t in, char16_t* out, width_t width)
 }
 
 template<>
-auto utf16::codec::decode(const char16_t* in, char32_t& out, width_t width)
+void utf16::codec::decode(const char16_t* in, char32_t& out, width_t width)
 {
 	switch (width)
 	{
@@ -1531,13 +1645,13 @@ auto utf32::codec::width(const char32_t unit) -> width_t
 };
 
 template<>
-auto utf32::codec::encode(const char32_t in, char32_t* out, width_t width)
+void utf32::codec::encode(const char32_t in, char32_t* out, width_t width)
 {
 	out[0] = in;
 }
 
 template<>
-auto utf32::codec::decode(const char32_t* in, char32_t& out, width_t width)
+void utf32::codec::decode(const char32_t* in, char32_t& out, width_t width)
 {
 	out = in[0];
 };

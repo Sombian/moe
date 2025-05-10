@@ -216,7 +216,7 @@ namespace lang
 		bool is_const; //
 		//-------------//
 		single<utf8> name;
-		single<data> type;
+		single<utf8> type;
 		single<expr> init;
 	};
 	struct _fun final : public decl_base
@@ -226,7 +226,7 @@ namespace lang
 		//------------//
 		vector<_var> args;
 		single<utf8> name;
-		single<data> type;
+		single<utf8> type;
 		vector<stmt> body;
 	};
 }
