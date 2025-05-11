@@ -109,28 +109,24 @@ public:
 		);
 	}
 
-	[[nodiscard]]
 	// x = column
 	auto x() const -> size_t
 	{
 		return this->data.back();
 	}
 
-	[[nodiscard]]
 	// x = column
 	auto x() -> proxy_x
 	{
 		return {this->data};
 	}
 
-	[[nodiscard]]
 	// y = line
 	auto y() const -> size_t
 	{
 		return this->data.size();
 	}
 
-	[[nodiscard]]
 	// y = line
 	auto y() -> proxy_y
 	{

@@ -5,7 +5,6 @@
 
 namespace
 {
-	[[nodiscard]]
 	auto UnicodeData(const utf8& name) -> std::set<char32_t>
 	{
 		std::set<char32_t> result;
@@ -21,7 +20,6 @@ namespace
 		return result;
 	}
 
-	[[nodiscard]]
 	auto CaseFolding(const utf8& name) -> std::set<char32_t>
 	{
 		std::set<char32_t> result;
@@ -37,7 +35,6 @@ namespace
 		return result;
 	}
 
-	[[nodiscard]]
 	auto CompositionExclusions(const utf8& name) -> std::set<char32_t>
 	{
 		std::set<char32_t> result;
@@ -53,7 +50,6 @@ namespace
 		return result;
 	}
 
-	[[nodiscard]]
 	auto DerivedCoreProperties(const utf8& name) -> std::set<char32_t>
 	{
 		std::set<char32_t> result;

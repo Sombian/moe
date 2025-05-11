@@ -276,13 +276,11 @@ private:
 		//| member function |
 		//|-----------------|
 
-		[[nodiscard]]
 		auto reset()
 		{
 			this->ptr = nullptr;
 		}
 
-		[[nodiscard]]
 		auto value() const -> std::optional<T> requires
 		(
 			std::is_class_v<T> ? !std::is_empty_v<T> : true
@@ -291,31 +289,26 @@ private:
 			return this->ptr ? this->ptr->data : std::nullopt;
 		}
 
-		[[nodiscard]]
 		auto is_root() const -> bool
 		{
 			return this->ptr == nullptr;
 		}
 
-		[[nodiscard]]
 		auto is_leaf() const -> bool
 		{
 			return ptr && !ptr->left && !ptr->middle && !ptr->right;
 		}
 
-		[[nodiscard]]
 		auto is_child() const -> bool
 		{
 			return this->ptr != nullptr;
 		}
 
-		[[nodiscard]]
 		auto is_parent() const -> bool
 		{
 			return ptr && (ptr->left || ptr->middle || ptr->right);
 		}
 
-		[[nodiscard]]
 		// incremental search
 		auto operator[](const char32_t idx) -> bool
 		{
@@ -359,7 +352,6 @@ private:
 
 public:
 
-	[[nodiscard]]
 	auto view() const -> cursor<decltype(*this)>
 	{
 		return {*this, nullptr};

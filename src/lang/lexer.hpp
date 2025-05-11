@@ -130,7 +130,6 @@ public:
 	//| member function |
 	//|-----------------|
 
-	[[nodiscard]]
 	auto pull() -> std::variant<token<B>, bool, error>
 	{
 		for
@@ -218,7 +217,6 @@ public:
 		return true;
 	}
 
-	[[nodiscard]]
 	auto print()
 	{
 		lexer clone {this->file};
@@ -252,20 +250,18 @@ private:
 	//| comments |
 	//|----------|
 
-	[[nodiscard]]
 	auto skip_1_line_comment()
 	{
 		while (this->next())
 		{
 			if (this->out == '\n')
 			{
-				return true;
+				// this->next();
+				break;
 			}
 		}
-		return true;
 	}
 
-	[[nodiscard]]
 	auto skip_N_line_comment()
 	{
 		while (this->next())
@@ -275,18 +271,16 @@ private:
 				if (*this->it == '/')
 				{
 					this->next();
-					return true;
+					break;
 				}
 			}
 		}
-		return true;
 	}
 
 	//|----------------|
 	//| string literal |
 	//|----------------|
 
-	[[nodiscard]]
 	auto scan_1_code() -> decltype(this->pull())
 	{
 		size_t len {0};
@@ -307,7 +301,6 @@ private:
 		return T(lexeme::CHAR);
 	}
 
-	[[nodiscard]]
 	auto scan_N_code() -> decltype(this->pull())
 	{
 		size_t len {0};
@@ -328,7 +321,6 @@ private:
 	//| number literal |
 	//|----------------|
 
-	[[nodiscard]]
 	auto scan_bin() -> decltype(this->pull())
 	{
 		// skip 'b'
@@ -360,7 +352,6 @@ private:
 		return T(lexeme::BIN);
 	}
 
-	[[nodiscard]]
 	auto scan_oct() -> decltype(this->pull())
 	{
 		// skip 'o'
@@ -398,7 +389,6 @@ private:
 		return T(lexeme::OCT);
 	}
 
-	[[nodiscard]]
 	auto scan_hex() -> decltype(this->pull())
 	{
 		// skip 'x'
@@ -445,7 +435,6 @@ private:
 		return T(lexeme::HEX);
 	}
 
-	[[nodiscard]]
 	auto scan_num() -> decltype(this->pull())
 	{
 		auto type {lexeme::INT};
@@ -512,7 +501,6 @@ private:
 	//| TST magic |
 	//|-----------|
 
-	[[nodiscard]]
 	auto scan_sym() -> decltype(this->pull())
 	{
 		#define macro(K, V)\

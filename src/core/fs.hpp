@@ -22,7 +22,6 @@ namespace fs
 		A path;
 		B data;
 
-		[[nodiscard]]
 		auto lines() // auto type deducing
 		{
 			return this->data.split(U'\n');
@@ -278,21 +277,18 @@ namespace fs
 		}
 	}
 
-	[[nodiscard]]
 	// converting constructor support
 	auto open(const utf8 path) -> std::optional<std::variant<file<utf8, utf8>, file<utf8, utf16>, file<utf8, utf32>>>
 	{
 		return fs::_open(path);
 	}
 
-	[[nodiscard]]
 	// converting constructor support
 	auto open(const utf16 path) -> std::optional<std::variant<file<utf16, utf8>, file<utf16, utf16>, file<utf16, utf32>>>
 	{
 		return fs::_open(path);
 	}
 
-	[[nodiscard]]
 	// converting constructor support
 	auto open(const utf32 path) -> std::optional<std::variant<file<utf32, utf8>, file<utf32, utf16>, file<utf32, utf32>>>
 	{

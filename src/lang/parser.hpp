@@ -14,7 +14,6 @@
 
 namespace
 {
-	[[nodiscard]]
 	auto to_u(const lexeme type) -> op_u
 	{
 		switch (type)
@@ -37,7 +36,6 @@ namespace
 		}
 	}
 
-	[[nodiscard]]
 	auto to_b(const lexeme type) -> op_b
 	{
 		switch (type)
@@ -60,7 +58,6 @@ namespace
 		}
 	}
 
-	[[nodiscard]]
 	auto to_c(const lexeme type) -> op_c
 	{
 		switch (type)
@@ -118,7 +115,6 @@ class parser
 		},                  \
 	}                       \
 
-	[[nodiscard]]
 	auto next()
 	{
 		auto result {this->lexer.pull()};
@@ -145,7 +141,6 @@ class parser
 		result); // <- we put result here
 	}
 
-	[[nodiscard]]
 	auto peek() -> token<B>*
 	{
 		return std::get_if<token<B>>(&this->buffer.back());
@@ -166,7 +161,6 @@ public:
 	//| member function |
 	//|-----------------|
 
-	[[nodiscard]]
 	auto pull() -> std::variant<program, error>
 	{
 		program ast;
@@ -185,7 +179,6 @@ public:
 		return ast;
 	}
 
-	[[nodiscard]]
 	auto print()
 	{
 		// TODO
@@ -197,31 +190,26 @@ private:
 	//| statements |
 	//|------------|
 
-	[[nodiscard]]
 	auto parse_stmt() -> stmt
 	{
 
 	}
 
-	[[nodiscard]]
 	auto stmt_for() -> stmt
 	{
 
 	}
 
-	[[nodiscard]]
 	auto stmt_while() -> stmt
 	{
 
 	}
 
-	[[nodiscard]]
 	auto stmt_if() -> stmt
 	{
 
 	}
 
-	[[nodiscard]]
 	auto stmt_match() -> stmt
 	{
 
@@ -231,7 +219,6 @@ private:
 	//| expressions |
 	//|-------------|
 
-	[[nodiscard]]
 	auto parse_expr() -> expr
 	{
 		struct meta_t
@@ -263,25 +250,21 @@ private:
 
 		public:
 
-			[[nodiscard]]
 			operator bool() const
 			{
 				return this->priority != NIL;
 			}
 
-			[[nodiscard]]
 			auto operator<=>(const meta_t& rhs) const
 			{
 				return this->priority <=> rhs.priority;
 			}
 
-			[[nodiscard]]
 			auto operator==(const meta_t& rhs) const
 			{
 				return this->priority == rhs.priority;
 			}
 
-			[[nodiscard]]
 			auto upgrade() const -> uint8_t
 			{
 				return (this->priority < MAX)
@@ -454,25 +437,21 @@ private:
 		return impl(meta_t::NIL);
 	}
 
-	[[nodiscard]]
 	auto expr_call() -> expr
 	{
 		return nullptr;
 	}
 
-	[[nodiscard]]
 	auto expr_group() -> expr
 	{
 		return nullptr;
 	}
 
-	[[nodiscard]]
 	auto expr_symbol() -> expr
 	{
 		return nullptr;
 	}
 
-	[[nodiscard]]
 	auto expr_literal() -> expr
 	{
 		if (auto tkn {this->peek()})
@@ -527,7 +506,6 @@ private:
 	//| declarations |
 	//|--------------|
 
-	[[nodiscard]]
 	auto parse_decl() -> decl
 	{
 		if (const auto tkn {this->peek()})
@@ -555,7 +533,6 @@ private:
 		return nullptr;
 	}
 
-	[[nodiscard]]
 	auto decl_var(const bool is_const) -> decl
 	{
 		this->next();
@@ -588,7 +565,6 @@ private:
 		return std::make_unique<decltype(ast)>(std::move(ast));
 	}
 
-	[[nodiscard]]
 	auto decl_fun(const bool is_pure) -> decl
 	{
 		this->next();
