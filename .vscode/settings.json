@@ -7,6 +7,6 @@
 		// OS system files
 		".*.gitignore": true,
 		// 3rd party submodules
-		"3rd-party/*/*": true
+		"3rd-party/*/*": true,
 	}
 }

@@ -2,6 +2,7 @@
 
 #include <bit>
 #include <string>
+#include <vector>
 #include <cassert>
 #include <cstdint>
 #include <cstddef>
@@ -363,7 +364,7 @@ public:
 				// S -> S
 				case tag::SMALL:
 				{
-					// TODO: none
+					// ¯\_(ツ)_/¯
 					break;
 				}
 			}
@@ -695,18 +696,6 @@ public:
 		assert(this->mode() == tag::SMALL);
 	}
 
-	text(const T* ptr) : text() // <- delegation
-	{
-		if (ptr != nullptr)
-		{
-			auto len {std::char_traits<T>::length(ptr)};
-			// update size
-			this->size(len);
-			// write data
-			std::copy(ptr, ptr + len, this->c_str());
-		}
-	}
-
 	template<size_t N>
 	requires (N <= MAX)
 	text(const T (&str)[N]) : text() // <- delegation
@@ -861,7 +850,7 @@ public:
 		[[nodiscard]]
 		auto to_utf8() const -> text<char8_t>
 		{
-			text<char8_t> rvalue {this->length() * 4};
+			text<char8_t> rvalue {this->size()};
 
 			char8_t* ptr {rvalue.c_str()};
 
@@ -880,7 +869,7 @@ public:
 		[[nodiscard]]
 		auto to_utf16() const -> text<char16_t>
 		{
-			text<char16_t> rvalue {this->length() * 2};
+			text<char16_t> rvalue {this->size()};
 
 			char16_t* ptr {rvalue.c_str()};
 
@@ -899,7 +888,7 @@ public:
 		[[nodiscard]]
 		auto to_utf32() const -> text<char32_t>
 		{
-			text<char32_t> rvalue {this->length() * 1};
+			text<char32_t> rvalue {this->size()};
 
 			char32_t* ptr {rvalue.c_str()};
 
@@ -942,6 +931,162 @@ public:
 		}
 
 		[[nodiscard]]
+		auto split(const text<char8_t>& str) const -> std::vector<slice> requires (!std::is_same_v<T, char8_t>)
+		{
+			// TODO
+		}
+
+		[[nodiscard]]
+		auto split(const text<char16_t>& str) const -> std::vector<slice> requires (!std::is_same_v<T, char16_t>)
+		{
+			// TODO
+		}
+
+		[[nodiscard]]
+		auto split(const text<char32_t>& str) const -> std::vector<slice> requires (!std::is_same_v<T, char32_t>)
+		{
+			// TODO
+		}
+
+		[[nodiscard]]
+		auto split(const text<T>& str) const -> std::vector<slice>
+		{
+			const size_t N {str.size()};
+
+			std::vector<slice> result;
+
+			const T* head {this->head};
+			const T* tail {this->head};
+
+			while (tail < this->tail)
+			{
+				if (head + N - 1 < this->tail)
+				{
+					size_t i {0};
+
+					// check match
+					for (; i < N - 1; ++i)
+					{
+						if (str[i] != tail[i])
+						{
+							break;
+						}
+					}
+					// full match
+					if (i == N - 1)
+					{
+						result.emplace_back(head, tail);
+						// move start to the next
+						head = tail = tail + i;
+					}
+					++tail;
+				}
+				break;
+			}
+			// rest of the slice
+			if (head < this->tail)
+			{
+				result.emplace_back(head, this->tail);
+			}
+			return result;
+		}
+
+		template<size_t N>
+		[[nodiscard]]
+		auto split(const char8_t (&str)[N]) const -> std::vector<slice> requires (!std::is_same_v<T, char8_t>)
+		{
+			// TODO
+		}
+
+		template<size_t N>
+		[[nodiscard]]
+		auto split(const char16_t (&str)[N]) const -> std::vector<slice> requires (!std::is_same_v<T, char16_t>)
+		{
+			// TODO
+		}
+
+		template<size_t N>
+		[[nodiscard]]
+		auto split(const char32_t (&str)[N]) const -> std::vector<slice> requires (!std::is_same_v<T, char32_t>)
+		{
+			// TODO
+		}
+
+		template<size_t N>
+		[[nodiscard]]
+		auto split(const T (&str)[N]) const -> std::vector<slice>
+		{
+			std::vector<slice> result;
+
+			const T* head {this->head};
+			const T* tail {this->head};
+
+			while (tail < this->tail)
+			{
+				if (head + N - 1 < this->tail)
+				{
+					size_t i {0};
+
+					// check match
+					for (; i < N - 1; ++i)
+					{
+						if (str[i] != tail[i])
+						{
+							break;
+						}
+					}
+					// full match
+					if (i == N - 1)
+					{
+						result.emplace_back(head, tail);
+						// move start to the next
+						head = tail = tail + i;
+					}
+					++tail;
+				}
+				break;
+			}
+			// rest of the slice
+			if (head < this->tail)
+			{
+				result.emplace_back(head, this->tail);
+			}
+			return result;
+		}
+
+		[[nodiscard]]
+		auto split(const char32_t code) const -> std::vector<slice>
+		{
+			std::vector<slice> result;
+
+			char32_t out {'\0'};
+
+			const T* head {this->head};
+			const T* tail {this->head};
+
+			while (tail < this->tail)
+			{
+				auto width {codec::next(tail)};
+				codec::decode(tail, out, width);
+
+				if (out == code)
+				{
+					result.emplace_back(head, tail);
+					// move start to the next
+					head = tail + width;
+				}
+				// move point to the next
+				tail += width;
+			}
+			// rest of the slice
+			if (head < this->tail)
+			{
+				result.emplace_back(head, this->tail);
+			}
+			return result;
+		}
+
+		[[nodiscard]]
 		auto length() const -> size_t
 		{
 			// UTF-32
@@ -968,21 +1113,67 @@ public:
 			return this->tail - this->head;
 		}
 
+		//|--------|
+		//| lhs[M] |
+		//|--------|
+
+		auto operator[](const size_t nth) const -> char32_t
+		{
+			auto ptr {this->head};
+
+			size_t i {0};
+			size_t j {0};
+
+			if constexpr (std::is_same_v<T, char32_t>)
+			{
+				i = nth;
+				j = nth;
+
+				if (nth < this->size())
+				{
+					goto for_utf32; // <- O(1)
+				}
+				// no exception
+				return U'\0';
+			}
+
+			for (; ptr[i]; ++j)
+			{
+				if (j == nth)
+				{
+					for_utf32:
+					char32_t out;
+					// write to ref
+					codec::decode(ptr + i, out, codec::next(ptr + i));
+					// ¯\_(ツ)_/¯
+					return out;
+				}
+				i += codec::next(ptr + i);
+			}
+			// no exception
+			return U'\0';
+		}
+
 		//|------------|
 		//| lhs == rhs |
 		//|------------|
 
-		auto operator==(const slice& rhs) -> bool
+		auto operator==(const text<char8_t>& rhs) const -> bool requires (!std::is_same_v<T, char8_t>)
 		{
-			return
-			(
-				this->head == rhs.head
-				&&
-				this->tail == rhs.tail
-			);
+			
 		}
 
-		auto operator==(const text<T>& rhs) -> bool
+		auto operator==(const text<char16_t>& rhs) const -> bool requires (!std::is_same_v<T, char16_t>)
+		{
+
+		}
+
+		auto operator==(const text<char32_t>& rhs) const -> bool requires (!std::is_same_v<T, char32_t>)
+		{
+
+		}
+
+		auto operator==(const text<T>& rhs) const -> bool
 		{
 			if (this->tail - this->head != rhs.size())
 			{
@@ -993,9 +1184,27 @@ public:
 			// content equality without null terminator
 			return std::memcmp(this->head, rhs.c_str(), total) == 0;
 		}
-	
+
 		template<size_t N>
-		auto operator==(const T (&rhs)[N]) -> bool
+		auto operator==(const char8_t (&rhs)[N]) const -> bool requires (!std::is_same_v<T, char8_t>)
+		{
+			
+		}
+
+		template<size_t N>
+		auto operator==(const char16_t (&rhs)[N]) const -> bool requires (!std::is_same_v<T, char16_t>)
+		{
+
+		}
+
+		template<size_t N>
+		auto operator==(const char32_t (&rhs)[N]) const -> bool requires (!std::is_same_v<T, char32_t>)
+		{
+
+		}
+
+		template<size_t N>
+		auto operator==(const T (&rhs)[N]) const -> bool
 		{
 			if (this->tail - this->head != N)
 			{
@@ -1007,22 +1216,65 @@ public:
 			return std::memcmp(this->head, rhs, total) == 0;
 		}
 
+		auto operator==(const slice& rhs) const -> bool
+		{
+			return
+			(
+				this->head == rhs.head
+				&&
+				this->tail == rhs.tail
+			);
+		}
+
 		//|------------|
 		//| lhs != rhs |
 		//|------------|
 
-		auto operator!=(const slice& rhs) -> bool
+		auto operator!=(const text<char8_t>& rhs) const -> bool requires (!std::is_same_v<T, char8_t>)
 		{
 			return !this->operator==(rhs);
 		}
 
-		auto operator!=(const text<T>& rhs) -> bool
+		auto operator!=(const text<char16_t>& rhs) const -> bool requires (!std::is_same_v<T, char16_t>)
+		{
+			return !this->operator==(rhs);
+		}
+
+		auto operator!=(const text<char32_t>& rhs) const -> bool requires (!std::is_same_v<T, char32_t>)
+		{
+			return !this->operator==(rhs);
+		}
+
+		auto operator!=(const text<T>& rhs) const -> bool
+		{
+			return !this->operator==(rhs);
+		}
+
+		template<size_t N>
+		auto operator!=(const char8_t (&rhs)[N]) const -> bool requires (!std::is_same_v<T, char8_t>)
+		{
+			return !this->operator==(rhs);
+		}
+
+		template<size_t N>
+		auto operator!=(const char16_t (&rhs)[N]) const -> bool requires (!std::is_same_v<T, char16_t>)
+		{
+			return !this->operator==(rhs);
+		}
+
+		template<size_t N>
+		auto operator!=(const char32_t (&rhs)[N]) const -> bool requires (!std::is_same_v<T, char32_t>)
 		{
 			return !this->operator==(rhs);
 		}
 	
 		template<size_t N>
-		auto operator!=(const T (&rhs)[N]) -> bool
+		auto operator!=(const T (&rhs)[N]) const -> bool
+		{
+			return !this->operator==(rhs);
+		}
+
+		auto operator!=(const slice& rhs) const -> bool
 		{
 			return !this->operator==(rhs);
 		}
@@ -1060,7 +1312,7 @@ public:
 		{
 			return text<char8_t> {*this};
 		}
-		text<char8_t> rvalue {this->length() * 4};
+		text<char8_t> rvalue {this->size()};
 
 		char8_t* ptr {rvalue.c_str()};
 
@@ -1083,7 +1335,7 @@ public:
 		{
 			return text<char16_t> {*this};
 		}
-		text<char16_t> rvalue {this->length() * 2};
+		text<char16_t> rvalue {this->size()};
 
 		char16_t* ptr {rvalue.c_str()};
 
@@ -1106,7 +1358,7 @@ public:
 		{
 			return text<char32_t> {*this};
 		}
-		text<char32_t> rvalue {this->length() * 1};
+		text<char32_t> rvalue {this->size()};
 
 		char32_t* ptr {rvalue.c_str()};
 
@@ -1149,6 +1401,165 @@ public:
 	}
 
 	[[nodiscard]]
+	auto split(const text<char8_t>& str) const -> std::vector<slice> requires (!std::is_same_v<T, char8_t>)
+	{
+		// TODO
+	}
+
+	[[nodiscard]]
+	auto split(const text<char16_t>& str) const -> std::vector<slice> requires (!std::is_same_v<T, char16_t>)
+	{
+		// TODO
+	}
+
+	[[nodiscard]]
+	auto split(const text<char32_t>& str) const -> std::vector<slice> requires (!std::is_same_v<T, char32_t>)
+	{
+		// TODO
+	}
+
+	[[nodiscard]]
+	auto split(const text<T>& str) const -> std::vector<slice>
+	{
+		const size_t N {str.size()};
+
+		std::vector<slice> result;
+
+		const T* head {this->c_str() + 0 /* RE:0 */};
+		const T* tail {this->c_str() + 0 /* RE:0 */};
+		const T* last {this->c_str() + this->size()};
+
+		while (tail < last)
+		{
+			if (head + N - 1 < last)
+			{
+				size_t i {0};
+
+				// check match
+				for (; i < N - 1; ++i)
+				{
+					if (str[i] != tail[i])
+					{
+						break;
+					}
+				}
+				// full match
+				if (i == N - 1)
+				{
+					result.emplace_back(head, tail);
+					// move start to the next
+					head = tail = tail + i;
+				}
+				++tail;
+			}
+			break;
+		}
+		// rest of the slice
+		if (head < last)
+		{
+			result.emplace_back(head, last);
+		}
+		return result;
+	}
+
+	template<size_t N>
+	[[nodiscard]]
+	auto split(const char8_t (&str)[N]) const -> std::vector<slice> requires (!std::is_same_v<T, char8_t>)
+	{
+		// TODO
+	}
+
+	template<size_t N>
+	[[nodiscard]]
+	auto split(const char16_t (&str)[N]) const -> std::vector<slice> requires (!std::is_same_v<T, char16_t>)
+	{
+		// TODO
+	}
+
+	template<size_t N>
+	[[nodiscard]]
+	auto split(const char32_t (&str)[N]) const -> std::vector<slice> requires (!std::is_same_v<T, char32_t>)
+	{
+		// TODO
+	}
+
+	template<size_t N>
+	[[nodiscard]]
+	auto split(const T (&str)[N]) const -> std::vector<slice>
+	{
+		std::vector<slice> result;
+
+		const T* head {this->c_str() + 0 /* RE:0 */};
+		const T* tail {this->c_str() + 0 /* RE:0 */};
+		const T* last {this->c_str() + this->size()};
+
+		while (tail < last)
+		{
+			if (head + N - 1 < last)
+			{
+				size_t i {0};
+
+				// check match
+				for (; i < N - 1; ++i)
+				{
+					if (str[i] != tail[i])
+					{
+						break;
+					}
+				}
+				// full match
+				if (i == N - 1)
+				{
+					result.emplace_back(head, tail);
+					// move start to the next
+					head = tail = tail + i;
+				}
+				++tail;
+			}
+			break;
+		}
+		// rest of the slice
+		if (head < last)
+		{
+			result.emplace_back(head, last);
+		}
+		return result;
+	}
+
+	[[nodiscard]]
+	auto split(const char32_t code) const -> std::vector<slice>
+	{
+			std::vector<slice> result;
+
+			char32_t out {'\0'};
+
+			const T* head {this->c_str() + 0 /* RE:0 */};
+			const T* tail {this->c_str() + 0 /* RE:0 */};
+			const T* last {this->c_str() + this->size()};
+
+			while (tail < last)
+			{
+				auto width {codec::next(tail)};
+				codec::decode(tail, out, width);
+
+				if (out == code)
+				{
+					result.emplace_back(head, tail);
+					// move start to the next
+					head = tail + width;
+				}
+				// move point to the next
+				tail += width;
+			}
+			// rest of the slice
+			if (head < last)
+			{
+				result.emplace_back(head, last);
+			}
+			return result;
+	}
+
+	[[nodiscard]]
 	auto length() const -> size_t
 	{
 		// UTF-32
@@ -1173,7 +1584,22 @@ public:
 	//| lhs == rhs |
 	//|------------|
 
-	auto operator==(const text<T>& rhs) -> bool
+	auto operator==(const text<char8_t>& rhs) const -> bool requires (!std::is_same_v<T, char8_t>)
+	{
+		// TODO
+	}
+
+	auto operator==(const text<char16_t>& rhs) const -> bool requires (!std::is_same_v<T, char16_t>)
+	{
+		// TODO
+	}
+
+	auto operator==(const text<char32_t>& rhs) const -> bool requires (!std::is_same_v<T, char32_t>)
+	{
+		// TODO
+	}
+
+	auto operator==(const text<T>& rhs) const -> bool
 	{
 		if (this->size() != rhs.size())
 		{
@@ -1185,20 +1611,26 @@ public:
 		return std::memcmp(this->c_str(), rhs.c_str(), total) == 0;
 	}
 
-	auto operator==(const slice& rhs) -> bool
+	template<size_t N>
+	auto operator==(const char8_t (&rhs)[N]) const -> bool requires (!std::is_same_v<T, char8_t>)
 	{
-		if (this->size() != rhs.tail - rhs.head)
-		{
-			return false;
-		}
-		// skip a null terminator, thus - 1
-		const auto total {(this->size() - 1) * sizeof(T)};
-		// content equality without null terminator
-		return std::memcmp(this->c_str(), rhs.head, total) == 0;
+		// TODO
 	}
 
 	template<size_t N>
-	auto operator==(const T (&rhs)[N]) -> bool
+	auto operator==(const char16_t (&rhs)[N]) const -> bool requires (!std::is_same_v<T, char16_t>)
+	{
+		// TODO
+	}
+
+	template<size_t N>
+	auto operator==(const char32_t (&rhs)[N]) const -> bool requires (!std::is_same_v<T, char32_t>)
+	{
+		// TODO
+	}
+
+	template<size_t N>
+	auto operator==(const T (&rhs)[N]) const -> bool
 	{
 		if (this->size() != N)
 		{
@@ -1210,22 +1642,67 @@ public:
 		return std::memcmp(this->c_str(), rhs, total) == 0;
 	}
 
+	auto operator==(const slice& rhs) const -> bool
+	{
+		if (this->size() != rhs.tail - rhs.head)
+		{
+			return false;
+		}
+		// skip a null terminator, thus - 1
+		const auto total {(this->size() - 1) * sizeof(T)};
+		// content equality without null terminator
+		return std::memcmp(this->c_str(), rhs.head, total) == 0;
+	}
+
 	//|------------|
 	//| lhs != rhs |
 	//|------------|
 
-	auto operator!=(const text<T>& rhs) -> bool
+	auto operator!=(const text<char8_t>& rhs) const -> bool requires (!std::is_same_v<T, char8_t>)
 	{
 		return !this->operator==(rhs);
 	}
 
-	auto operator!=(const slice& rhs) -> bool
+	auto operator!=(const text<char16_t>& rhs) const -> bool requires (!std::is_same_v<T, char16_t>)
+	{
+		return !this->operator==(rhs);
+	}
+
+	auto operator!=(const text<char32_t>& rhs) const -> bool requires (!std::is_same_v<T, char32_t>)
+	{
+		return !this->operator==(rhs);
+	}
+
+	auto operator!=(const text<T>& rhs) const -> bool
 	{
 		return !this->operator==(rhs);
 	}
 
 	template<size_t N>
-	auto operator!=(const T (&rhs)[N]) -> bool
+	auto operator!=(const char8_t (&rhs)[N]) const -> bool requires (!std::is_same_v<T, char8_t>)
+	{
+		return !this->operator==(rhs);
+	}
+
+	template<size_t N>
+	auto operator!=(const char16_t (&rhs)[N]) const -> bool requires (!std::is_same_v<T, char16_t>)
+	{
+		return !this->operator==(rhs);
+	}
+
+	template<size_t N>
+	auto operator!=(const char32_t (&rhs)[N]) const -> bool requires (!std::is_same_v<T, char32_t>)
+	{
+		return !this->operator==(rhs);
+	}
+
+	template<size_t N>
+	auto operator!=(const T (&rhs)[N]) const -> bool
+	{
+		return !this->operator==(rhs);
+	}
+
+	auto operator!=(const slice& rhs) const -> bool
 	{
 		return !this->operator==(rhs);
 	}
@@ -1234,7 +1711,22 @@ public:
 	//| lhs += rhs |
 	//|------------|
 
-	auto operator+=(const text<T>& rhs) -> decltype(*this)
+	auto operator+=(const text<char8_t>& rhs) -> text<T> requires (!std::is_same_v<T, char8_t>)
+	{
+		// TODO
+	}
+
+	auto operator+=(const text<char16_t>& rhs) -> text<T> requires (!std::is_same_v<T, char16_t>)
+	{
+		// TODO
+	}
+
+	auto operator+=(const text<char32_t>& rhs) -> text<T> requires (!std::is_same_v<T, char32_t>)
+	{
+		// TODO
+	}
+
+	auto operator+=(const text<T>& rhs) -> text<T>
 	{
 		const auto total {this->size() + rhs.size()};
 
@@ -1257,30 +1749,26 @@ public:
 		return *this;
 	}
 
-	auto operator+=(const slice& rhs) -> decltype(*this)
+	template<size_t N>
+	auto operator!=(const char8_t (&rhs)[N]) -> text<T> requires (!std::is_same_v<T, char8_t>)
 	{
-		const auto total {this->size() + rhs.size()};
-
-		if (this->capacity() < total)
-		{
-			this->capacity(total);
-		}
-		// copy data
-		std::copy
-		(
-			rhs.head + 0,
-			rhs.tail + 0,
-			// destination
-			this->c_str() + this->size()
-		);
-		// update size
-		this->size(total);
-
-		return *this;
+		// TODO
 	}
 
 	template<size_t N>
-	auto operator+=(const T (&rhs)[N]) -> decltype(*this)
+	auto operator!=(const char16_t (&rhs)[N]) -> text<T> requires (!std::is_same_v<T, char16_t>)
+	{
+		// TODO
+	}
+
+	template<size_t N>
+	auto operator!=(const char32_t (&rhs)[N]) -> text<T> requires (!std::is_same_v<T, char32_t>)
+	{
+		// TODO
+	}
+
+	template<size_t N>
+	auto operator+=(const T (&rhs)[N]) -> text<T>
 	{
 		const auto total {this->size() + N - 1};
 
@@ -1302,9 +1790,46 @@ public:
 		return *this;
 	}
 
+	auto operator+=(const slice& rhs) -> text<T>
+	{
+		const auto total {this->size() + rhs.size()};
+
+		if (this->capacity() < total)
+		{
+			this->capacity(total);
+		}
+		// copy data
+		std::copy
+		(
+			rhs.head + 0,
+			rhs.tail + 0,
+			// destination
+			this->c_str() + this->size()
+		);
+		// update size
+		this->size(total);
+
+		return *this;
+	}
+
 	//|-----------|
 	//| lhs + rhs |
 	//|-----------|
+
+	auto operator+(const text<char8_t>& rhs) const -> text<T> requires (!std::is_same_v<T, char8_t>)
+	{
+		// TODO
+	}
+
+	auto operator+(const text<char16_t>& rhs) const -> text<T> requires (!std::is_same_v<T, char16_t>)
+	{
+		// TODO
+	}
+
+	auto operator+(const text<char32_t>& rhs) const -> text<T> requires (!std::is_same_v<T, char32_t>)
+	{
+		// TODO
+	}
 
 	auto operator+(const text<T>& rhs) const -> text<T>
 	{
@@ -1318,9 +1843,28 @@ public:
 		return rvalue;
 	}
 
-	auto operator+(const slice& rhs) const -> text<T>
+	template<size_t N>
+	auto operator+(const char8_t (&rhs)[N]) const -> text<T> requires (!std::is_same_v<T, char8_t>)
 	{
-		text<T> rvalue {this->size() + rhs.size()};
+		// TODO
+	}
+
+	template<size_t N>
+	auto operator+(const char16_t (&rhs)[N]) const -> text<T> requires (!std::is_same_v<T, char16_t>)
+	{
+		// TODO
+	}
+
+	template<size_t N>
+	auto operator+(const char32_t (&rhs)[N]) const -> text<T> requires (!std::is_same_v<T, char32_t>)
+	{
+		// TODO
+	}
+
+	template<size_t N>
+	auto operator+(const T (&rhs)[N]) const -> text<T>
+	{
+		text<T> rvalue {this->size() + N - 1};
 
 		// copy lhs
 		rvalue += *this;
@@ -1330,10 +1874,9 @@ public:
 		return rvalue;
 	}
 
-	template<size_t N>
-	auto operator+(const T (&rhs)[N]) const -> text<T>
+	auto operator+(const slice& rhs) const -> text<T>
 	{
-		text<T> rvalue {this->size() + N - 1};
+		text<T> rvalue {this->size() + rhs.size()};
 
 		// copy lhs
 		rvalue += *this;

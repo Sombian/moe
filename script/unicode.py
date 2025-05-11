@@ -112,52 +112,53 @@ class Props:
 	def __str__(self):
 		return f"props {{{self.xid_start}, {self.xid_continue}}}"
 
+	def __eq__(self, other):
+		if self.xid_start != other.xid_start:
+			return False
+		if self.xid_continue != other.xid_continue:
+			return False
+		return True
+
+	def __hash__(self):
+		return hash((self.xid_start, self.xid_continue))
+
 BLOCK_SIZE = 128
 
 class Generator:
 	@staticmethod
 	def build(data):
-
 		stage1 = []
 		stage2 = []
 		stage3 = []
-		stage3_map = {}  # Props string -> index in stage3
-		stage2_map = {}  # Tuple of 128 ints -> block start index in stage2
 
 		block = []
+		stage2_map = {}
+		stage3_map = {}
+
+		# Deduplicate stage3 props
+		for prop in set(data.values()):
+			stage3_map[prop] = len(stage3)
+			stage3.append(prop)
+
+		default_index = stage3_map[Props()]
 
 		for code in range(0x10FFFF + 1):
-			# Get the property object or default
-			prop = data.get(code, Props())
-			prop_key = str(prop)
+			prop = data[code]
+			stage3_idx = stage3_map[prop]
+			block.append(stage3_idx)
 
-			# Map to stage3 index (create new if needed)
-			if prop_key not in stage3_map:
-				stage3_map[prop_key] = len(stage3)
-				stage3.append(prop)
-			stage3_index = stage3_map[prop_key]
-
-			# Add index to current block
-			block.append(stage3_index)
-
-			# When block fills (128 entries)
 			if len(block) == BLOCK_SIZE:
 				block_key = tuple(block)
 
-				# Check for existing block in stage2
 				if block_key not in stage2_map:
 					stage2_map[block_key] = len(stage2)
-					stage2.extend(block)  # Append block to stage2
+					stage2.extend(block)
 
-				block_start = stage2_map[block_key]
-				stage1.append(block_start)
-				block = []
+				stage1.append(stage2_map[block_key])
+				block.clear()
 
-		# Handle partial final block if Unicode count isn't divisible by BLOCK_SIZE
+		# Handle final partial block
 		if block:
-			# Pad block with zeros (pointing to default prop)
-			default_prop = Props()
-			default_index = stage3_map.get(str(default_prop), 0)
 			while len(block) < BLOCK_SIZE:
 				block.append(default_index)
 
@@ -166,8 +167,7 @@ class Generator:
 				stage2_map[block_key] = len(stage2)
 				stage2.extend(block)
 
-			block_start = stage2_map[block_key]
-			stage1.append(block_start)
+			stage1.append(stage2_map[block_key])
 
 		return stage1, stage2, stage3
 
@@ -177,11 +177,14 @@ class Generator:
 
 OUT = {}
 
+for code in range(0x10FFFF + 1):
+	OUT[code] = Props()
+
 for code in DerivedCoreProperties("XID_Start"):
-	OUT.setdefault(code, Props()).xid_start = "true"
+	OUT[code].xid_start = "true"
 
 for code in DerivedCoreProperties("XID_Continue"):
-	OUT.setdefault(code, Props()).xid_continue = "true"
+	OUT[code].xid_continue = "true"
 
 [stage1, stage2, stage3] = Generator.build(OUT)
 

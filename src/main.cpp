@@ -15,7 +15,7 @@ auto main() -> int
 		}
 	#endif
 
-	if (auto sys {fs::open(u8"sample/main.moe")})
+	if (auto io {fs::open(u8"sample/main.moe")})
 	{
 		std::visit([&](auto&& file)
 		{
@@ -70,7 +70,7 @@ auto main() -> int
 			},
 			parser.pull());
 		},
-		sys.value());
+		io.value());
 	}
 
 	return 0;

@@ -564,8 +564,8 @@ private:
 		// update metadata
 		ast.is_const = is_const;
 
-		// let name: T = init?;
-		// let! name: T = init;
+		// "let" name ":" T = init?;
+		// "let!" name ":" T = init;
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
 		{
@@ -575,7 +575,7 @@ private:
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::COLON)
 		{
-			/* syntax, nothing to do here...*/ this->next();
+			/* syntax, nothing to do here */ this->next();
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::COLON"); }
 
@@ -597,8 +597,8 @@ private:
 		// update metadata
 		ast.is_pure = is_pure;
 
-		// fun name(param?) block
-		// fun! name(param?) block
+		// "fun" name "(" param? ")" ":" T "{" stmt* "}"
+		// "fun!" name "(" param? ")" ":" T "{" stmt* "}"
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
 		{
@@ -608,7 +608,7 @@ private:
 	
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::L_PAREN)
 		{
-			/* syntax, nothing to do here...*/ this->next();
+			/* syntax, nothing to do here */ this->next();
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::L_PAREN"); }
 
@@ -616,7 +616,7 @@ private:
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::R_PAREN)
 		{
-			/* syntax, nothing to do here...*/ this->next();
+			/* syntax, nothing to do here */ this->next();
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::R_PAREN"); }
 

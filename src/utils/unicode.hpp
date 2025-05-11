@@ -21,7 +21,7 @@ namespace utils
 	//| https://here-be-braces.com/fast-lookup-of-unicode-properties |
 	//|--------------------------------------------------------------|
 
-	auto props(char32_t code) -> props
+	auto props(const char32_t code) -> props
 	{
 		return stage3[stage2[stage1[code >> 8] + (code & 0xFF)]];
 	}

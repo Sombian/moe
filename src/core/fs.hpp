@@ -21,6 +21,12 @@ namespace fs
 	{
 		A path;
 		B data;
+
+		[[nodiscard]]
+		auto lines() // auto type deducing
+		{
+			return this->data.split(U'\n');
+		}
 	};
 
 	namespace

@@ -33,3 +33,24 @@ target_include_directories(${PROJECT_NAME}
 	PRIVATE
 		${CMAKE_SOURCE_DIR}/3rd-party
 )
+
+##################
+# download files #
+##################
+
+file(DOWNLOAD
+	https://www.unicode.org/Public/UNIDATA/UnicodeData.txt
+	${CMAKE_SOURCE_DIR}/script/generate/UnicodeData.txt SHOW_PROGRESS
+)
+file(DOWNLOAD
+	https://www.unicode.org/Public/UNIDATA/CaseFolding.txt
+	${CMAKE_SOURCE_DIR}/script/generate/CaseFolding.txt SHOW_PROGRESS
+)
+file(DOWNLOAD
+	https://www.unicode.org/Public/UNIDATA/CompositionExclusions.txt
+	${CMAKE_SOURCE_DIR}/script/generate/CompositionExclusions.txt SHOW_PROGRESS
+)
+file(DOWNLOAD
+	https://www.unicode.org/Public/UNIDATA/DerivedCoreProperties.txt
+	${CMAKE_SOURCE_DIR}/script/generate/DerivedCoreProperties.txt SHOW_PROGRESS
+)
