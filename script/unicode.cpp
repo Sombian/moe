@@ -69,7 +69,7 @@ namespace unicode
 				{
 					if (0 < line.size() && line[0] != '#')
 					{
-						std::cout << line.split(u8";")[0] << std::endl;
+						std::cout << line.find(u8";") << std::endl;
 					}
 				}
 			},
