@@ -693,7 +693,7 @@ public:
 			// update size
 			this->size(len);
 			// write data
-			std::copy(ptr, ptr + len, this->c_str());
+			std::copy(ptr, ptr + len + 1, this->c_str());
 		}
 	}
 

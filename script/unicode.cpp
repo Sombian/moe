@@ -3,8 +3,9 @@
 #include "core/fs.hpp"
 #include "models/str.hpp"
 
-namespace
+namespace unicode
 {
+	[[nodiscard]] static
 	auto UnicodeData(const utf8& name) -> std::set<char32_t>
 	{
 		std::set<char32_t> result;
@@ -20,6 +21,7 @@ namespace
 		return result;
 	}
 
+	[[nodiscard]] static
 	auto CaseFolding(const utf8& name) -> std::set<char32_t>
 	{
 		std::set<char32_t> result;
@@ -35,6 +37,7 @@ namespace
 		return result;
 	}
 
+	[[nodiscard]] static
 	auto CompositionExclusions(const utf8& name) -> std::set<char32_t>
 	{
 		std::set<char32_t> result;
@@ -50,6 +53,7 @@ namespace
 		return result;
 	}
 
+	[[nodiscard]] static
 	auto DerivedCoreProperties(const utf8& name) -> std::set<char32_t>
 	{
 		std::set<char32_t> result;
@@ -74,5 +78,5 @@ namespace
 
 auto main() -> int
 {
-
+	unicode::DerivedCoreProperties(u8"XID_Start");
 }
