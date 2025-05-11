@@ -684,7 +684,6 @@ public:
 		assert(this->mode() == tag::SMALL);
 	}
 
-
 	text(const T* ptr) : text() // <- delegation
 	{
 		if (ptr != nullptr)
@@ -925,6 +924,27 @@ public:
 			return {ptr + a, ptr + b};
 		}
 
+		template<size_t N>
+		// converting constructor support
+		auto split(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
+		{
+			return this->split(text<char8_t>{str});
+		}
+
+		template<size_t N>
+		// converting constructor support
+		auto split(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
+		{
+			return this->split(text<char16_t>{str});
+		}
+
+		template<size_t N>
+		// converting constructor support
+		auto split(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
+		{
+			return this->split(text<char32_t>{str});
+		}
+
 		template<typename U>
 		auto split(const text<U>& str) const -> std::vector<slice>
 		{
@@ -996,7 +1016,6 @@ public:
 							{
 								break;
 							}
-
 							// hopefully no segfault
 							auto width {codec::next(ptr)};
 							codec::decode(ptr, out, width);
@@ -1171,6 +1190,27 @@ public:
 		//| lhs == rhs |
 		//|------------|
 
+		template<size_t N>
+		// converting constructor support
+		auto operator==(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
+		{
+			return this->operator==(text<char8_t>{str});
+		}
+
+		template<size_t N>
+		// converting constructor support
+		auto operator==(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
+		{
+			return this->operator==(text<char16_t>{str});
+		}
+
+		template<size_t N>
+		// converting constructor support
+		auto operator==(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
+		{
+			return this->operator==(text<char32_t>{str});
+		}
+
 		template<typename U>
 		auto operator==(const text<U>& rhs) const -> bool
 		{
@@ -1240,6 +1280,27 @@ public:
 		//|------------|
 		//| lhs != rhs |
 		//|------------|
+
+		template<size_t N>
+		// converting constructor support
+		auto operator!=(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
+		{
+			return !this->operator==(text<char8_t>{str});
+		}
+
+		template<size_t N>
+		// converting constructor support
+		auto operator!=(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
+		{
+			return !this->operator==(text<char16_t>{str});
+		}
+
+		template<size_t N>
+		// converting constructor support
+		auto operator!=(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
+		{
+			return !this->operator==(text<char32_t>{str});
+		}
 
 		template<typename U>
 		auto operator!=(const text<U>& rhs) const -> bool
@@ -1371,6 +1432,27 @@ public:
 			b += codec::next(ptr + b);
 		}
 		return {ptr + a, ptr + b};
+	}
+
+	template<size_t N>
+	// converting constructor support
+	auto split(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
+	{
+		return this->split(text<char8_t>{str});
+	}
+
+	template<size_t N>
+	// converting constructor support
+	auto split(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
+	{
+		return this->split(text<char16_t>{str});
+	}
+
+	template<size_t N>
+	// converting constructor support
+	auto split(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
+	{
+		return this->split(text<char32_t>{str});
 	}
 
 	template<typename U>
@@ -1578,6 +1660,27 @@ public:
 	//| lhs == rhs |
 	//|------------|
 
+	template<size_t N>
+	// converting constructor support
+	auto operator==(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
+	{
+		return this->operator==(text<char8_t>{str});
+	}
+
+	template<size_t N>
+	// converting constructor support
+	auto operator==(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
+	{
+		return this->operator==(text<char16_t>{str});
+	}
+
+	template<size_t N>
+	// converting constructor support
+	auto operator==(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
+	{
+		return this->operator==(text<char32_t>{str});
+	}
+
 	template<typename U>
 	auto operator==(const text<U>& rhs) const -> bool
 	{
@@ -1649,6 +1752,27 @@ public:
 	//|------------|
 	//| lhs != rhs |
 	//|------------|
+
+	template<size_t N>
+	// converting constructor support
+	auto operator!=(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
+	{
+		return !this->operator==(text<char8_t>{str});
+	}
+
+	template<size_t N>
+	// converting constructor support
+	auto operator!=(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
+	{
+		return !this->operator==(text<char16_t>{str});
+	}
+
+	template<size_t N>
+	// converting constructor support
+	auto operator!=(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
+	{
+		return !this->operator==(text<char32_t>{str});
+	}
 
 	template<typename U>
 	auto operator!=(const text<U>& rhs) const -> bool

@@ -62,11 +62,14 @@ namespace unicode
 		{
 			std::visit([&](auto&& file)
 			{
+				utf8 x {6}; // 0x'10FFFF'
+				utf8 y {6}; // 0x'10FFFF'
+
 				for (const auto& line : file.lines())
 				{
 					if (0 < line.size() && line[0] != '#')
 					{
-						std::cout << line << std::endl;
+						std::cout << line.split(u';')[0] << std::endl;
 					}
 				}
 			},
@@ -79,4 +82,5 @@ namespace unicode
 auto main() -> int
 {
 	unicode::DerivedCoreProperties(u8"XID_Start");
+	unicode::DerivedCoreProperties(u8"XID_Continue");
 }

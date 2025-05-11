@@ -178,7 +178,7 @@ public:
 	}
 
 	// converting constructor support
-	tst(std::initializer_list<std::pair<utf8, T>> args = {})
+	tst(std::initializer_list<std::pair<const utf8, T>> args = {})
 	{
 		for (const auto& [first, second] : args)
 		{
@@ -187,7 +187,7 @@ public:
 	}
 
 	// converting constructor support
-	tst(std::initializer_list<std::pair<utf16, T>> args = {})
+	tst(std::initializer_list<std::pair<const utf16, T>> args = {})
 	{
 		for (const auto& [first, second] : args)
 		{
@@ -196,7 +196,7 @@ public:
 	}
 
 	// converting constructor support
-	tst(std::initializer_list<std::pair<utf32, T>> args = {})
+	tst(std::initializer_list<std::pair<const utf32, T>> args = {})
 	{
 		for (const auto& [first, second] : args)
 		{

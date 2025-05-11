@@ -2,6 +2,7 @@
 
 #include <bit>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <variant>
 #include <fstream>
@@ -28,270 +29,270 @@ namespace fs
 		}
 	};
 
-	namespace
+	template<type::string T>
+	auto open(const T& path) -> std::optional<std::variant<file<T, utf8>, file<T, utf16>, file<T, utf32>>>
 	{
-		template<type::string T>
-		auto _open(const T& path) -> std::optional<std::variant<file<T, utf8>, file<T, utf16>, file<T, utf32>>>
+		auto sys {std::filesystem::path(path.c_str())};
+
+		//|-----------------------|
+		//| step 1. open the file |
+		//|-----------------------|
+
+		if (std::ifstream ifs {sys, std::ios::binary})
 		{
-			auto sys {std::filesystem::path(path.c_str())};
-	
-			//|-----------------------|
-			//| step 1. open the file |
-			//|-----------------------|
+			//|-------------------------|
+			//| step 2. detect encoding |
+			//|-------------------------|
 
-			if (std::ifstream ifs {sys, std::ios::binary})
+			enum encoding : uint8_t
 			{
-				//|-------------------------|
-				//| step 2. detect encoding |
-				//|-------------------------|
-	
-				enum encoding : uint8_t
+				UTF8_STD = (0 << 4) | 0,
+				UTF8_BOM = (1 << 4) | 3,
+				UTF16_BE = (2 << 4) | 2,
+				UTF16_LE = (3 << 4) | 2,
+				UTF32_BE = (4 << 4) | 4,
+				UTF32_LE = (5 << 4) | 4,
+			}
+			const BOM = [&] -> encoding
+			{
+				char buffer[4]
 				{
-					UTF8_STD = (0 << 4) | 0,
-					UTF8_BOM = (1 << 4) | 3,
-					UTF16_BE = (2 << 4) | 2,
-					UTF16_LE = (3 << 4) | 2,
-					UTF32_BE = (4 << 4) | 4,
-					UTF32_LE = (5 << 4) | 4,
-				}
-				const BOM = [&] -> encoding
-				{
-					char buffer[4]
-					{
-						0, // <- clear
-						0, // <- clear
-						0, // <- clear
-						0, // <- clear
-					};
-	
-					ifs.seekg(0, std::ios::beg);
-					ifs.read(&buffer[0], 4);
-	
-					if
-					(
-						buffer[0] == '\x00'
-						&&
-						buffer[1] == '\x00'
-						&&
-						buffer[2] == '\xFE'
-						&&
-						buffer[3] == '\xFF'
-					)
-					{
-						return UTF32_BE;
-					}
-					if
-					(
-						buffer[0] == '\xFF'
-						&&
-						buffer[1] == '\xFE'
-						&&
-						buffer[2] == '\x00'
-						&&
-						buffer[3] == '\x00'
-					)
-					{
-						return UTF32_LE;
-					}
-					if
-					(
-						buffer[0] == '\xFE'
-						&&
-						buffer[1] == '\xFF'
-					)
-					{
-						return UTF16_BE;
-					}
-					if
-					(
-						buffer[0] == '\xFF'
-						&&
-						buffer[1] == '\xFE'
-					)
-					{
-						return UTF16_LE;
-					}
-					if
-					(
-						buffer[0] == '\xEF'
-						&&
-						buffer[1] == '\xBB'
-						&&
-						buffer[2] == '\xBF'
-					)
-					{
-						return UTF8_BOM;
-					}
-					return UTF8_STD;
-				}
-				();
-	
-				const auto off {BOM & 0xF};
-	
-				//|------------------------|
-				//| step 3. calculate size |
-				//|------------------------|
-	
-				// to the BOM
-				ifs.seekg(off, std::ios::beg);
-				auto size {ifs.tellg()};
-				// to the end
-				ifs.seekg(0, std::ios::end);
-				size = ifs.tellg() - size;
-				// to the BOM
-				ifs.clear(); // <- important
-				ifs.seekg(off, std::ios::beg);
-	
-				//|------------------------|
-				//| step 4. read file data |
-				//|------------------------|
-
-				const auto write_native
-				{
-					[&]<typename unit>(text<unit>& str)
-					{
-						auto size {0};
-						unit code {0};
-	
-						for (auto ptr {str.c_str()}; !ifs.eof(); ++size)
-						{
-							if (ifs.read(reinterpret_cast<char*>(&code), sizeof(unit)); code == '\r')
-							{
-								if (ifs.read(reinterpret_cast<char*>(&code), sizeof(unit)); code != '\n')
-								{
-									assert(!!!"error");
-									std::unreachable();
-								}
-							}
-							ptr[size] = code;
-						}
-						// update size
-						str.size(size - 1);
-					}
+					0, // <- clear
+					0, // <- clear
+					0, // <- clear
+					0, // <- clear
 				};
 
-				const auto write_foreign
-				{
-					[&]<typename unit>(text<unit>& str)
-					{
-						auto size {0};
-						unit code {0};
+				ifs.seekg(0, std::ios::beg);
+				ifs.read(&buffer[0], 4);
 
-						for (auto ptr {str.c_str()}; !ifs.eof(); ++size)
+				if
+				(
+					buffer[0] == '\x00'
+					&&
+					buffer[1] == '\x00'
+					&&
+					buffer[2] == '\xFE'
+					&&
+					buffer[3] == '\xFF'
+				)
+				{
+					return UTF32_BE;
+				}
+				if
+				(
+					buffer[0] == '\xFF'
+					&&
+					buffer[1] == '\xFE'
+					&&
+					buffer[2] == '\x00'
+					&&
+					buffer[3] == '\x00'
+				)
+				{
+					return UTF32_LE;
+				}
+				if
+				(
+					buffer[0] == '\xFE'
+					&&
+					buffer[1] == '\xFF'
+				)
+				{
+					return UTF16_BE;
+				}
+				if
+				(
+					buffer[0] == '\xFF'
+					&&
+					buffer[1] == '\xFE'
+				)
+				{
+					return UTF16_LE;
+				}
+				if
+				(
+					buffer[0] == '\xEF'
+					&&
+					buffer[1] == '\xBB'
+					&&
+					buffer[2] == '\xBF'
+				)
+				{
+					return UTF8_BOM;
+				}
+				return UTF8_STD;
+			}
+			();
+
+			const auto off {BOM & 0xF};
+
+			//|------------------------|
+			//| step 3. calculate size |
+			//|------------------------|
+
+			// to the BOM
+			ifs.seekg(off, std::ios::beg);
+			auto size {ifs.tellg()};
+			// to the end
+			ifs.seekg(0, std::ios::end);
+			size = ifs.tellg() - size;
+			// to the BOM
+			ifs.clear(); // <- important
+			ifs.seekg(off, std::ios::beg);
+
+			//|------------------------|
+			//| step 4. read file data |
+			//|------------------------|
+
+			const auto write_native
+			{
+				[&]<typename unit>(text<unit>& str)
+				{
+					auto size {0};
+					unit code {0};
+
+					for (auto ptr {str.c_str()}; !ifs.eof(); ++size)
+					{
+						if (ifs.read(reinterpret_cast<char*>(&code), sizeof(unit)); code == '\r')
 						{
-							if (ifs.read(reinterpret_cast<char*>(&code), sizeof(unit)); (code = std::byteswap(code)) == '\r')
+							if (ifs.read(reinterpret_cast<char*>(&code), sizeof(unit)); code != '\n')
 							{
-								if (ifs.read(reinterpret_cast<char*>(&code), sizeof(unit)); (code = std::byteswap(code)) != '\n')
-								{
-									assert(!!!"error");
-									std::unreachable();
-								}
+								assert(!!!"error");
+								std::unreachable();
 							}
-							ptr[size] = code;
 						}
-						// update size
-						str.size(size - 1);
+						ptr[size] = code;
 					}
-				};
-	
-				switch (BOM)
-				{
-					case UTF8_STD:
-					case UTF8_BOM:
-					{
-						typedef char8_t unit;
-						
-						text<unit> data {size / sizeof(unit)};
-	
-						write_native(data); // no need to swap
-	
-						return file<T, decltype(data)>{std::move(path), std::move(data)};
-					}
-					case UTF16_BE:
-					{
-						typedef char16_t unit;
-	
-						text<unit> data {size / sizeof(unit)};
-	
-						if (std::endian::native == std::endian::big)
-						{
-							write_native(data); // write as it is
-						}
-						else
-						{
-							write_foreign(data); // write as flips
-						}
-						return file<T, decltype(data)>{std::move(path), std::move(data)};
-					}
-					case UTF16_LE:
-					{
-						typedef char16_t unit;
-	
-						text<unit> data {size / sizeof(unit)};
-	
-						if (std::endian::native == std::endian::little)
-						{
-							write_native(data); // write as it is
-						}
-						else
-						{
-							write_foreign(data); // write as flips
-						}
-						return file<T, decltype(data)>{std::move(path), std::move(data)};
-					}
-					case UTF32_BE:
-					{
-						typedef char32_t unit;
-	
-						text<unit> data {size / sizeof(unit)};
+					// update size
+					str.size(size - 1);
+				}
+			};
 
-						if (std::endian::native == std::endian::big)
-						{
-							write_native(data); // write as it is
-						}
-						else
-						{
-							write_foreign(data); // write as flips
-						}
-						return file<T, decltype(data)>{std::move(path), std::move(data)};
-					}
-					case UTF32_LE:
+			const auto write_foreign
+			{
+				[&]<typename unit>(text<unit>& str)
+				{
+					auto size {0};
+					unit code {0};
+
+					for (auto ptr {str.c_str()}; !ifs.eof(); ++size)
 					{
-						typedef char32_t unit;
-	
-						text<unit> data {size / sizeof(unit)};
-						
-						if (std::endian::native == std::endian::little)
+						if (ifs.read(reinterpret_cast<char*>(&code), sizeof(unit)); (code = std::byteswap(code)) == '\r')
 						{
-							write_native(data); // write as it is
+							if (ifs.read(reinterpret_cast<char*>(&code), sizeof(unit)); (code = std::byteswap(code)) != '\n')
+							{
+								assert(!!!"error");
+								std::unreachable();
+							}
 						}
-						else
-						{
-							write_foreign(data); // write as flips
-						}
-						return file<T, decltype(data)>{std::move(path), std::move(data)};
+						ptr[size] = code;
 					}
+					// update size
+					str.size(size - 1);
+				}
+			};
+
+			switch (BOM)
+			{
+				case UTF8_STD:
+				case UTF8_BOM:
+				{
+					typedef char8_t unit;
+					
+					text<unit> data {size / sizeof(unit)};
+
+					write_native(data); // no need to swap
+
+					return file<T, decltype(data)>{std::move(path), std::move(data)};
+				}
+				case UTF16_BE:
+				{
+					typedef char16_t unit;
+
+					text<unit> data {size / sizeof(unit)};
+
+					if (std::endian::native == std::endian::big)
+					{
+						write_native(data); // write as it is
+					}
+					else
+					{
+						write_foreign(data); // write as flips
+					}
+					return file<T, decltype(data)>{std::move(path), std::move(data)};
+				}
+				case UTF16_LE:
+				{
+					typedef char16_t unit;
+
+					text<unit> data {size / sizeof(unit)};
+
+					if (std::endian::native == std::endian::little)
+					{
+						write_native(data); // write as it is
+					}
+					else
+					{
+						write_foreign(data); // write as flips
+					}
+					return file<T, decltype(data)>{std::move(path), std::move(data)};
+				}
+				case UTF32_BE:
+				{
+					typedef char32_t unit;
+
+					text<unit> data {size / sizeof(unit)};
+
+					if (std::endian::native == std::endian::big)
+					{
+						write_native(data); // write as it is
+					}
+					else
+					{
+						write_foreign(data); // write as flips
+					}
+					return file<T, decltype(data)>{std::move(path), std::move(data)};
+				}
+				case UTF32_LE:
+				{
+					typedef char32_t unit;
+
+					text<unit> data {size / sizeof(unit)};
+					
+					if (std::endian::native == std::endian::little)
+					{
+						write_native(data); // write as it is
+					}
+					else
+					{
+						write_foreign(data); // write as flips
+					}
+					return file<T, decltype(data)>{std::move(path), std::move(data)};
 				}
 			}
-			return std::nullopt;
 		}
+		return std::nullopt;
 	}
 
+	template<size_t N>
 	// converting constructor support
-	auto open(const utf8 path) -> std::optional<std::variant<file<utf8, utf8>, file<utf8, utf16>, file<utf8, utf32>>>
+	auto open(const char8_t (&path)[N])
 	{
-		return fs::_open(path);
+		return open(utf8 {path});
 	}
 
+	template<size_t N>
 	// converting constructor support
-	auto open(const utf16 path) -> std::optional<std::variant<file<utf16, utf8>, file<utf16, utf16>, file<utf16, utf32>>>
+	auto open(const char16_t (&path)[N])
 	{
-		return fs::_open(path);
+		return open(utf16 {path});
 	}
 
+	template<size_t N>
 	// converting constructor support
-	auto open(const utf32 path) -> std::optional<std::variant<file<utf32, utf8>, file<utf32, utf16>, file<utf32, utf32>>>
+	auto open(const char32_t (&path)[N])
 	{
-		return fs::_open(path);
+		return open(utf32 {path});
 	}
 }
