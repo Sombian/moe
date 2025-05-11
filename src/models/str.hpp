@@ -980,7 +980,10 @@ public:
 						}
 						++tail;
 					}
-					break;
+					else
+					{
+						break;
+					}
 				}
 				// rest of the slice
 				if (head < this->tail)
@@ -1079,7 +1082,10 @@ public:
 					}
 					++tail;
 				}
-				break;
+				else
+				{
+					break;
+				}
 			}
 			// rest of the slice
 			if (head < this->tail)
@@ -1492,7 +1498,10 @@ public:
 					}
 					++tail;
 				}
-				break;
+				else
+				{
+					break;
+				}
 			}
 			// rest of the slice
 			if (head < last)
@@ -1594,7 +1603,10 @@ public:
 				}
 				++tail;
 			}
-			break;
+			else
+			{
+				break;
+			}
 		}
 		// rest of the slice
 		if (head < last)
