@@ -72,16 +72,18 @@ add_custom_command(
 		${CMAKE_SOURCE_DIR}/src/data/stage2.txt
 		${CMAKE_SOURCE_DIR}/src/data/stage3.txt
 	COMMAND
-		codegen_tools
+		codegen_tools # run file
 	DEPENDS
 		${CMAKE_SOURCE_DIR}/scripts/auto/*.txt
-	WORKING_DIRECTORY
-		${CMAKE_SOURCE_DIR} # <- !!IMPORTANT!!
 )
 
-add_custom_target(codegen_data ALL
+add_custom_target(codegen_out ALL
 	DEPENDS
 		${CMAKE_SOURCE_DIR}/src/data/stage1.txt
 		${CMAKE_SOURCE_DIR}/src/data/stage2.txt
 		${CMAKE_SOURCE_DIR}/src/data/stage3.txt
 )
+
+##################[IMPORTANT]##################
+add_dependencies(${PROJECT_NAME} codegen_out) #
+###############################################
