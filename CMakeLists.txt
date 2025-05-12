@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 4.0)
 
 ###############
 # set project #
@@ -15,17 +15,38 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-##################
-# define project #
-##################
+#############
+# downloads #
+#############
 
-add_executable(${PROJECT_NAME}
-	script/unicode.cpp
+file(DOWNLOAD
+	https://www.unicode.org/Public/UNIDATA/UnicodeData.txt
+	${CMAKE_SOURCE_DIR}/scripts/auto/UnicodeData.txt SHOW_PROGRESS
+)
+file(DOWNLOAD
+	https://www.unicode.org/Public/UNIDATA/CaseFolding.txt
+	${CMAKE_SOURCE_DIR}/scripts/auto/CaseFolding.txt SHOW_PROGRESS
+)
+file(DOWNLOAD
+	https://www.unicode.org/Public/UNIDATA/CompositionExclusions.txt
+	${CMAKE_SOURCE_DIR}/scripts/auto/CompositionExclusions.txt SHOW_PROGRESS
+)
+file(DOWNLOAD
+	https://www.unicode.org/Public/UNIDATA/DerivedCoreProperties.txt
+	${CMAKE_SOURCE_DIR}/scripts/auto/DerivedCoreProperties.txt SHOW_PROGRESS
 )
 
-###################
-# define includes #
-###################
+##############
+# executable #
+##############
+
+add_executable(${PROJECT_NAME}
+	src/main.cpp
+)
+
+add_executable(codegen_tools
+	scripts/main.cpp
+)
 
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
@@ -34,23 +55,33 @@ target_include_directories(${PROJECT_NAME}
 		${CMAKE_SOURCE_DIR}/3rd-party
 )
 
+target_include_directories(codegen_tools
+	PUBLIC
+		${CMAKE_SOURCE_DIR}/src
+	PRIVATE
+		${CMAKE_SOURCE_DIR}/3rd-party
+)
+
 ##################
-# download files #
+# code generator #
 ##################
 
-file(DOWNLOAD
-	https://www.unicode.org/Public/UNIDATA/UnicodeData.txt
-	${CMAKE_SOURCE_DIR}/script/generate/UnicodeData.txt SHOW_PROGRESS
+add_custom_command(
+	OUTPUT
+		${CMAKE_SOURCE_DIR}/src/data/stage1.txt
+		${CMAKE_SOURCE_DIR}/src/data/stage2.txt
+		${CMAKE_SOURCE_DIR}/src/data/stage3.txt
+	COMMAND
+		codegen_tools
+	DEPENDS
+		${CMAKE_SOURCE_DIR}/scripts/auto/*.txt
+	WORKING_DIRECTORY
+		${CMAKE_SOURCE_DIR} # <- !!IMPORTANT!!
 )
-file(DOWNLOAD
-	https://www.unicode.org/Public/UNIDATA/CaseFolding.txt
-	${CMAKE_SOURCE_DIR}/script/generate/CaseFolding.txt SHOW_PROGRESS
-)
-file(DOWNLOAD
-	https://www.unicode.org/Public/UNIDATA/CompositionExclusions.txt
-	${CMAKE_SOURCE_DIR}/script/generate/CompositionExclusions.txt SHOW_PROGRESS
-)
-file(DOWNLOAD
-	https://www.unicode.org/Public/UNIDATA/DerivedCoreProperties.txt
-	${CMAKE_SOURCE_DIR}/script/generate/DerivedCoreProperties.txt SHOW_PROGRESS
+
+add_custom_target(codegen_data ALL
+	DEPENDS
+		${CMAKE_SOURCE_DIR}/src/data/stage1.txt
+		${CMAKE_SOURCE_DIR}/src/data/stage2.txt
+		${CMAKE_SOURCE_DIR}/src/data/stage3.txt
 )

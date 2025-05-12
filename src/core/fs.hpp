@@ -23,7 +23,7 @@ namespace fs
 		A path;
 		B data;
 
-		auto lines() // auto type deducing
+		auto lines() -> auto
 		{
 			return this->data.split(U'\n');
 		}

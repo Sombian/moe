@@ -1,6 +1,6 @@
 #pragma once
 
-#include <array>
+#include <cstdint>
 
 namespace utils
 {
@@ -8,8 +8,8 @@ namespace utils
 	{
 		struct props
 		{
-			bool XID_Start    : 1;
-			bool XID_Continue : 1;
+			bool XID_Start : 1 {false};
+			bool XID_Continue : 1 {false};
 		};
 
 		#include "data/stage1.txt"

@@ -2638,8 +2638,14 @@ namespace type
 	(
 		std::is_same_v<T, utf8>
 		||
+		std::is_same_v<T, utf8::slice>
+		||
 		std::is_same_v<T, utf16>
 		||
+		std::is_same_v<T, utf16::slice>
+		||
 		std::is_same_v<T, utf32>
+		||
+		std::is_same_v<T, utf32::slice>
 	);
 }
