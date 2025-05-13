@@ -6,7 +6,7 @@
 		".cache": true,
 		// OS system files
 		".*.gitignore": true,
-		// 3rd party submodules
+		// 3rd party sub folders
 		"3rd-party/*/*": true,
 	}
 }

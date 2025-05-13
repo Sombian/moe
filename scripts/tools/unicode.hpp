@@ -360,7 +360,7 @@ namespace setup
 		/**/ std::vector<props> stage3; std::map<props, uint16_t> stage3map; /**/
 		/***********************************************************************/
 
-		std::array<props, 0x10FFFF> POOL {};
+		std::array<props, 0x10FFFF + 1> POOL {};
 
 		//|-----------------------|
 		//| step 1. populate pool |
@@ -391,7 +391,7 @@ namespace setup
 
 				block[j] = [&](const props& props)
 				{
-					const auto [it, insert]
+					const auto [pair, insert]
 					{stage3map.try_emplace(props,
 					static_cast<uint16_t>(stage3.size()))};
 					
@@ -399,12 +399,12 @@ namespace setup
 					{
 						stage3.push_back(props);
 					}
-					return it->second; // *wink*
+					return pair->second; // *wink*
 				}
 				(code <= 0x10FFFF ? POOL[code] : props {});
 			}
 
-			const auto [it, insert]
+			const auto [pair, insert]
 			{stage2map.try_emplace(block,
 			static_cast<uint16_t>(stage2.size()))};
 
@@ -412,7 +412,7 @@ namespace setup
 			{
 				stage2.push_back(block);
 			}
-			stage1.push_back(it->second);
+			stage1.push_back(pair->second);
 		}
 
 		//|-----------------------|

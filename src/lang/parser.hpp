@@ -167,7 +167,7 @@ public:
 
 		try // start parser..!
 		{
-			while (auto decl {this->parse_decl()})
+			while (auto decl {this->$decl()})
 			{
 				ast.body.push_back(std::move(decl));
 			}
@@ -190,7 +190,7 @@ private:
 	//| statements |
 	//|------------|
 
-	auto parse_stmt() -> stmt
+	auto $stmt() -> stmt
 	{
 		return nullptr;
 	}
@@ -219,7 +219,7 @@ private:
 	//| expressions |
 	//|-------------|
 
-	auto parse_expr() -> expr
+	auto $expr() -> expr
 	{
 		struct meta_t
 		{
@@ -295,7 +295,7 @@ private:
 							lang::_unary node;
 
 							node.op = to_u(tkn->type);
-							node.rhs = this->parse_expr();
+							node.rhs = this->$expr();
 
 							return std::make_unique<decltype(node)>(std::move(node));
 						}
@@ -322,7 +322,7 @@ private:
 			{
 				switch (tkn.type)
 				{
-					case lexeme::ASSIGN_STD:
+					case lexeme::ASSIGN:
 					case lexeme::ASSIGN_ADD:
 					case lexeme::ASSIGN_SUB:
 					case lexeme::ASSIGN_MUL:
@@ -548,7 +548,7 @@ private:
 	//| declarations |
 	//|--------------|
 
-	auto parse_decl() -> decl
+	auto $decl() -> decl
 	{
 		if (const auto tkn {this->peek()})
 		{
@@ -593,47 +593,47 @@ private:
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
 		{
-			this->next(); ast.name = tkn->data.to_utf8();
+			this->next(); ast.name = tkn->data;
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::SYMBOL"); }
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::COLON)
 		{
-			this->next(); // syntax, nothing to do here
+			this->next(); // nothing to do here
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::COLON"); }
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
 		{
-			this->next(); ast.type = tkn->data.to_utf8();
+			this->next(); ast.type = tkn->data;
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::SYMBOL"); }
 
 		if (!ast.is_const)
 		{
-			if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::ASSIGN_STD)
+			if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::ASSIGN)
 			{
-				this->next(); ast.init = this->parse_expr();
+				this->next(); ast.init = this->$expr();
 			}
 			// else { throw E(u8"[parser.hpp] must init const variable"); }
 
 			if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::S_COLON)
 			{
-				this->next(); // syntax, nothing to do here
+				this->next(); // nothing to do here
 			}
 			else { throw E(u8"[parser.hpp] expects lexeme::S_COLON"); }
 		}
 		else // let! name
 		{
-			if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::ASSIGN_STD)
+			if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::ASSIGN)
 			{
-				this->next(); ast.init = this->parse_expr();
+				this->next(); ast.init = this->$expr();
 			}
 			else { throw E(u8"[parser.hpp] must init const variable"); }
 
 			if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::S_COLON)
 			{
-				this->next(); // syntax, nothing to do here
+				this->next(); // nothing to do here
 			}
 			else { throw E(u8"[parser.hpp] expects lexeme::S_COLON"); }
 		}
@@ -662,44 +662,69 @@ private:
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
 		{
-			this->next(); ast.name = tkn->data.to_utf8();
+			this->next(); ast.name = tkn->data;
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::SYMBOL"); }
 	
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::L_PAREN)
 		{
-			this->next(); // syntax, nothing to do here
+			this->next(); // nothing to do here
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::L_PAREN"); }
 
-		for(auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL;)
+		args:
+		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
 		{
-			lang::_var param;
+			this->next();
+			
+			lang::_var arg;
 			// update metadata
-			param.is_const = true;
+			arg.name = tkn->data;
 
-			this->next(); ast.name = tkn->data.to_utf8();
+			if (tkn = this->peek(); tkn && tkn->type == lexeme::COLON)
+			{
+				this->next(); // nothing to do here
+			}
+			else { throw E(u8"[parser.hpp] expects lexeme::COLON"); }
 
-			//--------------------------------//
-			this->next(); tkn = this->peek(); //
-			//--------------------------------//
+			if (tkn = this->peek(); tkn && tkn->type == lexeme::SYMBOL)
+			{
+				this->next(); arg.name = tkn->data;
+			}
+			else { throw E(u8"[parser.hpp] expects lexeme::SYMBOL"); }
+
+			if (tkn = this->peek(); tkn && tkn->type == lexeme::ASSIGN)
+			{
+				this->next(); arg.init = this->$expr();
+			}
+			// else { throw E(u8"[parser.hpp] expects lexeme::ASSIGN"); }
+
+			//-------------<INSERT>-------------//
+			ast.args.push_back(std::move(arg)); //
+			//----------------------------------//
+			
+			if (tkn = this->peek(); tkn && tkn->type == lexeme::COMMA)
+			{
+				this->next(); goto args; // <- *wink*
+			}
+			// else { throw E(u8"[parser.hpp] expects lexeme::COMMA"); }
 		}
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::R_PAREN)
 		{
-			this->next(); // syntax, nothing to do here
+			this->next(); // nothing to do here
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::R_PAREN"); }
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::COLON)
 		{
-			this->next(); // syntax, nothing to do here
+			this->next(); // nothing to do here
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::COLON"); }
 
 		if (auto tkn {this->peek()}; tkn && tkn->type == lexeme::SYMBOL)
 		{
-			this->next(); ast.type = tkn->data.to_utf8();
+			this->next(); ast.type = tkn->data;
 		}
 		else { throw E(u8"[parser.hpp] expects lexeme::SYMBOL"); }
 

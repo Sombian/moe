@@ -15,9 +15,9 @@
 ⡝⡵⡕⡀⠑⠳⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠛⢉⡠⡲⡫⡪⡪⡣
 */
 
-let! 전역_상수: utf8 = "죽어";
+let! foo: utf8 = "죽어";
 
-fun! main(utf8 args): i32
+fun! main(args: utf8 = "lorem ipsum", value: T): i32
 {
 	let! foo = 6.9;
 	let! bar = 0x0;

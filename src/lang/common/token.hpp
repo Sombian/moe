@@ -43,7 +43,7 @@ namespace lang
 	/*|------------|*/        \
 	/*| assignment |*/        \
 	/*|------------|*/        \
-	macro(ASSIGN_STD, u8"=")  \
+	macro(ASSIGN, u8"=")      \
 	macro(ASSIGN_ADD, u8"+=") \
 	macro(ASSIGN_SUB, u8"-=") \
 	macro(ASSIGN_MUL, u8"*=") \

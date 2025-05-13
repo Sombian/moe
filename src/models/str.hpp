@@ -482,6 +482,7 @@ private:
 							{
 								this->src.capacity(new_l * 2);
 							}
+							// copy right->left
 							std::copy_backward
 							(
 								ptr + i + b,
@@ -510,10 +511,7 @@ private:
 							const size_t old_l {this->src.size()};
 							const size_t new_l {old_l - (a - b)};
 
-							// if (this->src.capacity() < new_l)
-							// {
-							// 	this->src.capacity(new_l * 2);
-							// }
+							// copy left->right
 							std::copy
 							(
 								ptr + i + b,
@@ -1531,80 +1529,92 @@ public:
 
 	template
 	<
-		typename string
+		typename slice_t
 	>
-	requires requires (string slice)
+	requires requires (slice_t str)
 	{
-		{ slice.to_utf8() } -> std::same_as<text<char8_t>>;
-		{ slice.to_utf16() } -> std::same_as<text<char16_t>>;
-		{ slice.to_utf32() } -> std::same_as<text<char32_t>>;
+		!std::is_same_v<slice_t, text<char8_t>>;
+		!std::is_same_v<slice_t, text<char16_t>>;
+		!std::is_same_v<slice_t, text<char32_t>>;
+
+		{ str.to_utf8() } -> std::same_as<text<char8_t>>;
+		{ str.to_utf16() } -> std::same_as<text<char16_t>>;
+		{ str.to_utf32() } -> std::same_as<text<char32_t>>;
 	}
-	text(const string& slice) : text()
+	text(const slice_t& str) : text()
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
 		{
-			*this = slice.to_utf8();
+			*this = str.to_utf8();
 		}
 		if constexpr (std::is_same_v<T, char16_t>)
 		{
-			*this = slice.to_utf16();
+			*this = str.to_utf16();
 		}
 		if constexpr (std::is_same_v<T, char32_t>)
 		{
-			*this = slice.to_utf32(); 
+			*this = str.to_utf32(); 
 		}
 	}
 
 	template
 	<
-		typename string
+		typename slice_t
 	>
-	requires requires (string slice)
+	requires requires (slice_t str)
 	{
-		{ slice.to_utf8() } -> std::same_as<text<char8_t>>;
-		{ slice.to_utf16() } -> std::same_as<text<char16_t>>;
-		{ slice.to_utf32() } -> std::same_as<text<char32_t>>;
+		!std::is_same_v<slice_t, text<char8_t>>;
+		!std::is_same_v<slice_t, text<char16_t>>;
+		!std::is_same_v<slice_t, text<char32_t>>;
+
+		{ str.to_utf8() } -> std::same_as<text<char8_t>>;
+		{ str.to_utf16() } -> std::same_as<text<char16_t>>;
+		{ str.to_utf32() } -> std::same_as<text<char32_t>>;
 	}
-	auto operator=(const string& rhs) noexcept -> text&
+	auto operator=(const slice_t& rhs) noexcept -> text&
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
 		{
-			copy(rhs.to_utf8(), *this);
+			*this = rhs.to_utf8();
 		}
 		if constexpr (std::is_same_v<T, char16_t>)
 		{
-			copy(rhs.to_utf16(), *this);
+			*this = rhs.to_utf16();
 		}
 		if constexpr (std::is_same_v<T, char32_t>)
 		{
-			copy(rhs.to_utf32(), *this);
+			*this = rhs.to_utf32();
 		}
 		return *this;
 	}
 
 	template
 	<
-		typename string
+		typename slice_t
 	>
-	requires requires (string slice)
+	requires requires (slice_t str)
 	{
-		{ slice.to_utf8() } -> std::same_as<text<char8_t>>;
-		{ slice.to_utf16() } -> std::same_as<text<char16_t>>;
-		{ slice.to_utf32() } -> std::same_as<text<char32_t>>;
+		!std::is_same_v<slice_t, text<char8_t>>;
+		!std::is_same_v<slice_t, text<char16_t>>;
+		!std::is_same_v<slice_t, text<char32_t>>;
+
+		{ str.to_utf8() } -> std::same_as<text<char8_t>>;
+		{ str.to_utf16() } -> std::same_as<text<char16_t>>;
+		{ str.to_utf32() } -> std::same_as<text<char32_t>>;
 	}
-	auto operator=(const string&& rhs) noexcept -> text&
+	auto operator=(const slice_t&& rhs) noexcept -> text&
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
 		{
-			swap(rhs.to_utf8(), *this);
+			*this = rhs.to_utf8();
 		}
 		if constexpr (std::is_same_v<T, char16_t>)
 		{
-			swap(rhs.to_utf16(), *this);
+			*this = rhs.to_utf16();
 		}
 		if constexpr (std::is_same_v<T, char32_t>)
 		{
-			swap(rhs.to_utf32(), *this);
+			*this = rhs.to_utf32();
 		}
 		return *this;
 	}
@@ -2724,16 +2734,22 @@ namespace type
 	template<typename T>
 	concept string =
 	(
-		std::is_same_v<T, utf8>
+		// string impl
+		(
+			std::is_same_v<T, utf8>
+			||
+			std::is_same_v<T, utf16>
+			||
+			std::is_same_v<T, utf32>
+		)
 		||
-		std::is_same_v<T, utf8::slice>
-		||
-		std::is_same_v<T, utf16>
-		||
-		std::is_same_v<T, utf16::slice>
-		||
-		std::is_same_v<T, utf32>
-		||
-		std::is_same_v<T, utf32::slice>
+		// string slice
+		(
+			std::is_same_v<T, utf8::slice>
+			||
+			std::is_same_v<T, utf16::slice>
+			||
+			std::is_same_v<T, utf32::slice>
+		)
 	);
 }

@@ -21,7 +21,7 @@
 //| TST(Ternary Search Tree) |
 //|--------------------------|
 
-template <typename T>
+template<typename T>
 class tst
 {
 	struct node
@@ -281,7 +281,7 @@ private:
 			this->ptr = nullptr;
 		}
 
-		auto value() const -> std::optional<T> requires
+		auto get() const -> std::optional<T> requires
 		(
 			std::is_class_v<T> ? !std::is_empty_v<T> : true
 		)

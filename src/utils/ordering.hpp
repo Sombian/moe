@@ -14,18 +14,23 @@ namespace utils
 
 	template
 	<
-		typename T1,
-		typename T2
+		typename T,
+		typename U
 	>
-	requires requires(T1 a, T2 b)
+	requires requires(T a, U b)
 	{
 		{ a < b } -> std::convertible_to<bool>;
 		{ a > b } -> std::convertible_to<bool>;
 		{ b < a } -> std::convertible_to<bool>;
 		{ b > a } -> std::convertible_to<bool>;
 	}
-	constexpr auto cmp(T1 a, T2 b) -> ordering
+	constexpr auto cmp(const T a, const U b) -> ordering
 	{
+		//|------------------------------|
+		//| (a < b) -> ordering::LESS    |
+		//| (a = b) -> ordering::EQUAL   |
+		//| (a > b) -> ordering::GREATER |
+		//|------------------------------|
 		return static_cast<ordering>((a > b) - (a < b));
 	}
 }

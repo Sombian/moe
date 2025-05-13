@@ -562,15 +562,15 @@ private:
 		{
 			case utils::ordering::LESS:
 			{
-				return T(lexeme::SYMBOL);
+				return T(lexeme::SYMBOL); // <- always symbol
 			}
 			case utils::ordering::EQUAL:
 			{
-				return T(*view.value());
+				return T(view.get().value_or(lexeme::SYMBOL));
 			}
 			case utils::ordering::GREATER:
 			{
-				return T(*view.value());
+				return T(view.get().value()); // <- always deref
 			}
 		}
 		assert(false && "-Wreturn-type");
