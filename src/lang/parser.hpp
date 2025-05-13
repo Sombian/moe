@@ -141,9 +141,10 @@ class parser
 		result); // <- we put result here
 	}
 
-	auto peek() -> token<B>*
+	auto peek() -> std::optional<token<B>>
 	{
-		return std::get_if<token<B>>(&this->buffer.back());
+		if (const auto ptr {std::get_if<token<B>>(&this->buffer.back())})
+		{ return *ptr; /* fuck you GCC */ } else { return std::nullopt; }
 	}
 
 public:
@@ -318,7 +319,7 @@ private:
 
 		const auto data
 		{
-			[](token<B>& tkn) -> meta_t
+			[&](const token<B>& tkn) -> meta_t
 			{
 				switch (tkn.type)
 				{

@@ -647,7 +647,7 @@ public:
 			from.c_str() + 0,
 			from.c_str() + N,
 			// destination
-			dest.c_str()
+			dest.c_str() + 0
 		);
 		// update size
 		dest.size(N);
@@ -1571,7 +1571,7 @@ public:
 		{ str.to_utf16() } -> std::same_as<text<char16_t>>;
 		{ str.to_utf32() } -> std::same_as<text<char32_t>>;
 	}
-	auto operator=(const slice_t& rhs) noexcept -> text&
+	auto operator=(const slice_t& rhs) -> text&
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
 		{
@@ -1602,7 +1602,7 @@ public:
 		{ str.to_utf16() } -> std::same_as<text<char16_t>>;
 		{ str.to_utf32() } -> std::same_as<text<char32_t>>;
 	}
-	auto operator=(const slice_t&& rhs) noexcept -> text&
+	auto operator=(const slice_t&& rhs) -> text&
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
 		{
