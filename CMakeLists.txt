@@ -71,6 +71,8 @@ add_custom_command(
 		codegen_tools
 	DEPENDS
 		${CMAKE_SOURCE_DIR}/scripts/auto/*.txt
+	WORKING_DIRECTORY
+		${CMAKE_SOURCE_DIR}#---<IMPORTANT>---#
 )
 
 add_custom_target(codegen_out ALL
