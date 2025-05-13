@@ -3,7 +3,6 @@
 #include <map>
 #include <set>
 #include <vector>
-#include <format>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -40,7 +39,7 @@ namespace
 		{
 			std::visit([&](auto&& file)
 			{
-				// TODO
+				std::cout << "success" << std::endl;
 			},
 			io.value());
 		}
@@ -89,7 +88,7 @@ namespace
 		{
 			std::visit([&](auto&& file)
 			{
-				// TODO
+				std::cout << "success" << std::endl;
 			},
 			io.value());
 		}
@@ -138,7 +137,7 @@ namespace
 		{
 			std::visit([&](auto&& file)
 			{
-				// TODO
+				std::cout << "success" << std::endl;
 			},
 			io.value());
 		}
@@ -187,6 +186,8 @@ namespace
 		{
 			std::visit([&](auto&& file)
 			{
+				std::cout << "success" << std::endl;
+
 				for (const auto& line : file.lines())
 				{
 					if (15 < line.size() && line[0] != '#')

@@ -684,7 +684,7 @@ public:
 		assert(this->mode() == tag::SMALL);
 	}
 
-	text(const T* ptr) : text() // <- delegation
+	text(const T* ptr) : text()
 	{
 		if (ptr != nullptr)
 		{
@@ -698,7 +698,7 @@ public:
 
 	template<size_t N>
 	requires (N <= MAX)
-	text(const T (&str)[N]) : text() // <- delegation
+	text(const T (&str)[N]) : text()
 	{
 		this->size(N);
 		// check mode
@@ -709,7 +709,7 @@ public:
 
 	template<size_t N>
 	requires (MAX < N)
-	text(const T (&str)[N]) : text() // <- delegation
+	text(const T (&str)[N]) : text()
 	{
 		this->size(N);
 		// check mode
@@ -718,12 +718,12 @@ public:
 		std::copy(str, str + N, this->large.data);
 	}
 
-	text(const size_t size) : text() // <- delegation
+	text(const size_t size) : text()
 	{
 		this->capacity(size);
 	}
 
-	COPY_CONSTRUCTOR(text) : text() // <- delegation
+	COPY_CONSTRUCTOR(text) : text()
 	{
 		if (this != &other)
 		{
@@ -731,7 +731,7 @@ public:
 		}
 	}
 
-	MOVE_CONSTRUCTOR(text) : text() // <- delegation
+	MOVE_CONSTRUCTOR(text) : text()
 	{
 		if (this != &other)
 		{
@@ -816,10 +816,10 @@ public:
 		// where : 0 < result
 		auto width(const char32_t code) -> width_t;
 
-		[[nodiscard]] static
+		[[maybe_unused]] static
 		void encode(const char32_t in, T* out, width_t width);
 
-		[[nodiscard]] static
+		[[maybe_unused]] static
 		void decode(const T* in, char32_t& out, width_t width);
 	};
 
@@ -1524,6 +1524,94 @@ public:
 			for (const auto code : str) { os << code; } return os; // STL support :3
 		}
 	};
+
+	//|----------------------|
+	//| from slice to string |
+	//|----------------------|
+
+	template
+	<
+		typename string
+	>
+	requires requires (string slice)
+	{
+		{ slice.to_utf8() } -> std::same_as<text<char8_t>>;
+		{ slice.to_utf16() } -> std::same_as<text<char16_t>>;
+		{ slice.to_utf32() } -> std::same_as<text<char32_t>>;
+	}
+	text(const string& slice) : text()
+	{
+		if constexpr (std::is_same_v<T, char8_t>)
+		{
+			*this = slice.to_utf8();
+		}
+		if constexpr (std::is_same_v<T, char16_t>)
+		{
+			*this = slice.to_utf16();
+		}
+		if constexpr (std::is_same_v<T, char32_t>)
+		{
+			*this = slice.to_utf32(); 
+		}
+	}
+
+	template
+	<
+		typename string
+	>
+	requires requires (string slice)
+	{
+		{ slice.to_utf8() } -> std::same_as<text<char8_t>>;
+		{ slice.to_utf16() } -> std::same_as<text<char16_t>>;
+		{ slice.to_utf32() } -> std::same_as<text<char32_t>>;
+	}
+	auto operator=(const string& rhs) noexcept -> text&
+	{
+		if constexpr (std::is_same_v<T, char8_t>)
+		{
+			copy(rhs.to_utf8(), *this);
+		}
+		if constexpr (std::is_same_v<T, char16_t>)
+		{
+			copy(rhs.to_utf16(), *this);
+		}
+		if constexpr (std::is_same_v<T, char32_t>)
+		{
+			copy(rhs.to_utf32(), *this);
+		}
+		return *this;
+	}
+
+	template
+	<
+		typename string
+	>
+	requires requires (string slice)
+	{
+		{ slice.to_utf8() } -> std::same_as<text<char8_t>>;
+		{ slice.to_utf16() } -> std::same_as<text<char16_t>>;
+		{ slice.to_utf32() } -> std::same_as<text<char32_t>>;
+	}
+	auto operator=(const string&& rhs) noexcept -> text&
+	{
+		if constexpr (std::is_same_v<T, char8_t>)
+		{
+			swap(rhs.to_utf8(), *this);
+		}
+		if constexpr (std::is_same_v<T, char16_t>)
+		{
+			swap(rhs.to_utf16(), *this);
+		}
+		if constexpr (std::is_same_v<T, char32_t>)
+		{
+			swap(rhs.to_utf32(), *this);
+		}
+		return *this;
+	}
+
+	//|--------------------------|
+	//| utf8 <-> utf16 <-> utf32 |
+	//|--------------------------|
 
 	auto to_utf8() const -> text<char8_t>
 	{

@@ -4,7 +4,7 @@
 
 auto main() -> int
 {
-	//------------------[adjust CWD]------------------//
+	//-------["{project}/build" -> "{project}"]-------//
 	const auto CWD {std::filesystem::current_path()}; //
 	std::filesystem::current_path(CWD.parent_path()); //
 	//------------------------------------------------//

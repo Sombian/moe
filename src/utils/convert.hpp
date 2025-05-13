@@ -17,9 +17,9 @@ namespace utils
 			{
 				std::array<uint8_t, 256> impl {255};
 
-				for (int i = '0'; i <= '9'; ++i) { impl[i] = i - '0' + 00; }
-				for (int i = 'a'; i <= 'z'; ++i) { impl[i] = i - 'a' + 10; }
-				for (int i = 'A'; i <= 'Z'; ++i) { impl[i] = i - 'A' + 10; }
+				for (int i = '0'; i <= '9'; ++i) { impl[i] = i - '0' + 0x0; }
+				for (int i = 'a'; i <= 'z'; ++i) { impl[i] = i - 'a' + 0xA; }
+				for (int i = 'A'; i <= 'Z'; ++i) { impl[i] = i - 'A' + 0xA; }
 
 				return impl; // <- return lookup table
 			}

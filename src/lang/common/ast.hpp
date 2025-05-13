@@ -8,12 +8,12 @@
 
 #include "models/str.hpp"
 
+struct stmt_base { virtual ~stmt_base() = default; };
+struct expr_base { virtual ~expr_base() = default; };
+struct decl_base { virtual ~decl_base() = default; };
+
 namespace
 {
-	struct stmt_base { virtual ~stmt_base() = default; };
-	struct expr_base { virtual ~expr_base() = default; };
-	struct decl_base { virtual ~decl_base() = default; };
-
 	//-------------------//|
 	template<typename T> //|
 	using single =       //|
@@ -167,36 +167,36 @@ namespace lang
 
 namespace lang
 {
-	struct _unary final : public expr
+	struct _unary final : public expr_base
 	{
 		single<op_u> op;
 		single<expr> rhs;
 	};
 
-	struct _binary final : public expr
+	struct _binary final : public expr_base
 	{
 		single<expr> lhs;
 		single<op_b> op;
 		single<expr> rhs;
 	};
 
-	struct _literal final : public expr
+	struct _literal final : public expr_base
 	{
 		single<data> type;
 		single<utf8> data;
 	};
 
-	struct _symbol final : public expr
+	struct _symbol final : public expr_base
 	{
 		single<utf8> name;
 	};
 
-	struct _group final : public expr
+	struct _group final : public expr_base
 	{
 		single<expr> body;
 	};
 
-	struct _call final : public expr
+	struct _call final : public expr_base
 	{
 		single<op_c> op;
 		single<utf8> name;
