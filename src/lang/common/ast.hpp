@@ -14,21 +14,21 @@ struct decl_base { virtual ~decl_base() = default; };
 
 namespace
 {
-	//|------<single>----//|
-	template             //|
-	<typename T>         //|
-	using single = T;    //|
-	//|------------------//|
+	//|------<single>-//---|
+	template          //   |
+	<typename T>      //   |
+	using single = T; //   |
+	//|---------------//---|
 }
 
 namespace
 {
-	//|------<vector>----//|
-	template             //|
-	<typename T>         //|
-	using vector =       //|
-	std::vector<T>;      //|
-	//|------------------//|
+	//|------<vector>-//---|
+	template          //   |
+	<typename T>      //   |
+	using vector =    //   |
+	std::vector<T>;   //   |
+	//|---------------//---|
 }
 
 typedef std::unique_ptr<stmt_base> stmt;
@@ -199,6 +199,11 @@ namespace lang
 	struct _symbol final : public expr_base
 	{
 		single<utf8> name;
+	};
+
+	struct _group final : public expr_base
+	{
+		single<expr> body;
 	};
 
 	struct _call final : public expr_base

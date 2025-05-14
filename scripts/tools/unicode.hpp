@@ -31,21 +31,18 @@ namespace
 	[[nodiscard]] static
 	auto UnicodeData(const type::string auto& name) -> std::set<uint32_t>
 	{
+		static auto UnicodeData // <- cache the file
+		{fs::open(u8"scripts/auto/UnicodeData.txt")};
+
 		std::set<uint32_t> result;
 
-		std::cout << "opening UnicodeData.txt..." << std::endl;
-
-		if (auto io {fs::open(u8"scripts/auto/UnicodeData.txt")})
+		if (UnicodeData)
 		{
 			std::visit([&](auto&& file)
 			{
-				std::cout << "success" << std::endl;
+				// TODO
 			},
-			io.value());
-		}
-		else
-		{
-			std::cout << "failure" << std::endl;
+			*UnicodeData);
 		}
 		return result;
 	}
@@ -80,21 +77,18 @@ namespace
 	[[nodiscard]] static
 	auto CaseFolding(const type::string auto& name) -> std::set<uint32_t>
 	{
+		static auto CaseFolding // <- cache the file
+		{fs::open(u8"scripts/auto/CaseFolding.txt")};
+
 		std::set<uint32_t> result;
 
-		std::cout << "opening CaseFolding.txt..." << std::endl;
-
-		if (auto io {fs::open(u8"scripts/auto/CaseFolding.txt")})
+		if (CaseFolding)
 		{
 			std::visit([&](auto&& file)
 			{
-				std::cout << "success" << std::endl;
+				// TODO
 			},
-			io.value());
-		}
-		else
-		{
-			std::cout << "failure" << std::endl;
+			*CaseFolding);
 		}
 		return result;
 	}
@@ -129,21 +123,19 @@ namespace
 	[[nodiscard]] static
 	auto CompositionExclusions(const type::string auto& name) -> std::set<uint32_t>
 	{
+		static auto CompositionExclusions // <- cache the file
+		{fs::open(u8"scripts/auto/CompositionExclusions.txt")};
+
 		std::set<uint32_t> result;
 
-		std::cout << "opening CompositionExclusions.txt..." << std::endl;
-
-		if (auto io {fs::open(u8"scripts/auto/CompositionExclusions.txt")})
+		if (CompositionExclusions)
 		{
 			std::visit([&](auto&& file)
 			{
-				std::cout << "success" << std::endl;
+				// TODO
+
 			},
-			io.value());
-		}
-		else
-		{
-			std::cout << "failure" << std::endl;
+			*CompositionExclusions);
 		}
 		return result;
 	}
@@ -178,16 +170,15 @@ namespace
 	[[nodiscard]] static
 	auto DerivedCoreProperties(const type::string auto& name) -> std::set<uint32_t>
 	{
+		static auto DerivedCoreProperties // <- cache the file
+		{fs::open(u8"scripts/auto/DerivedCoreProperties.txt")};
+
 		std::set<uint32_t> result;
 
-		std::cout << "opening DerivedCoreProperties.txt..." << std::endl;
-
-		if (auto io {fs::open(u8"scripts/auto/DerivedCoreProperties.txt")})
+		if (DerivedCoreProperties)
 		{
 			std::visit([&](auto&& file)
 			{
-				std::cout << "success" << std::endl;
-
 				for (const auto& line : file.lines())
 				{
 					if (15 < line.size() && line[0] != '#')
@@ -225,11 +216,7 @@ namespace
 					}
 				}
 			},
-			io.value());
-		}
-		else
-		{
-			std::cout << "failure" << std::endl;
+			*DerivedCoreProperties);
 		}
 		return result;
 	}
