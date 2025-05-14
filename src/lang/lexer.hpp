@@ -9,6 +9,7 @@
 
 #include "models/tst.hpp"
 
+#include "./common/eof.hpp"
 #include "./common/span.hpp"
 #include "./common/token.hpp"
 #include "./common/error.hpp"
@@ -130,7 +131,7 @@ public:
 	//| member function |
 	//|-----------------|
 
-	auto pull() -> std::variant<token<B>, bool, error>
+	auto pull() -> std::variant<token<B>, eof, error>
 	{
 		for
 		(
@@ -214,7 +215,7 @@ public:
 				}
 			}
 		}
-		return true;
+		return eof {};
 	}
 
 	auto print()
@@ -511,9 +512,9 @@ private:
 		static const tst<lexeme> TBL
 		{
 			delimeters(macro)
-			operator_u(macro)
-			operator_b(macro)
-			operator_c(macro)
+			operator_l(macro)
+			operator_i(macro)
+			operator_r(macro)
 			keywords(macro)
 			special(macro)
 		};

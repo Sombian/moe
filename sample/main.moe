@@ -15,43 +15,6 @@
 ⡝⡵⡕⡀⠑⠳⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠛⢉⡠⡲⡫⡪⡪⡣
 */
 
-let! foo: utf8 = "죽어";
-
-fun! main(args: utf8 = "lorem ipsum", value: T): i32
-{
-	let! foo = 6.9;
-	let! bar = 0x0;
-
-	'뷁';
-	'69';
-
-	print(foo);
-	print(bar);
-
-	print(cat());
-	print(dog());
-
-	let T = "69";
-
-	let a: ptr<code> = T;
-	let b: own<code> = T;
-	let c: rfc<code> = T;
-	let d: ref<code> = T;
-
-	*a; // deref
-	*b; // deref
-	*c; // deref
-	*d; // deref
-}
-
-// pure function
-fun! cat(): utf8
-{
-	return "*meow*";
-}
-
-// im-pure function
-fun dog(): utf16
-{
-	return "*bark*";
-}
+let! a: utf8 = (2^1 * 2^2 + 2^3); // 16
+let! b: utf8 = (2^1 * 2^2) + 2^3; // 16
+let! c: utf8 = 2^1 * (2^2 + 2^3); // 24

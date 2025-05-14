@@ -613,23 +613,6 @@ private:
 		}
 	};
 
-	friend auto drop(text<T>& to)
-	{
-		switch (to.mode())
-		{
-			case tag::SMALL:
-			{
-				// delete[] to.small;
-				break;
-			}
-			case tag::LARGE:
-			{
-				delete[] to.large.data;
-				break;
-			}
-		}
-	}
-
 public:
 
 	// a -> b
@@ -739,7 +722,11 @@ public:
 
 	~text()
 	{
-		drop(*this);
+		if (this->mode() == tag::LARGE)
+		{
+			delete[] this->large.data;
+		}
+		// no need to delete in SSO mode
 	}
 
 	COPY_ASSIGNMENT(text)
@@ -2734,16 +2721,14 @@ namespace type
 	template<typename T>
 	concept string =
 	(
-		// string impl
 		(
-			std::is_same_v<T, utf8>
+			std::is_same_v<T, utf8> // own
 			||
-			std::is_same_v<T, utf16>
+			std::is_same_v<T, utf16> // own
 			||
-			std::is_same_v<T, utf32>
+			std::is_same_v<T, utf32> // own
 		)
 		||
-		// string slice
 		(
 			std::is_same_v<T, utf8::slice>
 			||
@@ -2751,5 +2736,25 @@ namespace type
 			||
 			std::is_same_v<T, utf32::slice>
 		)
+	);
+
+	template<typename T>
+	concept string_impl =
+	(
+		std::is_same_v<T, utf8>
+		||
+		std::is_same_v<T, utf16>
+		||
+		std::is_same_v<T, utf32>
+	);
+
+	template<typename T>
+	concept string_view =
+	(
+		std::is_same_v<T, utf8::slice>
+		||
+		std::is_same_v<T, utf16::slice>
+		||
+		std::is_same_v<T, utf32::slice>
 	);
 }

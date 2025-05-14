@@ -25,7 +25,7 @@ auto main() -> int
 				decltype(file.data)
 			>
 			lexer {file};
-			lexer.print();
+			// lexer.print();
 
 			parser
 			<
@@ -33,42 +33,28 @@ auto main() -> int
 				decltype(file.data)
 			>
 			parser {lexer};
-			parser.print();
+			// parser.print();
 
-			std::visit([&](auto&& result)
+			if (const auto result {parser.pull()})
 			{
-				typedef std::decay_t<decltype(result)> T;
-
-				//----------------|
-				// error count: 0 |
-				//----------------|
-				if constexpr (std::is_same_v<T, program>)
+				for (const auto& decl : result->body)
 				{
-					for (const auto& decl : result.body)
-					{
-						//---------------------------//
-						const auto ptr {decl.get()}; // <- get raw ptr
-						//---------------------------//
+					//---------------------------//
+					const auto ptr {decl.get()}; // <- get raw ptr
+					//---------------------------//
 
-						if (const auto* var {dynamic_cast<lang::_var*>(ptr)})
-						{
-							std::cout << "variable:" << var->name << std::endl;
-						}
-						if (const auto* fun {dynamic_cast<lang::_fun*>(ptr)})
-						{
-							std::cout << "function:" << fun->name << std::endl;
-						}
+					if (const auto* var {dynamic_cast<lang::_var*>(ptr)})
+					{
+						std::cout << "variable:" << var->name << std::endl;
+						continue;
+					}
+					if (const auto* fun {dynamic_cast<lang::_fun*>(ptr)})
+					{
+						std::cout << "function:" << fun->name << std::endl;
+						continue;
 					}
 				}
-				//----------------|
-				// error count: N |
-				//----------------|
-				if constexpr (std::is_same_v<T, error>)
-				{
-					std::cout << result << std::endl;
-				}
-			},
-			parser.pull());
+			}
 		},
 		io.value());
 	}

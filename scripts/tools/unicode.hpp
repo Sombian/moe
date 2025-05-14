@@ -399,7 +399,7 @@ namespace setup
 					{
 						stage3.push_back(props);
 					}
-					return pair->second; // *wink*
+					return /* wink */ pair->second;
 				}
 				(code <= 0x10FFFF ? POOL[code] : props {});
 			}

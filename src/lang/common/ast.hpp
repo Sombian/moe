@@ -14,17 +14,21 @@ struct decl_base { virtual ~decl_base() = default; };
 
 namespace
 {
-	//-------------------//|
-	template<typename T> //|
-	using single =       //|
-	//----//-------------//|
-	   T; //             //|
-	//----//-------------//|
-	template<typename T> //|
+	//|------<single>----//|
+	template             //|
+	<typename T>         //|
+	using single = T;    //|
+	//|------------------//|
+}
+
+namespace
+{
+	//|------<vector>----//|
+	template             //|
+	<typename T>         //|
 	using vector =       //|
-	//-------------------//|
 	std::vector<T>;      //|
-	//-------------------//|
+	//|------------------//|
 }
 
 typedef std::unique_ptr<stmt_base> stmt;
@@ -66,24 +70,24 @@ enum class data : uint8_t
 	UTF32,
 };
 
-enum class op_u : uint8_t
+enum class op_l : uint8_t
 #define macro(K, V) K,
 {
-	operator_u(macro)
+	operator_l(macro)
 };
 #undef macro
 
-enum class op_b : uint8_t
+enum class op_i : uint8_t
 #define macro(K, V) K,
 {
-	operator_b(macro)
+	operator_i(macro)
 };
 #undef macro
 
-enum class op_c : uint8_t
+enum class op_r : uint8_t
 #define macro(K, V) K,
 {
-	operator_c(macro)
+	operator_r(macro)
 };
 #undef macro
 
@@ -167,17 +171,23 @@ namespace lang
 
 namespace lang
 {
-	struct _unary final : public expr_base
+	struct _unary_l final : public expr_base
 	{
-		single<op_u> op;
+		single<op_l> lhs;
 		single<expr> rhs;
 	};
 
 	struct _binary final : public expr_base
 	{
 		single<expr> lhs;
-		single<op_b> op;
+		single<op_i> mhs;
 		single<expr> rhs;
+	};
+
+	struct _unary_r final : public expr_base
+	{
+		single<expr> lhs;
+		single<op_r> rhs;
 	};
 
 	struct _literal final : public expr_base
@@ -191,14 +201,9 @@ namespace lang
 		single<utf8> name;
 	};
 
-	struct _group final : public expr_base
-	{
-		single<expr> body;
-	};
-
 	struct _call final : public expr_base
 	{
-		single<op_c> op;
+		single<op_r> op;
 		single<utf8> name;
 		vector<expr> args;
 	};

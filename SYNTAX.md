@@ -1,19 +1,23 @@
 # expr
 
 ```bnf
-expr ::= unary
+expr ::= unary_l
        | binary
+       | unary_r
        | literal
        | symbol
        | group
        | call
 
-unary ::= op_u
-          expr
+unary_l ::= op_l
+            expr
 
 binary ::= expr
-           op_b
+           op_i
            expr
+
+unary_r ::= expr
+            op_r
 
 literal ::= NUMBER
           | STRING
@@ -151,12 +155,17 @@ pow_op ::= "^"
 # 02 # unary prefix
 ######
 
-expr_02 ::= ( pre_op )* expr_01
+expr_02 ::= ( pre_op )* expr_01 ( post_op)?
 
 pre_op ::= "@"
          | "&"
          | "!"
          | "not"
+
+post_op ::= "."
+            "?."
+            "!."
+            "::"
 
 ######
 # 01 # primary
@@ -237,6 +246,6 @@ match ::= "match"
           block
 
 block ::= "{"
-          (expr | stmt)*
+          (expr | stmt | decl)*
           "}"
 ```

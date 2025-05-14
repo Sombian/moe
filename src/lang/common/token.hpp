@@ -24,7 +24,7 @@ namespace lang
 	macro(L_BRACK, u8"[")     \
 	macro(R_BRACK, u8"]")     \
 
-	#define operator_u(macro) \
+	#define operator_l(macro) \
 	/*|---------|*/           \
 	/*| pointer |*/           \
 	/*|---------|*/           \
@@ -39,7 +39,7 @@ namespace lang
 	/*|---------|*/           \
 	macro(B_NOT, u8"not")     \
 
-	#define operator_b(macro) \
+	#define operator_i(macro) \
 	/*|------------|*/        \
 	/*| assignment |*/        \
 	/*|------------|*/        \
@@ -89,9 +89,9 @@ namespace lang
 	/*|------------|*/        \
 	/*| ptr safety |*/        \
 	/*|------------|*/        \
-	macro(COALESCE, u8"??")   \
+	macro(NIL, u8"??")        \
 
-	#define operator_c(macro) \
+	#define operator_r(macro) \
 	/*|--------|*/            \
 	/*| callee |*/            \
 	/*|--------|*/            \
@@ -190,9 +190,9 @@ enum class lexeme : uint8_t
 #define macro(K, V) K,
 {
 	delimeters(macro)
-	operator_u(macro)
-	operator_b(macro)
-	operator_c(macro)
+	operator_l(macro)
+	operator_i(macro)
+	operator_r(macro)
 	keywords(macro)
 	special(macro)
 };
@@ -211,9 +211,9 @@ auto operator<<(std::ostream& os, const lexeme data) -> std::ostream&
 		/*|---------------|*/\
 
 		delimeters(macro)
-		operator_u(macro)
-		operator_b(macro)
-		operator_c(macro)
+		operator_l(macro)
+		operator_i(macro)
+		operator_r(macro)
 		keywords(macro)
 		special(macro)
 		#undef macro
@@ -231,16 +231,19 @@ template
 >
 struct token
 {
+	// SFINE: use T directly if T is a string impl, otherwise use T::slice
+	typedef std::conditional_t<type::string_impl<T>, typename T::slice, T> string;
+
 	//|---------------|
 	//| the rule of 0 |
 	//|---------------|
 
 	lexeme type;
-	//--[data]--//
+	//--<data>--//
 	uint16_t x; //
 	uint16_t y; //
 	//----------//
-	T::slice data;
+	string data;
 
 	//|----------------------|
 	//| traits::printable<T> |
