@@ -163,10 +163,10 @@ class parser
 {
 	lexer<A, B>& lexer;
 
-	//--<data>--//
-	uint16_t x; //
-	uint16_t y; //
-	//----------//
+	//|-<data>-|
+	uint16_t x;
+	uint16_t y;
+	//|--------|
 
 	#define E($value) error \
 	{                       \
@@ -184,11 +184,13 @@ class parser
 		},                  \
 	}                       \
 
+	//|--------------<maybe>-------------|
 	typedef std::optional<token<B>> maybe;
+	//|----------------------------------|
 
-	//-----------------[buffer]-----------------//
-	std::vector<decltype(lexer.pull())> buffer; //
-	//------------------------------------------//
+	//----------------<buffer>----------------|
+	std::vector<decltype(lexer.pull())> buffer;
+	//----------------------------------------|
 
 	auto peek() -> maybe
 	{
@@ -208,11 +210,7 @@ class parser
 		{
 			typedef std::decay_t<decltype(arg)> T;
 
-			if constexpr (std::is_same_v<T, eof>)
-			{
-				return std::nullopt;
-			}
-			else if constexpr (std::is_same_v<T, error>)
+			if constexpr (std::is_same_v<T, error>)
 			{
 				this->x = arg.x;
 				this->y = arg.y;
@@ -223,7 +221,7 @@ class parser
 
 				return std::nullopt;
 			}
-			else if constexpr (std::is_same_v<T, token<B>>)
+			if constexpr (std::is_same_v<T, token<B>>)
 			{
 				this->x = arg.x;
 				this->y = arg.y;
@@ -234,6 +232,7 @@ class parser
 
 				return /**/ arg /**/;
 			}
+			return std::nullopt;
 		},
 		this->buffer.back());
 	}
@@ -246,7 +245,9 @@ public:
 
 	parser(decltype(lexer) lexer) : lexer {lexer}
 	{
-		this->next(); // on creation, pull a token
+		// on construct
+		this->next();
+		// pull a token
 	}
 
 	//|-----------------|
@@ -255,40 +256,46 @@ public:
 
 	auto pull() -> std::optional<program>
 	{
+		program program;
+
 		try
 		{
-			program program;
-			
-			while (auto decl {this->$decl()})
+			while (true)
 			{
-				//|---------------<INSERT>---------------//
-				program.body.push_back(std::move(decl)); //
-				//|--------------------------------------//
+				if (auto ast {this->stmt_t()})
+				{
+					//|--------------<INSERT>--------------|
+					program.body.push_back(std::move(*ast));
+					//|------------------------------------|
+					continue;
+				}
+				if (auto ast {this->decl_t()})
+				{
+					//|--------------<INSERT>--------------|
+					program.body.push_back(std::move(*ast));
+					//|------------------------------------|
+					continue;
+				}
+				break;
 			}
-			return program;
 		}
-		catch (const error& error)
+		catch (error& error)
 		{
 			#ifndef NDEBUG //-------------|
 			std::cout << error << std::endl;
 			#endif //---------------------|
-
 			return std::nullopt;
 		}
-	}
-
-	auto print()
-	{
-		// TODO
+		return program;
 	}
 
 private:
 
-	//|------------|
-	//| statements |
-	//|------------|
+	//|--------------|
+	//| declarations |
+	//|--------------|
 
-	auto $stmt() -> stmt
+	auto decl_t() -> std::optional<decl>
 	{
 		if (const auto tkn {this->peek()})
 		{
@@ -296,19 +303,246 @@ private:
 			{
 				case lexeme::LET:
 				{
-					return this->stmt_for();
+					return this->decl_var(false);
 				}
 				case lexeme::LET$:
 				{
-					return this->stmt_while();
+					return this->decl_var(true);
 				}
 				case lexeme::FUN:
 				{
-					return this->stmt_if();
+					return this->decl_fun(false);
 				}
 				case lexeme::FUN$:
 				{
+					return this->decl_fun(true);
+				}
+			}
+		}
+		return std::nullopt;
+	}
+
+	auto decl_var(const bool is_const) -> decltype(this->decl_t())
+	{
+		this->next();
+		
+		lang::$var node;
+		// update metadata
+		node.is_const = is_const;
+
+		//|-------------------------------------|
+		//| let ::= "let" symbol ":" T = expr?; |
+		//|-------------------------------------|
+
+		//|--------------------------------------|
+		//| let! ::= "let!" symbol ":" T = expr; |
+		//|--------------------------------------|
+
+		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
+		{
+			this->next(); node.name = tkn->data;
+		}
+		else throw E(u8"[parser] expects <sym>");
+
+		if (auto tkn {this->peek()}; tkn == lexeme::COLON)
+		{
+			this->next(); // nothing to do here
+		}
+		else throw E(u8"[parser] expects ':'");
+
+		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
+		{
+			this->next(); node.type = tkn->data;
+		}
+		else throw E(u8"[parser] expects <sym>");
+
+		if (!node.is_const)
+		{
+			if (auto tkn {this->peek()}; tkn == lexeme::ASSIGN)
+			{
+				this->next(); node.init = *this->expr_t();
+			}
+			// else { throw E(u8"[parser] must init const variable"); }
+
+			if (auto tkn {this->peek()}; tkn == lexeme::S_COLON)
+			{
+				this->next(); // nothing to do here
+			}
+			else throw E(u8"[parser] expects ';'");
+		}
+		else // let! name
+		{
+			if (auto tkn {this->peek()}; tkn == lexeme::ASSIGN)
+			{
+				this->next(); node.init = *this->expr_t();
+			}
+			else throw E(u8"[parser] must init const var");
+
+			if (auto tkn {this->peek()}; tkn == lexeme::S_COLON)
+			{
+				this->next(); // nothing to do here
+			}
+			else throw E(u8"[parser] expects ':'");
+		}
+		return std::make_unique // forge
+		<decltype(node)>(std::move(node));
+	}
+
+	auto decl_fun(const bool is_pure) -> decltype(this->decl_t())
+	{
+		this->next();
+
+		lang::$fun node;
+		// update metadata
+		node.is_pure = is_pure;
+
+		//|---------------------------------------------------|
+		//| param ::= symbol ":" T ( "=" expr )? ("," param)? |
+		//|---------------------------------------------------|
+
+		//|-------------------------------------------------------|
+		//| fun ::= "fun" name "(" param? ")" ":" T "{" stmt* "}" |
+		//|-------------------------------------------------------|
+
+		//|---------------------------------------------------------|
+		//| fun! ::= "fun!" name "(" param? ")" ":" T "{" stmt* "}" | 
+		//|---------------------------------------------------------|
+
+		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
+		{
+			this->next(); node.name = tkn->data;
+		}
+		else throw E(u8"[parser] expects <sym>");
+	
+		if (auto tkn {this->peek()}; tkn == lexeme::L_PAREN)
+		{
+			this->next(); // nothing to do here
+		}
+		else throw E(u8"[parser] expects '('");
+
+		args:
+		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
+		{
+			this->next();
+			
+			lang::$var arg;
+			// update metadata
+			arg.name = tkn->data;
+
+			if (tkn = this->peek(); tkn == lexeme::COLON)
+			{
+				this->next(); // nothing to do here
+			}
+			else throw E(u8"[parser] expects ':'");
+
+			if (tkn = this->peek(); tkn == lexeme::SYMBOL)
+			{
+				this->next(); arg.type = tkn->data;
+			}
+			else throw E(u8"[parser] expects <sym>");
+
+			if (tkn = this->peek(); tkn == lexeme::ASSIGN)
+			{
+				this->next(); arg.init = *this->expr_t();
+			}
+			// else throw E(u8"[parser] expects '='");
+
+			//|------------<INSERT>------------|
+			node.args.push_back(std::move(arg));
+			//|--------------------------------|
+			
+			if (tkn = this->peek(); tkn == lexeme::COMMA)
+			{
+				this->next(); goto args; // <- *wink*
+			}
+			// else throw E(u8"[parser] expects ','");
+		}
+
+		if (auto tkn {this->peek()}; tkn == lexeme::R_PAREN)
+		{
+			this->next(); // nothing to do here
+		}
+		else throw E(u8"[parser] expects ')'");
+
+		if (auto tkn {this->peek()}; tkn == lexeme::COLON)
+		{
+			this->next(); // nothing to do here
+		}
+		else throw E(u8"[parser] expects ':'");
+
+		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
+		{
+			this->next(); node.type = tkn->data;
+		}
+		else throw E(u8"[parser] expects <sym>");
+
+		if (auto tkn {this->peek()}; tkn == lexeme::L_BRACE)
+		{
+			this->next(); // nothing to do here
+		}
+		else throw E(u8"[parser] expects '{'");
+
+		while (true)
+		{
+			if (auto ast {this->stmt_t()})
+			{
+				//|------------<INSERT>------------|
+				node.body.push_back(std::move(*ast));
+				//|--------------------------------|
+				continue;
+			}
+			if (auto ast {this->decl_t()})
+			{
+				//|------------<INSERT>------------|
+				node.body.push_back(std::move(*ast));
+				//|--------------------------------|
+				continue;
+			}
+			if (auto ast {this->expr_t()})
+			{
+				//|------------<INSERT>------------|
+				node.body.push_back(std::move(*ast));
+				//|--------------------------------|
+				continue;
+			}
+			break;
+		}
+
+		if (auto tkn {this->peek()}; tkn == lexeme::R_BRACE)
+		{
+			this->next(); // nothing to do here
+		}
+		else throw E(u8"[parser] expects '}'");
+
+		return std::make_unique // forge
+		<decltype(node)>(std::move(node));
+	}
+
+	//|------------|
+	//| statements |
+	//|------------|
+
+	auto stmt_t() -> std::optional<stmt>
+	{
+		if (const auto tkn {this->peek()})
+		{
+			switch (tkn->type)
+			{
+				case lexeme::IF:
+				{
+					return this->stmt_if();
+				}
+				case lexeme::MATCH:
+				{
 					return this->stmt_match();
+				}
+				case lexeme::FOR:
+				{
+					return this->stmt_for();
+				}
+				case lexeme::WHILE:
+				{
+					return this->stmt_while();
 				}
 				case lexeme::BREAK:
 				{
@@ -324,49 +558,49 @@ private:
 				}
 			}
 		}
-		return nullptr;
+		return std::nullopt;
 	}
 
-	auto stmt_for() -> stmt
+	auto stmt_if() -> decltype(this->stmt_t())
 	{
-		return nullptr;
+		return std::nullopt;
 	}
 
-	auto stmt_while() -> stmt
+	auto stmt_match() -> decltype(this->stmt_t())
 	{
-		return nullptr;
+		return std::nullopt;
 	}
 
-	auto stmt_if() -> stmt
+	auto stmt_for() -> decltype(this->stmt_t())
 	{
-		return nullptr;
+		return std::nullopt;
 	}
 
-	auto stmt_match() -> stmt
+	auto stmt_while() -> decltype(this->stmt_t())
 	{
-		return nullptr;
+		return std::nullopt;
 	}
 
-	auto stmt_break() -> stmt
+	auto stmt_break() -> decltype(this->stmt_t())
 	{
-		return nullptr;
+		return std::nullopt;
 	}
 
-	auto stmt_return() -> stmt
+	auto stmt_return() -> decltype(this->stmt_t())
 	{
-		return nullptr;
+		return std::nullopt;
 	}
 
-	auto stmt_continue() -> stmt
+	auto stmt_continue() -> decltype(this->stmt_t())
 	{
-		return nullptr;
+		return std::nullopt;
 	}
 
 	//|-------------|
 	//| expressions |
 	//|-------------|
 
-	auto $expr() -> expr
+	auto expr_t() -> std::optional<expr>
 	{
 		static const auto prefix
 		{
@@ -484,13 +718,13 @@ private:
 		};
 
 		// pratt parser impl
-		std::function<expr(uint8_t)> impl
+		std::function<std::optional<expr>(uint8_t)> impl
 		{
-			[&](const uint8_t mbp) -> expr
+			[&](const uint8_t mbp) -> std::optional<expr>
 			{
 				auto lhs
 				{
-					[&] -> expr
+					[&] -> std::optional<expr>
 					{
 						if (auto tkn {this->peek()})
 						{
@@ -498,95 +732,95 @@ private:
 							if (op::is_l(*tkn))
 							{
 								this->next();
-								
-								lang::_unary_l node;
 
-								node.lhs = op::to_l(*tkn);
-								node.rhs = impl(UINT8_MAX);
-
+								lang::$unary_l node
+								{
+									.lhs {op::to_l(*tkn)},
+									.rhs {*impl(UINT8_MAX)},
+								};
 								return std::make_unique // forge
 								<decltype(node)>(std::move(node));
 							}
 							// handle primary
-							expr ptr {nullptr};
-
-							if (ptr = std::move(this->expr_call()))
+							if (auto node {this->expr_call()})
 							{
-								return std::move(ptr);
+								return std::move(node); // successful
 							}
-							if (ptr = std::move(this->expr_group()))
+							if (auto node {this->expr_group()})
 							{
-								return std::move(ptr);
+								return std::move(node); // successful
 							}
-							if (ptr = std::move(this->expr_symbol()))
+							if (auto node {this->expr_symbol()})
 							{
-								return std::move(ptr);
+								return std::move(node); // successful
 							}
-							if (ptr = std::move(this->expr_literal()))
+							if (auto node {this->expr_literal()})
 							{
-								return std::move(ptr);
+								return std::move(node); // successful
 							}
-							throw E(u8"[parser.hpp] invalid prefix");
+							// invalid expr
+							return std::nullopt;
 						}
-						else
-						{
-							throw E(u8"[parser.hpp] syntax error");
-						}
+						// error or eof
+						return std::nullopt;
 					}
 					()
 				};
 
-				while (auto tkn {this->peek()})
+				if (lhs != std::nullopt)
 				{
-					// handle postfix
-					if (op::is_r(*tkn))
+					while (auto tkn {this->peek()})
 					{
-						auto [lbp, rbp]
+						// handle postfix
+						if (op::is_r(*tkn))
 						{
-							postfix(*tkn)
-						};
-						if (lbp < mbp)
-						{
-							break;
+							auto [lbp, rbp]
+							{
+								postfix(*tkn)
+							};
+							if (lbp < mbp)
+							{
+								break;
+							}
+							this->next();
+							
+							lang::$unary_r node
+							{
+								.lhs {std::move(*lhs)},
+								.rhs {op::to_r(*tkn)},
+							};
+							lhs = std::make_unique // forge
+							<decltype(node)>(std::move(node));
+							continue;
 						}
-						this->next();
-						
-						lang::_unary_r node;
 
-						node.lhs = std::move(lhs);
-						node.rhs = op::to_r(*tkn);
-
-						lhs = std::make_unique // forge
-						<decltype(node)>(std::move(node));
-						continue;
-					}
-
-					// handle infix
-					if (op::is_i(*tkn))
-					{
-						auto [lbp, rbp]
+						// handle infix
+						if (op::is_i(*tkn))
 						{
-							infix(*tkn)
-						};
-						if (lbp < mbp)
-						{
-							break;
+							auto [lbp, rbp]
+							{
+								infix(*tkn)
+							};
+							if (lbp < mbp)
+							{
+								break;
+							}
+							this->next();
+
+							auto rhs {impl(rbp)};
+
+							lang::$binary node
+							{
+								.lhs {std::move(*lhs)},
+								.mhs {op::to_i(*tkn)},
+								.rhs {std::move(*rhs)},
+							};
+							lhs = std::make_unique // forge
+							<decltype(node)>(std::move(node));
+							continue;
 						}
-						this->next();
-						
-						lang::_binary node;
-
-						auto rhs {impl(rbp)};
-
-						node.lhs = std::move(lhs);
-						node.mhs = op::to_i(*tkn);
-						node.rhs = std::move(rhs);
-
-						lhs = std::make_unique // forge
-						<decltype(node)>(std::move(node));
-						continue;
+						break;
 					}
-					break;
 				}
 				return lhs;
 			}
@@ -594,12 +828,64 @@ private:
 		return impl(0);
 	}
 
-	auto expr_call() -> expr
+	auto expr_call() -> decltype(this->expr_t())
 	{
-		return nullptr;
+		if (auto tkn {this->peek()})
+		{
+			switch (tkn->type)
+			{
+				case lexeme::CALL_M:
+				case lexeme::CALL_S:
+				case lexeme::CALL_U:
+				case lexeme::CALL_N:
+				{
+					this->next();
+
+					lang::$call node;
+
+					node.type = op::to_r(*tkn);
+					
+					if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
+					{
+						this->next(); node.name = tkn->data;
+					}
+					else throw E(u8"[parser] expects <sym>");
+
+					if (auto tkn {this->peek()}; tkn == lexeme::L_PAREN)
+					{
+						this->next(); // nothing to do
+					}
+					else throw E(u8"[parser] expects '('");
+
+					args:
+					if (auto ast {this->expr_t()})
+					{
+						//|------------<INSERT>------------|
+						node.args.push_back(std::move(*ast));
+						//|--------------------------------|
+
+						if (tkn = this->peek(); tkn == lexeme::COMMA)
+						{
+							this->next(); goto args; // <- *wink*
+						}
+						// else throw E(u8"[parser] expects ','");
+					}
+
+					if (auto tkn {this->peek()}; tkn == lexeme::R_PAREN)
+					{
+						this->next(); // nothing to do
+					}
+					else throw E(u8"[parser] expects ')'");
+
+					return std::make_unique // forge
+					<decltype(node)>(std::move(node));
+				}
+			}
+		}
+		return std::nullopt;
 	}
 
-	auto expr_group() -> expr
+	auto expr_group() -> decltype(this->expr_t())
 	{
 		if (auto tkn {this->peek()})
 		{
@@ -607,26 +893,27 @@ private:
 			{
 				case lexeme::L_PAREN:
 				{
-					this->next(); // <- consume '('
+					this->next();
 					
-					lang::_group node;
-					node.body = this->$expr();
+					lang::$group node;
+
+					node.body = *this->expr_t();
 
 					if (this->peek() == lexeme::R_PAREN)
 					{
 						this->next(); // <- consume ')'
 					}
-					else throw E(u8"[parser.hpp] expects ')'");
+					else throw E(u8"[parser] expects ')'");
 
 					return std::make_unique // forge
 					<decltype(node)>(std::move(node));
 				}
 			}
 		}
-		return nullptr;
+		return std::nullopt;
 	}
 
-	auto expr_symbol() -> expr
+	auto expr_symbol() -> decltype(this->expr_t())
 	{
 		if (auto tkn {this->peek()})
 		{
@@ -636,7 +923,8 @@ private:
 				{
 					this->next();
 
-					lang::_symbol node;
+					lang::$symbol node;
+
 					node.name = tkn->data;
 
 					return std::make_unique // forge
@@ -644,10 +932,10 @@ private:
 				}
 			}
 		}
-		return nullptr;
+		return std::nullopt;
 	}
 
-	auto expr_literal() -> expr
+	auto expr_literal() -> decltype(this->expr_t())
 	{
 		if (auto tkn {this->peek()})
 		{
@@ -658,7 +946,8 @@ private:
 				{
 					this->next();
 					
-					lang::_literal node;
+					lang::$literal node;
+
 					node.data = tkn->data;
 					node.type = data::BOOL;
 
@@ -669,7 +958,8 @@ private:
 				{
 					this->next();
 
-					lang::_literal node;
+					lang::$literal node;
+
 					node.data = tkn->data;
 					node.type = data::CODE;
 
@@ -680,7 +970,8 @@ private:
 				{
 					this->next();
 
-					lang::_literal node;
+					lang::$literal node;
+
 					node.data = tkn->data;
 					node.type = data::UTF8;
 
@@ -691,7 +982,8 @@ private:
 				{
 					this->next();
 
-					lang::_literal node;
+					lang::$literal node;
+
 					node.data = tkn->data;
 					node.type = data::F32;
 
@@ -705,7 +997,8 @@ private:
 				{
 					this->next();
 
-					lang::_literal node;
+					lang::$literal node;
+
 					node.data = tkn->data;
 					node.type = data::I32;
 
@@ -714,213 +1007,7 @@ private:
 				}
 			}
 		}
-		return nullptr;
-	}
-
-	//|--------------|
-	//| declarations |
-	//|--------------|
-
-	auto $decl() -> decl
-	{
-		if (const auto tkn {this->peek()})
-		{
-			switch (tkn->type)
-			{
-				case lexeme::LET:
-				{
-					return this->decl_var(false);
-				}
-				case lexeme::LET$:
-				{
-					return this->decl_var(true);
-				}
-				case lexeme::FUN:
-				{
-					return this->decl_fun(false);
-				}
-				case lexeme::FUN$:
-				{
-					return this->decl_fun(true);
-				}
-			}
-		}
-		return nullptr;
-	}
-
-	auto decl_var(const bool is_const) -> decl
-	{
-		this->next();
-		
-		lang::_var ast;
-		// update metadata
-		ast.is_const = is_const;
-
-		//|-------------------------------------|
-		//| let ::= "let" symbol ":" T = expr?; |
-		//|-------------------------------------|
-
-		//|--------------------------------------|
-		//| let! ::= "let!" symbol ":" T = expr; |
-		//|--------------------------------------|
-
-		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
-		{
-			this->next(); ast.name = tkn->data;
-		}
-		else throw E(u8"[parser.hpp] expects <sym>");
-
-		if (auto tkn {this->peek()}; tkn == lexeme::COLON)
-		{
-			this->next(); // nothing to do here
-		}
-		else throw E(u8"[parser.hpp] expects ':'");
-
-		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
-		{
-			this->next(); ast.type = tkn->data;
-		}
-		else throw E(u8"[parser.hpp] expects <sym>");
-
-		if (!ast.is_const)
-		{
-			if (auto tkn {this->peek()}; tkn == lexeme::ASSIGN)
-			{
-				this->next(); ast.init = this->$expr();
-			}
-			// else { throw E(u8"[parser.hpp] must init const variable"); }
-
-			if (auto tkn {this->peek()}; tkn == lexeme::S_COLON)
-			{
-				this->next(); // nothing to do here
-			}
-			else throw E(u8"[parser.hpp] expects ';'");
-		}
-		else // let! name
-		{
-			if (auto tkn {this->peek()}; tkn == lexeme::ASSIGN)
-			{
-				this->next(); ast.init = this->$expr();
-			}
-			else throw E(u8"[parser.hpp] must init const var");
-
-			if (auto tkn {this->peek()}; tkn == lexeme::S_COLON)
-			{
-				this->next(); // nothing to do here
-			}
-			else throw E(u8"[parser.hpp] expects ':'");
-		}
-		return std::make_unique<decltype(ast)>(std::move(ast));
-	}
-
-	auto decl_fun(const bool is_pure) -> decl
-	{
-		this->next();
-
-		lang::_fun ast;
-		// update metadata
-		ast.is_pure = is_pure;
-
-		//|---------------------------------------------------|
-		//| param ::= symbol ":" T ( "=" expr )? ("," param)? |
-		//|---------------------------------------------------|
-
-		//|-------------------------------------------------------|
-		//| fun ::= "fun" name "(" param? ")" ":" T "{" stmt* "}" |
-		//|-------------------------------------------------------|
-
-		//|---------------------------------------------------------|
-		//| fun! ::= "fun!" name "(" param? ")" ":" T "{" stmt* "}" | 
-		//|---------------------------------------------------------|
-
-		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
-		{
-			this->next(); ast.name = tkn->data;
-		}
-		else throw E(u8"[parser.hpp] expects <sym>");
-	
-		if (auto tkn {this->peek()}; tkn == lexeme::L_PAREN)
-		{
-			this->next(); // nothing to do here
-		}
-		else throw E(u8"[parser.hpp] expects '('");
-
-		args:
-		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
-		{
-			this->next();
-			
-			lang::_var arg;
-			// update metadata
-			arg.name = tkn->data;
-
-			if (tkn = this->peek(); tkn == lexeme::COLON)
-			{
-				this->next(); // nothing to do here
-			}
-			else throw E(u8"[parser.hpp] expects ':'");
-
-			if (tkn = this->peek(); tkn == lexeme::SYMBOL)
-			{
-				this->next(); arg.type = tkn->data;
-			}
-			else throw E(u8"[parser.hpp] expects <sym>");
-
-			if (tkn = this->peek(); tkn == lexeme::ASSIGN)
-			{
-				this->next(); arg.init = this->$expr();
-			}
-			// else throw E(u8"[parser.hpp] expects '='");
-
-			//|------------<INSERT>-------------//
-			ast.args.push_back(std::move(arg)); //
-			//|---------------------------------//
-			
-			if (tkn = this->peek(); tkn == lexeme::COMMA)
-			{
-				this->next(); goto args; // <- *wink*
-			}
-			// else throw E(u8"[parser.hpp] expects ','");
-		}
-
-		if (auto tkn {this->peek()}; tkn == lexeme::R_PAREN)
-		{
-			this->next(); // nothing to do here
-		}
-		else throw E(u8"[parser.hpp] expects ')'");
-
-		if (auto tkn {this->peek()}; tkn == lexeme::COLON)
-		{
-			this->next(); // nothing to do here
-		}
-		else throw E(u8"[parser.hpp] expects ':'");
-
-		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
-		{
-			this->next(); ast.type = tkn->data;
-		}
-		else throw E(u8"[parser.hpp] expects <sym>");
-
-		if (auto tkn {this->peek()}; tkn == lexeme::L_BRACE)
-		{
-			this->next(); // nothing to do here
-		}
-		else throw E(u8"[parser.hpp] expects '{'");
-
-		while (auto stmt {this->$stmt()})
-		{
-			//|-------------<INSERT>-------------//
-			ast.body.push_back(std::move(stmt)); //
-			//|----------------------------------//
-		}
-
-		if (auto tkn {this->peek()}; tkn == lexeme::R_BRACE)
-		{
-			this->next(); // nothing to do here
-		}
-		else throw E(u8"[parser.hpp] expects '}'");
-
-		return std::make_unique<decltype(ast)>(std::move(ast));
+		return std::nullopt;
 	}
 
 	#undef E

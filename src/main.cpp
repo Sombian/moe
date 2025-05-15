@@ -25,7 +25,6 @@ auto main() -> int
 				decltype(file.data)
 			>
 			lexer {file};
-			// lexer.print();
 
 			parser
 			<
@@ -33,26 +32,12 @@ auto main() -> int
 				decltype(file.data)
 			>
 			parser {lexer};
-			// parser.print();
 
 			if (const auto result {parser.pull()})
 			{
-				for (const auto& decl : result->body)
+				for (const auto& node : result->body)
 				{
-					//---------------------------//
-					const auto ptr {decl.get()}; // <- get raw ptr
-					//---------------------------//
-
-					if (const auto* var {dynamic_cast<lang::_var*>(ptr)})
-					{
-						std::cout << "variable:" << var->name << std::endl;
-						continue;
-					}
-					if (const auto* fun {dynamic_cast<lang::_fun*>(ptr)})
-					{
-						std::cout << "function:" << fun->name << std::endl;
-						continue;
-					}
+					// TODO: do something with this
 				}
 			}
 		},
