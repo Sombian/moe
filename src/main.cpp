@@ -35,7 +35,7 @@ auto main() -> int
 
 			if (const auto result {parser.pull()})
 			{
-				for (const auto& node : result->body)
+				for (const auto& node : result->ast)
 				{
 					// TODO: do something with this
 				}

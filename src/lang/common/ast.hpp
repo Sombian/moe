@@ -95,6 +95,12 @@ typedef std::variant
 >
 node;
 
+typedef std::vector
+<
+	node
+>
+body;
+
 enum class data : uint8_t
 {
 	//|----------------|
@@ -177,7 +183,7 @@ namespace lang
 		many<$var> args;
 		only<utf8> name;
 		only<utf8> type;
-		many<node> body;
+		only<body> body;
 	};
 }
 
@@ -190,14 +196,14 @@ namespace lang
 	struct $if
 	{
 		many<expr> cases;
-		many<stmt> block;
+		many<body> block;
 	};
 
 	struct $match
 	{
 		only<expr> input;
 		many<expr> cases;
-		many<stmt> block;
+		many<body> block;
 	};
 
 	struct $for
@@ -205,13 +211,13 @@ namespace lang
 		only<expr> setup;
 		only<expr> input;
 		only<expr> after;
-		only<stmt> block;
+		only<body> block;
 	};
 
 	struct $while
 	{
 		only<expr> input;
-		only<stmt> block;
+		only<body> block;
 	};
 	
 	struct $break
@@ -268,7 +274,7 @@ namespace lang
 
 	struct $group
 	{
-		only<expr> body;
+		only<expr> expr;
 	};
 
 	struct $call
@@ -285,5 +291,5 @@ namespace lang
 
 struct program
 {
-	many<node> body;
+	many<node> ast;
 };
