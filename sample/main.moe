@@ -24,4 +24,4 @@ fun! main(): i32
 	// TODO
 }
 
-let! foo: f32 = ();
+let! foo: f32 = (-1);

@@ -33,9 +33,9 @@ auto main() -> int
 			>
 			parser {lexer};
 
-			if (const auto result {parser.pull()})
+			if (const auto exe {parser.pull()})
 			{
-				for (const auto& node : result->ast)
+				for (const auto& node : exe->ast)
 				{
 					// TODO: do something with this
 				}

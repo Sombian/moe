@@ -69,6 +69,7 @@ namespace lang
 	/*|---------|*/           \
 	macro(B_OR, u8"or")       \
 	macro(B_AND, u8"and")     \
+	macro(B_XOR, u8"xor")     \
 	/*|-------|*/             \
 	/*| shift |*/             \
 	/*|-------|*/             \

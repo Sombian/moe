@@ -141,6 +141,8 @@ enum class op_l : uint8_t
 #define macro(K, V) K,
 {
 	operator_l(macro)
+	ADD, // special
+	SUB, // special
 };
 #undef macro
 
@@ -159,6 +161,164 @@ enum class op_r : uint8_t
 	operator_r(macro)
 };
 #undef macro
+
+//|-----------|
+//| operators |
+//|-----------|
+
+namespace op
+{
+	template<typename B>
+	auto is_l(const token<B>& tkn) -> bool
+	{
+		switch (tkn.type)
+		{
+			#define macro(K, V)  \
+			/*|---------------|*/\
+			case lexeme::K:      \
+			{                    \
+				return true;     \
+			}                    \
+			/*|---------------|*/\
+		
+			case lexeme::ADD:
+			{
+				return true;
+			}
+			case lexeme::SUB:
+			{
+				return true;
+			}
+			operator_l(macro)
+			#undef macro
+			default:
+			{
+				return false;
+			}
+		}
+	}
+
+	template<typename B>
+	auto l(const token<B>& tkn) -> op_l
+	{
+		switch (tkn.type)
+		{
+			#define macro(K, V)  \
+			/*|---------------|*/\
+			case lexeme::K:      \
+			{                    \
+				return op_l::K;  \
+			}                    \
+			/*|---------------|*/\
+		
+			case lexeme::ADD:
+			{
+				return op_l::ADD;
+			}
+			case lexeme::SUB:
+			{
+				return op_l::SUB;
+			}
+			operator_l(macro)
+			#undef macro
+			default:
+			{
+				assert(!!!"error");
+				std::unreachable();
+			}
+		}
+	}
+
+	template<typename B>
+	auto is_i(const token<B>& tkn) -> bool
+	{
+		switch (tkn.type)
+		{
+			#define macro(K, V)  \
+			/*|---------------|*/\
+			case lexeme::K:      \
+			{                    \
+				return true;     \
+			}                    \
+			/*|---------------|*/\
+		
+			operator_i(macro)
+			#undef macro
+			default:
+			{
+				return false;
+			}
+		}
+	}
+
+	template<typename B>
+	auto i(const token<B>& tkn) -> op_i
+	{
+		switch (tkn.type)
+		{
+			#define macro(K, V)  \
+			/*|---------------|*/\
+			case lexeme::K:      \
+			{                    \
+				return op_i::K;  \
+			}                    \
+			/*|---------------|*/\
+		
+			operator_i(macro)
+			#undef macro
+			default:
+			{
+				assert(!!!"error");
+				std::unreachable();
+			}
+		}
+	}
+
+	template<typename B>
+	auto is_r(const token<B>& tkn) -> bool
+	{
+		switch (tkn.type)
+		{
+			#define macro(K, V)  \
+			/*|---------------|*/\
+			case lexeme::K:      \
+			{                    \
+				return true;     \
+			}                    \
+			/*|---------------|*/\
+		
+			operator_r(macro)
+			#undef macro
+			default:
+			{
+				return false;
+			}
+		}
+	}
+
+	template<typename B>
+	auto r(const token<B>& tkn) -> op_r
+	{
+		switch (tkn.type)
+		{
+			#define macro(K, V)  \
+			/*|---------------|*/\
+			case lexeme::K:      \
+			{                    \
+				return op_r::K;  \
+			}                    \
+			/*|---------------|*/\
+		
+			operator_r(macro)
+			#undef macro
+			default:
+			{
+				assert(!!!"error");
+				std::unreachable();
+			}
+		}
+	}
+}
 
 //|--------------|
 //| declarations |
