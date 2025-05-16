@@ -7,6 +7,7 @@
 #include <variant>
 #include <fstream>
 #include <optional>
+#include <iostream>
 #include <filesystem>
 
 #include "models/str.hpp"
@@ -32,16 +33,16 @@ namespace fs
 	template<type::string T>
 	auto open(const T& path) -> std::optional<std::variant<file<T, utf8>, file<T, utf16>, file<T, utf32>>>
 	{
+		#ifndef NDEBUG //-------------|
+		std::cout << path << std::endl;
+		#endif //---------------------|
+	
 		auto sys {std::filesystem::path(path.c_str())};
-
-		//|-----------------------|
-		//| step 1. open the file |
-		//|-----------------------|
 
 		if (std::ifstream ifs {sys, std::ios::binary})
 		{
 			//|-------------------------|
-			//| step 2. detect encoding |
+			//| step 1. detect encoding |
 			//|-------------------------|
 
 			enum encoding : uint8_t
@@ -128,7 +129,7 @@ namespace fs
 			const auto off {BOM & 0xF};
 
 			//|------------------------|
-			//| step 3. calculate size |
+			//| step 2. calculate size |
 			//|------------------------|
 
 			// to the BOM
@@ -142,7 +143,7 @@ namespace fs
 			ifs.seekg(off, std::ios::beg);
 
 			//|------------------------|
-			//| step 4. read file data |
+			//| step 3. read file data |
 			//|------------------------|
 
 			const auto write_native

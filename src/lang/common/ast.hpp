@@ -2,38 +2,98 @@
 
 #include <memory>
 #include <vector>
+#include <variant>
 #include <cstdint>
 
 #include "token.hpp"
 
 #include "models/str.hpp"
 
-struct stmt_base { virtual ~stmt_base() = default; };
-struct expr_base { virtual ~expr_base() = default; };
-struct decl_base { virtual ~decl_base() = default; };
+namespace lang
+{
+	struct $var;
+	struct $fun;
+}
+
+typedef std::variant
+<
+	std::unique_ptr<lang::$var>,
+	std::unique_ptr<lang::$fun>
+>
+decl;
+
+namespace lang
+{
+	struct $if;
+	struct $match;
+	struct $for;
+	struct $while;
+	struct $break;
+	struct $return;
+	struct $continue;
+}
+
+typedef std::variant
+<
+	std::unique_ptr<lang::$if>,
+	std::unique_ptr<lang::$match>,
+	std::unique_ptr<lang::$for>,
+	std::unique_ptr<lang::$while>,
+	std::unique_ptr<lang::$break>,
+	std::unique_ptr<lang::$return>,
+	std::unique_ptr<lang::$continue>
+>
+stmt;
+
+namespace lang
+{
+	struct $unary_l;
+	struct $binary;
+	struct $unary_r;
+	struct $literal;
+	struct $symbol;
+	struct $group;
+	struct $call;
+}
+
+typedef std::variant
+<
+	std::unique_ptr<lang::$unary_l>,
+	std::unique_ptr<lang::$binary>,
+	std::unique_ptr<lang::$unary_r>,
+	std::unique_ptr<lang::$literal>,
+	std::unique_ptr<lang::$symbol>,
+	std::unique_ptr<lang::$group>,
+	std::unique_ptr<lang::$call>
+>
+expr;
 
 namespace
 {
-	//|------<single>----//|
-	template             //|
-	<typename T>         //|
-	using single = T;    //|
-	//|------------------//|
+	//|----<only>---//---|
+	template        //   |
+	<typename T>    //   |
+	using only = T; //   |
+	//|-------------//---|
 }
 
 namespace
 {
-	//|------<vector>----//|
-	template             //|
-	<typename T>         //|
-	using vector =       //|
-	std::vector<T>;      //|
-	//|------------------//|
+	//|----<many>---//---|
+	template        //   |
+	<typename T>    //   |
+	using many =    //   |
+	std::vector<T>; //   |
+	//|-------------//---|
 }
 
-typedef std::unique_ptr<stmt_base> stmt;
-typedef std::unique_ptr<expr_base> expr;
-typedef std::unique_ptr<decl_base> decl;
+typedef std::variant
+<
+	decl,
+	stmt,
+	expr
+>
+node;
 
 enum class data : uint8_t
 {
@@ -70,6 +130,7 @@ enum class data : uint8_t
 	UTF32,
 };
 
+// lhs(prefix) operator
 enum class op_l : uint8_t
 #define macro(K, V) K,
 {
@@ -77,6 +138,7 @@ enum class op_l : uint8_t
 };
 #undef macro
 
+// mhs(infix) operator
 enum class op_i : uint8_t
 #define macro(K, V) K,
 {
@@ -84,6 +146,7 @@ enum class op_i : uint8_t
 };
 #undef macro
 
+// rhs(postfix) operator
 enum class op_r : uint8_t
 #define macro(K, V) K,
 {
@@ -91,14 +154,32 @@ enum class op_r : uint8_t
 };
 #undef macro
 
-//|---------|
-//| program |
-//|---------|
+//|--------------|
+//| declarations |
+//|--------------|
 
-struct program
+namespace lang
 {
-	vector<decl> body;
-};
+	struct $var
+	{
+		//-------------//
+		bool is_const; //
+		//-------------//
+		only<utf8> name;
+		only<utf8> type;
+		only<expr> init;
+	};
+	struct $fun
+	{
+		//------------//
+		bool is_pure; //
+		//------------//
+		many<$var> args;
+		only<utf8> name;
+		only<utf8> type;
+		many<node> body;
+	};
+}
 
 //|------------|
 //| statements |
@@ -106,62 +187,46 @@ struct program
 
 namespace lang
 {
-	//|------|
-	//| loop |
-	//|------|
-
-	struct _for final : public stmt_base
+	struct $if
 	{
-		single<expr> a;
-		single<expr> b;
-		single<expr> c;
-		single<stmt> block;
+		many<expr> cases;
+		many<stmt> block;
 	};
 
-	struct _while final : public stmt_base
+	struct $match
 	{
-		single<expr> in;
-		// single<expr> b;
-		// single<expr> c;
-		single<stmt> block;
+		only<expr> input;
+		many<expr> cases;
+		many<stmt> block;
 	};
 
-	//|--------|
-	//| branch |
-	//|--------|
-
-	struct _if final : public stmt_base
+	struct $for
 	{
-		single<expr> in;
-		single<stmt> if_block;
-		single<stmt> else_block;
-		vector<stmt> else_if_block;
+		only<expr> setup;
+		only<expr> input;
+		only<expr> after;
+		only<stmt> block;
 	};
 
-	struct _match final : public stmt_base
+	struct $while
 	{
-		single<expr> in;
-		vector<expr> match_cases;
-		vector<stmt> match_blocks;
+		only<expr> input;
+		only<stmt> block;
+	};
+	
+	struct $break
+	{
+		only<utf8> label;
 	};
 
-	//|---------|
-	//| control |
-	//|---------|
-
-	struct _break final : public stmt_base
+	struct $return
 	{
-		single<utf8> label;
+		only<expr> value;
 	};
 
-	struct _return final : public stmt_base
+	struct $continue
 	{
-		single<expr> value;
-	};
-
-	struct _continue final : public stmt_base
-	{
-		single<utf8> label;
+		only<utf8> label;
 	};
 }
 
@@ -171,67 +236,54 @@ namespace lang
 
 namespace lang
 {
-	struct _unary_l final : public expr_base
+	struct $unary_l
 	{
-		single<op_l> lhs;
-		single<expr> rhs;
+		only<op_l> lhs;
+		only<expr> rhs;
 	};
 
-	struct _binary final : public expr_base
+	struct $binary
 	{
-		single<expr> lhs;
-		single<op_i> mhs;
-		single<expr> rhs;
+		only<expr> lhs;
+		only<op_i> mhs;
+		only<expr> rhs;
 	};
 
-	struct _unary_r final : public expr_base
+	struct $unary_r
 	{
-		single<expr> lhs;
-		single<op_r> rhs;
+		only<expr> lhs;
+		only<op_r> rhs;
 	};
 
-	struct _literal final : public expr_base
+	struct $literal
 	{
-		single<data> type;
-		single<utf8> data;
+		only<data> type;
+		only<utf8> data;
 	};
 
-	struct _symbol final : public expr_base
+	struct $symbol
 	{
-		single<utf8> name;
+		only<utf8> name;
 	};
 
-	struct _call final : public expr_base
+	struct $group
 	{
-		single<op_r> op;
-		single<utf8> name;
-		vector<expr> args;
+		only<expr> body;
+	};
+
+	struct $call
+	{
+		only<op_r> type;
+		only<utf8> name;
+		many<expr> args;
 	};
 }
 
-//|--------------|
-//| declarations |
-//|--------------|
+//|---------------|
+//| "TIRO FINALE" |
+//|---------------|
 
-namespace lang
+struct program
 {
-	struct _var final : public decl_base
-	{
-		//-------------//
-		bool is_const; //
-		//-------------//
-		single<utf8> name;
-		single<utf8> type;
-		single<expr> init;
-	};
-	struct _fun final : public decl_base
-	{
-		//------------//
-		bool is_pure; //
-		//------------//
-		vector<_var> args;
-		single<utf8> name;
-		single<utf8> type;
-		vector<stmt> body;
-	};
-}
+	many<node> body;
+};

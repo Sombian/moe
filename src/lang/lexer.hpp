@@ -218,33 +218,6 @@ public:
 		return eof {};
 	}
 
-	auto print()
-	{
-		lexer clone {this->file};
-
-		while (std::visit([&](auto&& arg) -> bool
-		{
-			typedef std::decay_t<decltype(arg)> T;
-
-			if constexpr (std::is_same_v<T, error>)
-			{
-				//-----------------------------//
-				std::cout << arg << std::endl; //
-				//-----------------------------//
-				return true;
-			}
-			if constexpr (std::is_same_v<T, token<B>>)
-			{
-				//-----------------------------//
-				std::cout << arg << std::endl; //
-				//-----------------------------//
-				return true;
-			}
-			return false;
-		},
-		clone.pull()));
-	}
-
 private:
 
 	//|----------|
@@ -293,11 +266,11 @@ private:
 
 		if (len != 1)
 		{
-			return E(u8"[lexer.hpp] code length must be 1");
+			return E(u8"[lexer] code length must be 1");
 		}
 		if (!this->out)
 		{
-			return E(u8"[lexer.hpp] incomplete code literal");
+			return E(u8"[lexer] incomplete code literal");
 		}
 		return T(lexeme::CHAR);
 	}
@@ -313,7 +286,7 @@ private:
 
 		if (!this->out)
 		{
-			return E(u8"[lexer.hpp] incomplete string literal");
+			return E(u8"[lexer] incomplete string literal");
 		}
 		return T(lexeme::TEXT);
 	}
@@ -348,7 +321,7 @@ private:
 
 		if (this->ptr - &this->it == 2)
 		{
-			return E(u8"[lexer.hpp] incomplete bin literal");
+			return E(u8"[lexer] incomplete bin literal");
 		}
 		return T(lexeme::BIN);
 	}
@@ -385,7 +358,7 @@ private:
 
 		if (this->ptr - &this->it == 2)
 		{
-			return E(u8"[lexer.hpp] incomplete oct literal");
+			return E(u8"[lexer] incomplete oct literal");
 		}
 		return T(lexeme::OCT);
 	}
@@ -431,7 +404,7 @@ private:
 
 		if (this->ptr - &this->it == 2)
 		{
-			return E(u8"[lexer.hpp] incomplete hex literal");
+			return E(u8"[lexer] incomplete hex literal");
 		}
 		return T(lexeme::HEX);
 	}
@@ -530,7 +503,7 @@ private:
 		// infinite loop fix
 		if (t_len == 0 && s_len == 0)
 		{
-			return E(u8"[lexer.hpp] expects XID_Start");
+			return E(u8"[lexer] expects XID_Start");
 		}
 
 		// skip unnecessary iteration

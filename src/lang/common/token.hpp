@@ -231,7 +231,7 @@ template
 >
 struct token
 {
-	// SFINE: use T directly if T is a string impl, otherwise use T::slice
+	// SFINE: use T::slice directly if T is a string impl, otherwise use T
 	typedef std::conditional_t<type::string_impl<T>, typename T::slice, T> string;
 
 	//|---------------|
@@ -239,11 +239,18 @@ struct token
 	//|---------------|
 
 	lexeme type;
-	//--<data>--//
-	uint16_t x; //
-	uint16_t y; //
-	//----------//
+	//|-<data>-|
+	uint16_t x;
+	uint16_t y;
+	//|--------|
 	string data;
+
+public:
+
+	auto operator==(lexeme type) const -> bool
+	{
+		return this->type == type; // <- type equality
+	}
 
 	//|----------------------|
 	//| traits::printable<T> |
