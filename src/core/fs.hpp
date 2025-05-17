@@ -54,77 +54,80 @@ namespace fs
 				UTF32_BE = (4 << 4) | 4,
 				UTF32_LE = (5 << 4) | 4,
 			}
-			const BOM = [&] -> encoding
+			const BOM
 			{
-				char buffer[4]
+				[&] -> encoding
 				{
-					0, // <- clear
-					0, // <- clear
-					0, // <- clear
-					0, // <- clear
-				};
+					char buffer[4]
+					{
+						0, // <- clear
+						0, // <- clear
+						0, // <- clear
+						0, // <- clear
+					};
 
-				ifs.seekg(0, std::ios::beg);
-				ifs.read(&buffer[0], 4);
+					ifs.seekg(0, std::ios::beg);
+					ifs.read(&buffer[0], 4);
 
-				if
-				(
-					buffer[0] == '\x00'
-					&&
-					buffer[1] == '\x00'
-					&&
-					buffer[2] == '\xFE'
-					&&
-					buffer[3] == '\xFF'
-				)
-				{
-					return UTF32_BE;
+					if
+					(
+						buffer[0] == '\x00'
+						&&
+						buffer[1] == '\x00'
+						&&
+						buffer[2] == '\xFE'
+						&&
+						buffer[3] == '\xFF'
+					)
+					{
+						return UTF32_BE;
+					}
+					if
+					(
+						buffer[0] == '\xFF'
+						&&
+						buffer[1] == '\xFE'
+						&&
+						buffer[2] == '\x00'
+						&&
+						buffer[3] == '\x00'
+					)
+					{
+						return UTF32_LE;
+					}
+					if
+					(
+						buffer[0] == '\xFE'
+						&&
+						buffer[1] == '\xFF'
+					)
+					{
+						return UTF16_BE;
+					}
+					if
+					(
+						buffer[0] == '\xFF'
+						&&
+						buffer[1] == '\xFE'
+					)
+					{
+						return UTF16_LE;
+					}
+					if
+					(
+						buffer[0] == '\xEF'
+						&&
+						buffer[1] == '\xBB'
+						&&
+						buffer[2] == '\xBF'
+					)
+					{
+						return UTF8_BOM;
+					}
+					return UTF8_STD;
 				}
-				if
-				(
-					buffer[0] == '\xFF'
-					&&
-					buffer[1] == '\xFE'
-					&&
-					buffer[2] == '\x00'
-					&&
-					buffer[3] == '\x00'
-				)
-				{
-					return UTF32_LE;
-				}
-				if
-				(
-					buffer[0] == '\xFE'
-					&&
-					buffer[1] == '\xFF'
-				)
-				{
-					return UTF16_BE;
-				}
-				if
-				(
-					buffer[0] == '\xFF'
-					&&
-					buffer[1] == '\xFE'
-				)
-				{
-					return UTF16_LE;
-				}
-				if
-				(
-					buffer[0] == '\xEF'
-					&&
-					buffer[1] == '\xBB'
-					&&
-					buffer[2] == '\xBF'
-				)
-				{
-					return UTF8_BOM;
-				}
-				return UTF8_STD;
-			}
-			();
+				()
+			};
 
 			const auto off {BOM & 0xF};
 
@@ -201,7 +204,7 @@ namespace fs
 				{
 					typedef char8_t unit;
 					
-					text<unit> data {size / sizeof(unit)};
+					text<unit> data (size / sizeof(unit));
 
 					write_native(data); // no need to swap
 
@@ -211,7 +214,7 @@ namespace fs
 				{
 					typedef char16_t unit;
 
-					text<unit> data {size / sizeof(unit)};
+					text<unit> data (size / sizeof(unit));
 
 					if (std::endian::native == std::endian::big)
 					{
@@ -227,7 +230,7 @@ namespace fs
 				{
 					typedef char16_t unit;
 
-					text<unit> data {size / sizeof(unit)};
+					text<unit> data (size / sizeof(unit));
 
 					if (std::endian::native == std::endian::little)
 					{
@@ -243,7 +246,7 @@ namespace fs
 				{
 					typedef char32_t unit;
 
-					text<unit> data {size / sizeof(unit)};
+					text<unit> data (size / sizeof(unit));
 
 					if (std::endian::native == std::endian::big)
 					{
@@ -259,7 +262,7 @@ namespace fs
 				{
 					typedef char32_t unit;
 
-					text<unit> data {size / sizeof(unit)};
+					text<unit> data (size / sizeof(unit));
 					
 					if (std::endian::native == std::endian::little)
 					{

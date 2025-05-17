@@ -281,7 +281,7 @@ private:
 				node.init = *this->expr_t().or_else([&]
 					-> decltype(this->expr_t())
 				{throw E(u8"[parser] expects expr");});
-				//------------------------------------|
+				//|-----------------------------------|
 			}
 			// else throw E(u8"[parser] must init const var");
 		}
@@ -295,7 +295,7 @@ private:
 				node.init = *this->expr_t().or_else([&]
 					-> decltype(this->expr_t())
 				{throw E(u8"[parser] expects expr");});
-				//------------------------------------|
+				//|-----------------------------------|
 			}
 			else throw E(u8"[parser] must init const var");
 		}
@@ -383,7 +383,7 @@ private:
 				args.init = *this->expr_t().or_else([&]
 					-> decltype(this->expr_t())
 				{throw E(u8"[parser] expects expr");});
-				//------------------------------------|
+				//|-----------------------------------|
 			}
 			// else throw E(u8"[parser] expects '='");
 
@@ -558,6 +558,19 @@ private:
 
 		lang::$break node;
 
+		if (this->peek(lexeme::SYMBOL))
+		{
+			//|----------<copy>----------|
+			const auto tkn {*this->peek()};
+			//|--------------------------|
+
+			this->next();
+
+			//|----------<update>----------|
+			node.label = std::move(tkn.data);
+			//|----------------------------|
+		}
+
 		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
 	}
@@ -591,9 +604,18 @@ private:
 
 		lang::$continue node;
 
-		//|---------------|
-		//| "TIRO FINALE" |
-		//|---------------|
+		if (this->peek(lexeme::SYMBOL))
+		{
+			//|----------<copy>----------|
+			const auto tkn {*this->peek()};
+			//|--------------------------|
+
+			this->next();
+
+			//|----------<update>----------|
+			node.label = std::move(tkn.data);
+			//|----------------------------|
+		}
 
 		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
@@ -625,7 +647,7 @@ private:
 								std::optional rhs {impl(69).or_else([&]
 									-> decltype(this->expr_t())
 								{throw E(u8"[parser] expects expr");})};
-								//------------------------------------|
+								//|-----------------------------------|
 
 								lang::$unary_l node
 								{
@@ -750,7 +772,7 @@ private:
 							std::optional rhs {impl(rbp).or_else([&]
 								-> decltype(this->expr_t())
 							{throw E(u8"[parser] expects expr");})};
-							//------------------------------------|
+							//|-----------------------------------|
 
 							lang::$binary node
 							{
@@ -835,10 +857,6 @@ private:
 					}
 					else throw E(u8"[parser] expects ')'");
 
-					//|---------------|
-					//| "TIRO FINALE" |
-					//|---------------|
-
 					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
@@ -863,7 +881,7 @@ private:
 					node.expr = *this->expr_t().or_else([&]
 						-> decltype(this->expr_t())
 					{throw E(u8"[parser] expects expr");});
-					//------------------------------------|
+					//|-----------------------------------|
 
 					if (this->peek(lexeme::R_PAREN))
 					{

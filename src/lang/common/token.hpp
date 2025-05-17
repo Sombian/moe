@@ -240,10 +240,10 @@ struct token
 	//|---------------|
 
 	lexeme type;
-	//|-<data>-|
+	//|-------|
 	uint16_t x;
 	uint16_t y;
-	//|--------|
+	//|-------|
 	string data;
 
 public:

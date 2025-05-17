@@ -141,8 +141,8 @@ enum class data : uint8_t
 enum class op_l : uint8_t
 #define macro(K, V) K,
 {
-	ADD, // v. prefix
-	SUB, // v. prefix
+	ADD, // prefix ver.
+	SUB, // prefix ver.
 	operator_l(macro)
 };
 #undef macro

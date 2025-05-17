@@ -8,5 +8,5 @@
 		".*.gitignore": true,
 		// 3rd party sub folders
 		"3rd-party/*/*": true,
-	}
+	},
 }

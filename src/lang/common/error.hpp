@@ -9,10 +9,10 @@
 struct error
 {
 	utf8 msg;
-	//|-<data>-|
+	//|-------|
 	uint16_t x;
 	uint16_t y;
-	//|--------|
+	//|-------|
 
 	//|----------------------|
 	//| traits::printable<T> |

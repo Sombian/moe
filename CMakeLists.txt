@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.10)
 
 #-------------#
 # set project #
@@ -23,7 +23,7 @@ add_executable(${PROJECT_NAME}
 	src/main.cpp
 )
 
-add_executable(codegen_tools
+add_executable(codegen_auto
 	scripts/main.cpp
 )
 
@@ -34,7 +34,7 @@ target_include_directories(${PROJECT_NAME}
 		${CMAKE_SOURCE_DIR}/3rd-party
 )
 
-target_include_directories(codegen_tools
+target_include_directories(codegen_auto
 	PUBLIC
 		${CMAKE_SOURCE_DIR}/src
 	PRIVATE
@@ -68,20 +68,18 @@ add_custom_command(
 		${CMAKE_SOURCE_DIR}/src/data/stage2.txt
 		${CMAKE_SOURCE_DIR}/src/data/stage3.txt
 	COMMAND
-		codegen_tools
-	DEPENDS
-		${CMAKE_SOURCE_DIR}/scripts/auto/*.txt
+		codegen_auto
 	WORKING_DIRECTORY
-		${CMAKE_SOURCE_DIR}#---<IMPORTANT>---#
+		${CMAKE_SOURCE_DIR}
 )
 
-add_custom_target(codegen_out ALL
+add_custom_target(codegen_files ALL
 	DEPENDS
 		${CMAKE_SOURCE_DIR}/src/data/stage1.txt
 		${CMAKE_SOURCE_DIR}/src/data/stage2.txt
 		${CMAKE_SOURCE_DIR}/src/data/stage3.txt
 )
 
-#-----------------<IMPORTANT>-----------------#
-add_dependencies(${PROJECT_NAME} codegen_out) #
-#---------------------------------------------#
+#------------------<IMPORTANT>------------------#
+add_dependencies(${PROJECT_NAME} codegen_files) #
+#-----------------------------------------------#
