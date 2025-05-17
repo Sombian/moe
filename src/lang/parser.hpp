@@ -72,17 +72,6 @@ class parser
 		{
 			typedef std::decay_t<decltype(arg)> T;
 
-			if constexpr (std::is_same_v<T, error>)
-			{
-				this->x = arg.x;
-				this->y = arg.y;
-
-				#ifndef NDEBUG //------------|
-				std::cout << arg << std::endl;
-				#endif //--------------------|
-
-				return std::nullopt;
-			}
 			if constexpr (std::is_same_v<T, token<B>>)
 			{
 				this->x = arg.x;
@@ -94,7 +83,63 @@ class parser
 
 				return /**/ arg /**/;
 			}
+			if constexpr (std::is_same_v<T, error>)
+			{
+				this->x = arg.x;
+				this->y = arg.y;
+
+				#ifndef NDEBUG //------------|
+				std::cout << arg << std::endl;
+				#endif //--------------------|
+
+				return std::nullopt;
+			}
 			return std::nullopt;
+		},
+		this->buffer.back());
+	}
+
+	auto peek(const lexeme type) -> bool
+	{
+		if (const auto ptr {std::get_if<token<B>>(&this->buffer.back())})
+		{ /* fuck you GCC */ return *ptr == type; } else { return false; }
+	}
+
+	auto next(const lexeme type) -> bool
+	{
+		auto result {this->lexer.pull()};
+
+		// step 1. accumulate buffer
+		this->buffer.push_back(result);
+
+		// step 2. update x & y position
+		return std::visit([&](auto&& arg) -> bool
+		{
+			typedef std::decay_t<decltype(arg)> T;
+
+			if constexpr (std::is_same_v<T, token<B>>)
+			{
+				this->x = arg.x;
+				this->y = arg.y;
+
+				#ifndef NDEBUG //------------|
+				std::cout << arg << std::endl;
+				#endif //--------------------|
+
+				return arg == type;
+			}
+			if constexpr (std::is_same_v<T, error>)
+			{
+				this->x = arg.x;
+				this->y = arg.y;
+
+				#ifndef NDEBUG //------------|
+				std::cout << arg << std::endl;
+				#endif //--------------------|
+
+				return false;
+			}
+			return false;
 		},
 		this->buffer.back());
 	}
@@ -107,9 +152,7 @@ public:
 
 	parser(decltype(lexer) lexer) : lexer {lexer}
 	{
-		// on construct
-		this->next();
-		// pull a token
+		this->next(); // on construct, pull a token
 	}
 
 	//|-----------------|
@@ -189,38 +232,48 @@ private:
 		this->next();
 		
 		lang::$var node;
-		// update metadata
-		node.is_const = is_const;
 
-		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
+		//|-------<update>------|
+		node.is_const = is_const;
+		//|---------------------|
+
+		if (this->peek(lexeme::SYMBOL))
 		{
+			//|----------<copy>----------|
+			const auto tkn {*this->peek()};
+			//|--------------------------|
+
 			this->next();
-			
-			//|-----<assign>-----|
-			node.name = tkn->data;
-			//|------------------|
+
+			//|----------<update>----------|
+			node.name = std::move(tkn.data);
+			//|----------------------------|
 		}
 		else throw E(u8"[parser] expects <sym>");
 
-		if (auto tkn {this->peek()}; tkn == lexeme::COLON)
+		if (this->peek(lexeme::COLON))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] expects ':'");
 
-		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
+		if (this->peek(lexeme::SYMBOL))
 		{
+			//|----------<copy>----------|
+			const auto tkn {*this->peek()};
+			//|--------------------------|
+
 			this->next();
-			
-			//|-----<assign>-----|
-			node.type = tkn->data;
-			//|------------------|
+
+			//|----------<update>----------|
+			node.type = std::move(tkn.data);
+			//|----------------------------|
 		}
 		else throw E(u8"[parser] expects <sym>");
 
 		if (!node.is_const)
 		{
-			if (auto tkn {this->peek()}; tkn == lexeme::ASSIGN)
+			if (this->peek(lexeme::ASSIGN))
 			{
 				this->next();
 
@@ -231,19 +284,13 @@ private:
 				//------------------------------------|
 			}
 			// else throw E(u8"[parser] must init const var");
-
-			if (auto tkn {this->peek()}; tkn == lexeme::S_COLON)
-			{
-				this->next();
-			}
-			else throw E(u8"[parser] expects ';'");
 		}
 		else // let! name
 		{
-			if (auto tkn {this->peek()}; tkn == lexeme::ASSIGN)
+			if (this->peek(lexeme::ASSIGN))
 			{
 				this->next();
-				
+
 				//|--------------<catch>--------------|
 				node.init = *this->expr_t().or_else([&]
 					-> decltype(this->expr_t())
@@ -251,15 +298,15 @@ private:
 				//------------------------------------|
 			}
 			else throw E(u8"[parser] must init const var");
-
-			if (auto tkn {this->peek()}; tkn == lexeme::S_COLON)
-			{
-				this->next();
-			}
-			else throw E(u8"[parser] expects ':'");
 		}
 
-		return std::make_unique /*<wrap>*/
+		if (this->peek(lexeme::S_COLON))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] expects ';'");
+
+		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
 	}
 
@@ -268,46 +315,70 @@ private:
 		this->next();
 
 		lang::$fun node;
-		// update metadata
-		node.is_pure = is_pure;
 
-		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
+		//|------<update>-----|
+		node.is_pure = is_pure;
+		//|-------------------|
+
+		if (this->peek(lexeme::SYMBOL))
 		{
-			this->next(); node.name = tkn->data;
+			//|----------<copy>----------|
+			const auto tkn {*this->peek()};
+			//|--------------------------|
+
+			this->next();
+
+			//|----------<update>----------|
+			node.name = std::move(tkn.data);
+			//|----------------------------|
 		}
 		else throw E(u8"[parser] expects <sym>");
 	
-		if (auto tkn {this->peek()}; tkn == lexeme::L_PAREN)
+		if (this->peek(lexeme::L_PAREN))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] expects '('");
 
 		start:
-		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
+		if (this->peek(lexeme::SYMBOL))
 		{
+			//|----------<copy>----------|
+			const auto tkn {*this->peek()};
+			//|--------------------------|
+
 			this->next();
 			
 			lang::$var args;
-			// update metadata
-			args.name = tkn->data;
 
-			if (tkn = this->peek(); tkn == lexeme::COLON)
+			//|----------<update>----------|
+			args.name = std::move(tkn.data);
+			//|----------------------------|
+
+			if (this->peek(lexeme::COLON))
 			{
 				this->next();
 			}
 			else throw E(u8"[parser] expects ':'");
 
-			if (tkn = this->peek(); tkn == lexeme::SYMBOL)
+			if (this->peek(lexeme::SYMBOL))
 			{
-				this->next(); args.type = tkn->data;
+				//|----------<copy>----------|
+				const auto tkn {*this->peek()};
+				//|--------------------------|
+
+				this->next();
+
+				//|----------<update>----------|
+				args.type = std::move(tkn.data);
+				//|----------------------------|
 			}
 			else throw E(u8"[parser] expects <sym>");
 
-			if (tkn = this->peek(); tkn == lexeme::ASSIGN)
+			if (this->peek(lexeme::ASSIGN))
 			{
 				this->next();
-				
+
 				//|--------------<catch>--------------|
 				args.init = *this->expr_t().or_else([&]
 					-> decltype(this->expr_t())
@@ -320,7 +391,7 @@ private:
 			node.args.push_back(std::move(args));
 			//|--------------------------------|
 			
-			if (tkn = this->peek(); tkn == lexeme::COMMA)
+			if (this->peek(lexeme::COMMA))
 			{
 				this->next();
 				//|--------//
@@ -330,25 +401,33 @@ private:
 			// else throw E(u8"[parser] expects ','");
 		}
 
-		if (auto tkn {this->peek()}; tkn == lexeme::R_PAREN)
+		if (this->peek(lexeme::R_PAREN))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] expects ')'");
 
-		if (auto tkn {this->peek()}; tkn == lexeme::COLON)
+		if (this->peek(lexeme::COLON))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] expects ':'");
 
-		if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
+		if (this->peek(lexeme::SYMBOL))
 		{
-			this->next(); node.type = tkn->data;
+			//|----------<copy>----------|
+			const auto tkn {*this->peek()};
+			//|--------------------------|
+
+			this->next();
+
+			//|----------<update>----------|
+			node.type = std::move(tkn.data);
+			//|----------------------------|
 		}
 		else throw E(u8"[parser] expects <sym>");
 
-		if (auto tkn {this->peek()}; tkn == lexeme::L_BRACE)
+		if (this->peek(lexeme::L_BRACE))
 		{
 			this->next();
 		}
@@ -380,13 +459,13 @@ private:
 			break;
 		}
 
-		if (auto tkn {this->peek()}; tkn == lexeme::R_BRACE)
+		if (this->peek(lexeme::R_BRACE))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] expects '}'");
 
-		return std::make_unique /*<wrap>*/
+		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
 	}
 
@@ -439,7 +518,7 @@ private:
 
 		lang::$if node;
 
-		return std::make_unique /*<wrap>*/
+		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
 	}
 
@@ -449,7 +528,7 @@ private:
 
 		lang::$match node;
 
-		return std::make_unique /*<wrap>*/
+		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
 	}
 
@@ -459,7 +538,7 @@ private:
 
 		lang::$for node;
 
-		return std::make_unique /*<wrap>*/
+		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
 	}
 
@@ -468,8 +547,8 @@ private:
 		this->next();
 
 		lang::$while node;
-
-		return std::make_unique /*<wrap>*/
+	
+		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
 	}
 
@@ -479,7 +558,7 @@ private:
 
 		lang::$break node;
 
-		return std::make_unique /*<wrap>*/
+		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
 	}
 
@@ -489,7 +568,20 @@ private:
 
 		lang::$return node;
 
-		return std::make_unique /*<wrap>*/
+		if (auto out {this->expr_t()})
+		{
+			//|--------<update>---------|
+			node.value = std::move(*out);
+			//|-------------------------|
+		}
+
+		if (this->peek(lexeme::S_COLON))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] expects ';'");
+
+		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
 	}
 
@@ -499,7 +591,11 @@ private:
 
 		lang::$continue node;
 
-		return std::make_unique /*<wrap>*/
+		//|---------------|
+		//| "TIRO FINALE" |
+		//|---------------|
+
+		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
 	}
 
@@ -537,7 +633,7 @@ private:
 									.rhs {std::move(*rhs)},
 								};
 
-								return std::make_unique /*<wrap>*/
+								return std::make_unique /*(wrap)*/
 								<decltype(node)>(std::move(node));
 							}
 							// handle primary
@@ -663,7 +759,7 @@ private:
 								.rhs {std::move(*rhs)},
 							};
 
-							lhs = std::make_unique /*<wrap>*/
+							lhs = std::make_unique /*(wrap)*/
 							<decltype(node)>(std::move(node));
 							continue;
 						}
@@ -691,17 +787,27 @@ private:
 
 					lang::$call node;
 
+					//|------<update>------|
 					node.type = op::r(*tkn);
+					//|--------------------|
 					
-					if (auto tkn {this->peek()}; tkn == lexeme::SYMBOL)
+					if (this->peek(lexeme::SYMBOL))
 					{
-						this->next(); node.name = tkn->data;
+						//|----------<copy>----------|
+						const auto tkn {*this->peek()};
+						//|--------------------------|
+
+						this->next();
+
+						//|----------<update>----------|
+						node.name = std::move(tkn.data);
+						//|----------------------------|
 					}
 					else throw E(u8"[parser] expects <sym>");
 
-					if (auto tkn {this->peek()}; tkn == lexeme::L_PAREN)
+					if (this->peek(lexeme::L_PAREN))
 					{
-						this->next(); // nothing to do
+						this->next();
 					}
 					else throw E(u8"[parser] expects '('");
 
@@ -712,9 +818,10 @@ private:
 						node.args.push_back(std::move(*ast));
 						//|--------------------------------|
 
-						if (tkn = this->peek(); tkn == lexeme::COMMA)
+						if (this->peek(lexeme::COMMA))
 						{
 							this->next();
+
 							//|--------//
 							goto start;// <- back to the start
 							//|--------//
@@ -722,13 +829,17 @@ private:
 						// else throw E(u8"[parser] expects ','");
 					}
 
-					if (auto tkn {this->peek()}; tkn == lexeme::R_PAREN)
+					if (this->peek(lexeme::R_PAREN))
 					{
-						this->next(); // nothing to do
+						this->next();
 					}
 					else throw E(u8"[parser] expects ')'");
 
-					return std::make_unique /*<wrap>*/
+					//|---------------|
+					//| "TIRO FINALE" |
+					//|---------------|
+
+					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
 			}
@@ -754,13 +865,13 @@ private:
 					{throw E(u8"[parser] expects expr");});
 					//------------------------------------|
 
-					if (this->peek() == lexeme::R_PAREN)
+					if (this->peek(lexeme::R_PAREN))
 					{
 						this->next();
 					}
 					else throw E(u8"[parser] expects ')'");
 
-					return std::make_unique /*<wrap>*/
+					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
 			}
@@ -780,9 +891,11 @@ private:
 
 					lang::$symbol node;
 
-					node.name = tkn->data;
+					//|----------<update>----------|
+					node.name = std::move(tkn->data);
+					//|----------------------------|
 
-					return std::make_unique /*<wrap>*/
+					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
 			}
@@ -803,10 +916,12 @@ private:
 					
 					lang::$literal node;
 
-					node.data = tkn->data;
-					node.type = data::BOOL;
+					//|----------<update>----------|
+					node.data = std::move(tkn->data);
+					node.type = std::move(data::BOOL);
+					//|----------------------------|
 
-					return std::make_unique /*<wrap>*/
+					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
 				case lexeme::CHAR:
@@ -815,10 +930,12 @@ private:
 
 					lang::$literal node;
 
-					node.data = tkn->data;
-					node.type = data::CODE;
+					//|----------<update>----------|
+					node.data = std::move(tkn->data);
+					node.type = std::move(data::CODE);
+					//|----------------------------|
 
-					return std::make_unique /*<wrap>*/
+					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
 				case lexeme::TEXT:
@@ -827,10 +944,12 @@ private:
 
 					lang::$literal node;
 
-					node.data = tkn->data;
-					node.type = data::UTF8;
+					//|----------<update>----------|
+					node.data = std::move(tkn->data);
+					node.type = std::move(data::UTF8);
+					//|----------------------------|
 
-					return std::make_unique /*<wrap>*/
+					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
 				case lexeme::DEC:
@@ -839,10 +958,12 @@ private:
 
 					lang::$literal node;
 
-					node.data = tkn->data;
-					node.type = data::F32;
+					//|----------<update>----------|
+					node.data = std::move(tkn->data);
+					node.type = std::move(data::F32);
+					//|----------------------------|
 
-					return std::make_unique /*<wrap>*/
+					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
 				case lexeme::INT:
@@ -854,10 +975,12 @@ private:
 
 					lang::$literal node;
 
-					node.data = tkn->data;
-					node.type = data::I32;
+					//|----------<update>----------|
+					node.data = std::move(tkn->data);
+					node.type = std::move(data::I32);
+					//|----------------------------|
 
-					return std::make_unique /*<wrap>*/
+					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
 			}

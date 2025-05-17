@@ -21,7 +21,5 @@ let! c: u8 = 2^1 * (2^2 + 2^3); // 24
 
 fun! main(): i32
 {
-	// TODO
+	return a + b;
 }
-
-let! foo: f32 = (-1);

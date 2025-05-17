@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <variant>
+#include <cassert>
 #include <cstdint>
 
 #include "token.hpp"
@@ -140,9 +141,9 @@ enum class data : uint8_t
 enum class op_l : uint8_t
 #define macro(K, V) K,
 {
+	ADD, // v. prefix
+	SUB, // v. prefix
 	operator_l(macro)
-	ADD, // special
-	SUB, // special
 };
 #undef macro
 

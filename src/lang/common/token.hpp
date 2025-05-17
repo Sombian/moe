@@ -232,7 +232,7 @@ template
 >
 struct token
 {
-	// SFINE: use T::slice directly if T is a string impl, otherwise use T
+	// SFINE: use T::slice if T is a string impl, otherwise use T directly
 	typedef std::conditional_t<type::string_impl<T>, typename T::slice, T> string;
 
 	//|---------------|
@@ -248,9 +248,9 @@ struct token
 
 public:
 
-	auto operator==(lexeme type) const -> bool
+	auto operator==(const lexeme type) const -> bool
 	{
-		return this->type == type; // <- type equality
+		return this->type == type; // shallow equality
 	}
 
 	//|----------------------|
