@@ -169,14 +169,14 @@ public:
 			{
 				if (auto out {this->stmt_t()})
 				{
-					//|-------------<INSERT>-------------|
+					//|-------------<insert>-------------|
 					exe.ast.emplace_back(std::move(*out));
 					//|----------------------------------|
 					continue;
 				}
 				if (auto out {this->decl_t()})
 				{
-					//|-------------<INSERT>-------------|
+					//|-------------<insert>-------------|
 					exe.ast.emplace_back(std::move(*out));
 					//|----------------------------------|
 					continue;
@@ -249,13 +249,13 @@ private:
 			node.name = std::move(tkn.data);
 			//|----------------------------|
 		}
-		else throw E(u8"[parser] expects <sym>");
+		else throw E(u8"[parser] N/A <sym>");
 
 		if (this->peek(lexeme::COLON))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ':'");
+		else throw E(u8"[parser] N/A ':'");
 
 		if (this->peek(lexeme::SYMBOL))
 		{
@@ -269,7 +269,7 @@ private:
 			node.type = std::move(tkn.data);
 			//|----------------------------|
 		}
-		else throw E(u8"[parser] expects <sym>");
+		else throw E(u8"[parser] N/A <sym>");
 
 		if (!node.is_const)
 		{
@@ -280,7 +280,7 @@ private:
 				//|--------------<catch>--------------|
 				node.init = *this->expr_t().or_else([&]
 					-> decltype(this->expr_t())
-				{throw E(u8"[parser] expects expr");});
+				{ throw E(u8"[parser] N/A expr"); });
 				//|-----------------------------------|
 			}
 			// else throw E(u8"[parser] must init const var");
@@ -294,7 +294,7 @@ private:
 				//|--------------<catch>--------------|
 				node.init = *this->expr_t().or_else([&]
 					-> decltype(this->expr_t())
-				{throw E(u8"[parser] expects expr");});
+				{ throw E(u8"[parser] N/A expr"); });
 				//|-----------------------------------|
 			}
 			else throw E(u8"[parser] must init const var");
@@ -304,7 +304,7 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ';'");
+		else throw E(u8"[parser] N/A ';'");
 
 		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
@@ -332,13 +332,13 @@ private:
 			node.name = std::move(tkn.data);
 			//|----------------------------|
 		}
-		else throw E(u8"[parser] expects <sym>");
+		else throw E(u8"[parser] N/A <sym>");
 	
 		if (this->peek(lexeme::L_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '('");
+		else throw E(u8"[parser] N/A '('");
 
 		start:
 		if (this->peek(lexeme::SYMBOL))
@@ -359,7 +359,7 @@ private:
 			{
 				this->next();
 			}
-			else throw E(u8"[parser] expects ':'");
+			else throw E(u8"[parser] N/A ':'");
 
 			if (this->peek(lexeme::SYMBOL))
 			{
@@ -373,7 +373,7 @@ private:
 				args.type = std::move(tkn.data);
 				//|----------------------------|
 			}
-			else throw E(u8"[parser] expects <sym>");
+			else throw E(u8"[parser] N/A <sym>");
 
 			if (this->peek(lexeme::ASSIGN))
 			{
@@ -382,36 +382,34 @@ private:
 				//|--------------<catch>--------------|
 				args.init = *this->expr_t().or_else([&]
 					-> decltype(this->expr_t())
-				{throw E(u8"[parser] expects expr");});
+				{ throw E(u8"[parser] N/A expr"); });
 				//|-----------------------------------|
 			}
-			// else throw E(u8"[parser] expects '='");
+			// else throw E(u8"[parser] N/A '='");
 
-			//|------------<INSERT>------------|
+			//|------------<insert>------------|
 			node.args.push_back(std::move(args));
 			//|--------------------------------|
 			
 			if (this->peek(lexeme::COMMA))
 			{
 				this->next();
-				//|--------//
-				goto start;// <- back to the start
-				//|--------//
+				goto start;
 			}
-			// else throw E(u8"[parser] expects ','");
+			// else throw E(u8"[parser] N/A ','");
 		}
 
 		if (this->peek(lexeme::R_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ')'");
+		else throw E(u8"[parser] N/A ')'");
 
 		if (this->peek(lexeme::COLON))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ':'");
+		else throw E(u8"[parser] N/A ':'");
 
 		if (this->peek(lexeme::SYMBOL))
 		{
@@ -425,35 +423,42 @@ private:
 			node.type = std::move(tkn.data);
 			//|----------------------------|
 		}
-		else throw E(u8"[parser] expects <sym>");
+		else throw E(u8"[parser] N/A <sym>");
 
 		if (this->peek(lexeme::L_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '{'");
+		else throw E(u8"[parser] N/A '{'");
 
 		while (true)
 		{
 			if (auto out {this->stmt_t()})
 			{
-				//|--------------<INSERT>--------------|
+				//|--------------<insert>--------------|
 				node.body.emplace_back(std::move(*out));
 				//|------------------------------------|
 				continue;
 			}
 			if (auto out {this->decl_t()})
 			{
-				//|--------------<INSERT>--------------|
+				//|--------------<insert>--------------|
 				node.body.emplace_back(std::move(*out));
 				//|------------------------------------|
 				continue;
 			}
 			if (auto out {this->expr_t()})
 			{
-				//|--------------<INSERT>--------------|
+				//|--------------<insert>--------------|
 				node.body.emplace_back(std::move(*out));
 				//|------------------------------------|
+	
+				if (this->peek(lexeme::S_COLON))
+				{
+					this->next();
+				}
+				else throw E(u8"[parser] N/A ';'");
+				// again!
 				continue;
 			}
 			break;
@@ -463,7 +468,7 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '}'");
+		else throw E(u8"[parser] N/A '}'");
 
 		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
@@ -518,6 +523,85 @@ private:
 
 		lang::$if node;
 
+		expr expr;
+		body body;
+		
+		else_if:
+		if (this->peek(lexeme::L_PAREN))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '('");
+
+		//|--------------<catch>--------------|
+			expr = {*this->expr_t().or_else([&]
+			-> decltype(this->expr_t())
+		{ throw E(u8"[parser] N/A expr"); })};
+		//|-----------------------------------|
+
+		//|--------------<insert>--------------|
+		node.cases.emplace_back(std::move(expr));
+		//|------------------------------------|
+
+		if (this->peek(lexeme::R_PAREN))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A ')'");
+
+		if_block:
+		if (this->peek(lexeme::L_BRACE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '{'");
+
+		// <block>
+		while (true)
+		{
+			if (auto out {this->stmt_t()})
+			{
+				//|-----------<insert>-----------|
+				body.emplace_back(std::move(*out));
+				//|------------------------------|
+				continue;
+			}
+			if (auto out {this->expr_t()})
+			{
+				//|-----------<insert>-----------|
+				body.emplace_back(std::move(*out));
+				//|------------------------------|
+
+				if (this->peek(lexeme::S_COLON))
+				{
+					this->next();
+				}
+				else throw E(u8"[parser] N/A ';'");
+				// again!
+				continue;
+			}
+			break;
+		}
+
+		//|--------------<insert>--------------|
+		node.block.emplace_back(std::move(body));
+		//|------------------------------------|
+
+		if (this->peek(lexeme::R_BRACE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '}'");
+
+		if (this->peek(lexeme::ELSE))
+		{
+			if (this->next(lexeme::IF))
+			{
+				this->next(); goto else_if;
+			}
+			this->next(); goto if_block;
+		}
+
 		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
 	}
@@ -527,6 +611,119 @@ private:
 		this->next();
 
 		lang::$match node;
+
+		expr expr;
+		body body;
+
+		if (this->peek(lexeme::L_PAREN))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '('");
+
+		//|--------------<catch>--------------|
+		node.input = *this->expr_t().or_else([&]
+			-> decltype(this->expr_t())
+		{ throw E(u8"[parser] N/A expr"); });
+		//|-----------------------------------|
+
+		if (this->peek(lexeme::R_PAREN))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A ')'");
+
+		if (this->peek(lexeme::L_BRACE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '{'");
+
+		if (this->peek(lexeme::CASE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A 'case'");
+
+		case_block:
+		//|--------------<catch>--------------|
+			expr = *this->expr_t().or_else([&]
+			-> decltype(this->expr_t())
+		{ throw E(u8"[parser] N/A expr"); });
+		//|-----------------------------------|
+
+		//|--------------<insert>--------------|
+		node.cases.emplace_back(std::move(expr));
+		//|------------------------------------|
+
+		else_block:
+		if (this->peek(lexeme::COLON))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A ':'");
+
+		if (this->peek(lexeme::L_BRACE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '{'");
+
+		// <block>
+		while (true)
+		{
+			if (auto out {this->stmt_t()})
+			{
+				//|-----------<insert>-----------|
+				body.emplace_back(std::move(*out));
+				//|------------------------------|
+				continue;
+			}
+			if (auto out {this->expr_t()})
+			{
+				//|-----------<insert>-----------|
+				body.emplace_back(std::move(*out));
+				//|------------------------------|
+
+				if (this->peek(lexeme::S_COLON))
+				{
+					this->next();
+				}
+				else throw E(u8"[parser] N/A ';'");
+				// again!
+				continue;
+			}
+			break;
+		}
+
+		//|--------------<insert>--------------|
+		node.block.emplace_back(std::move(body));
+		//|------------------------------------|
+
+		if (this->peek(lexeme::R_BRACE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '}'");
+
+		// check if theres more...
+		if (this->peek(lexeme::CASE))
+		{
+			this->next();
+			goto case_block;
+		}
+		// check if theres more...
+		if (this->peek(lexeme::ELSE))
+		{
+			this->next();
+			goto else_block;
+		}
+
+		if (this->peek(lexeme::R_BRACE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '}'");
 
 		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
@@ -538,6 +735,87 @@ private:
 
 		lang::$for node;
 
+		if (this->peek(lexeme::L_PAREN))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '('");
+
+		//|--------------<catch>--------------|
+		node.setup = *this->expr_t().or_else([&]
+			-> decltype(this->expr_t())
+		{ throw E(u8"[parser] N/A expr"); });
+		//|-----------------------------------|
+
+		if (this->peek(lexeme::S_COLON))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A ';'");
+
+		//|--------------<catch>--------------|
+		node.input = *this->expr_t().or_else([&]
+			-> decltype(this->expr_t())
+		{ throw E(u8"[parser] N/A expr"); });
+		//|-----------------------------------|
+
+		if (this->peek(lexeme::S_COLON))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A ';'");
+
+		//|--------------<catch>--------------|
+		node.after = *this->expr_t().or_else([&]
+			-> decltype(this->expr_t())
+		{ throw E(u8"[parser] N/A expr"); });
+		//|-----------------------------------|
+
+		if (this->peek(lexeme::R_PAREN))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A ')'");
+
+		if (this->peek(lexeme::L_BRACE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '{'");
+
+		// <block>
+		while (true)
+		{
+			if (auto out {this->stmt_t()})
+			{
+				//|--------------<insert>--------------|
+				node.block.emplace_back(std::move(*out));
+				//|------------------------------------|
+				continue;
+			}
+			if (auto out {this->expr_t()})
+			{
+				//|--------------<insert>--------------|
+				node.block.emplace_back(std::move(*out));
+				//|------------------------------------|
+
+				if (this->peek(lexeme::S_COLON))
+				{
+					this->next();
+				}
+				else throw E(u8"[parser] N/A ';'");
+				// again!
+				continue;
+			}
+			break;
+		}
+
+		if (this->peek(lexeme::R_BRACE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '}'");
+
 		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
 	}
@@ -547,6 +825,63 @@ private:
 		this->next();
 
 		lang::$while node;
+
+		if (this->peek(lexeme::L_PAREN))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '('");
+
+		//|--------------<catch>--------------|
+		node.input = *this->expr_t().or_else([&]
+			-> decltype(this->expr_t())
+		{ throw E(u8"[parser] N/A expr"); });
+		//|-----------------------------------|
+
+		if (this->peek(lexeme::R_PAREN))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A ')'");
+
+		if (this->peek(lexeme::L_BRACE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '{'");
+
+		// <block>
+		while (true)
+		{
+			if (auto out {this->stmt_t()})
+			{
+				//|--------------<insert>--------------|
+				node.block.emplace_back(std::move(*out));
+				//|------------------------------------|
+				continue;
+			}
+			if (auto out {this->expr_t()})
+			{
+				//|--------------<insert>--------------|
+				node.block.emplace_back(std::move(*out));
+				//|------------------------------------|
+
+				if (this->peek(lexeme::S_COLON))
+				{
+					this->next();
+				}
+				else throw E(u8"[parser] N/A ';'");
+				// again!
+				continue;
+			}
+			break;
+		}
+
+		if (this->peek(lexeme::R_BRACE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '}'");
 	
 		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
@@ -592,7 +927,7 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ';'");
+		else throw E(u8"[parser] N/A ';'");
 
 		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
@@ -646,7 +981,7 @@ private:
 								//|--------------<catch>--------------|
 								std::optional rhs {impl(69).or_else([&]
 									-> decltype(this->expr_t())
-								{throw E(u8"[parser] expects expr");})};
+								{ throw E(u8"[parser] N/A expr");}) };
 								//|-----------------------------------|
 
 								lang::$unary_l node
@@ -771,7 +1106,7 @@ private:
 							//|--------------<catch>--------------|
 							std::optional rhs {impl(rbp).or_else([&]
 								-> decltype(this->expr_t())
-							{throw E(u8"[parser] expects expr");})};
+							{ throw E(u8"[parser] N/A expr"); })};
 							//|-----------------------------------|
 
 							lang::$binary node
@@ -825,37 +1160,34 @@ private:
 						node.name = std::move(tkn.data);
 						//|----------------------------|
 					}
-					else throw E(u8"[parser] expects <sym>");
+					else throw E(u8"[parser] N/A <sym>");
 
 					if (this->peek(lexeme::L_PAREN))
 					{
 						this->next();
 					}
-					else throw E(u8"[parser] expects '('");
+					else throw E(u8"[parser] N/A '('");
 
 					start:
 					if (auto ast {this->expr_t()})
 					{
-						//|------------<INSERT>------------|
+						//|------------<insert>------------|
 						node.args.push_back(std::move(*ast));
 						//|--------------------------------|
 
 						if (this->peek(lexeme::COMMA))
 						{
 							this->next();
-
-							//|--------//
-							goto start;// <- back to the start
-							//|--------//
+							goto start;
 						}
-						// else throw E(u8"[parser] expects ','");
+						// else throw E(u8"[parser] N/A ','");
 					}
 
 					if (this->peek(lexeme::R_PAREN))
 					{
 						this->next();
 					}
-					else throw E(u8"[parser] expects ')'");
+					else throw E(u8"[parser] N/A ')'");
 
 					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
@@ -880,14 +1212,14 @@ private:
 					//|--------------<catch>--------------|
 					node.expr = *this->expr_t().or_else([&]
 						-> decltype(this->expr_t())
-					{throw E(u8"[parser] expects expr");});
+					{ throw E(u8"[parser] N/A expr"); });
 					//|-----------------------------------|
 
 					if (this->peek(lexeme::R_PAREN))
 					{
 						this->next();
 					}
-					else throw E(u8"[parser] expects ')'");
+					else throw E(u8"[parser] N/A ')'");
 
 					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));

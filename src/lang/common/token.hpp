@@ -123,6 +123,7 @@ namespace lang
 	macro(IF, u8"if")             \
 	macro(ELSE, u8"else")         \
 	macro(MATCH, u8"match")       \
+	macro(CASE, u8"case")         \
 	/*|------|*/                  \
 	/*| loop |*/                  \
 	/*|------|*/                  \

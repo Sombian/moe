@@ -69,6 +69,8 @@ add_custom_command(
 		${CMAKE_SOURCE_DIR}/src/data/stage3.txt
 	COMMAND
 		codegen_auto
+	DEPENDS
+		codegen_auto
 	WORKING_DIRECTORY
 		${CMAKE_SOURCE_DIR}
 )
