@@ -241,10 +241,8 @@ struct token
 	//|---------------|
 
 	lexeme type;
-	//|-------|
 	uint16_t x;
 	uint16_t y;
-	//|-------|
 	string data;
 
 public:

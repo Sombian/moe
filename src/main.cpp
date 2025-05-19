@@ -35,10 +35,7 @@ auto main() -> int
 
 			if (const auto exe {parser.pull()})
 			{
-				for (const auto& node : exe->ast)
-				{
-					// TODO: do something with this
-				}
+				exe->print();
 			}
 		},
 		io.value());
