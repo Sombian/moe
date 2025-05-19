@@ -261,6 +261,14 @@ auto operator<<(std::ostream& os, const op_l op) -> std::ostream&
 		}                    \
 		/*|---------------|*/\
 
+		case op_l::ADD:
+		{
+			return os << "ADD";
+		}
+		case op_l::SUB:
+		{
+			return os << "SUB";
+		}
 		operator_l(macro)
 		#undef macro
 		default:
