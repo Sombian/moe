@@ -221,7 +221,7 @@ auto operator<<(std::ostream& os, const data tp) -> std::ostream&
 		}
 		case data::UTF8:
 		{
-			return os << "utf88";
+			return os << "utf8";
 		}
 		case data::UTF16:
 		{
@@ -682,7 +682,7 @@ public:
 			//| helpers |
 			//|---------|
 
-			auto visit(const decl& data)
+			auto visit(const only<decl>& data)
 			{
 				std::visit([&](auto&& arg)
 				{
@@ -691,7 +691,7 @@ public:
 				data);
 			}
 
-			auto visit(const stmt& data)
+			auto visit(const only<stmt>& data)
 			{
 				std::visit([&](auto&& arg)
 				{
@@ -700,7 +700,7 @@ public:
 				data);
 			}
 
-			auto visit(const expr& data)
+			auto visit(const only<expr>& data)
 			{
 				std::visit([&](auto&& arg)
 				{
@@ -709,7 +709,7 @@ public:
 				data);
 			}
 
-			auto visit(const node& data)
+			auto visit(const only<node>& data)
 			{
 				std::visit([&](auto&& arg)
 				{
