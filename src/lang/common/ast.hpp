@@ -756,14 +756,24 @@ public:
 
 			void visit(const lang::$var& data) override
 			{
-				this->out << "(var;";
+				this->out << "(var";
+				this->out << " ";
+				this->out << data.name;
+				this->out << " ";
+				this->out << data.type;
+				this->out << " ";
 				this->visit(data.init);
 				this->out << ")";
 			}
 
 			void visit(const lang::$fun& data) override
 			{
-				this->out << "(fun;";
+				this->out << "(fun";
+				this->out << " ";
+				this->out << data.name;
+				this->out << " ";
+				this->out << data.type;
+				this->out << " ";
 				this->visit(data.body);
 				this->out << ")";
 			}
@@ -774,63 +784,70 @@ public:
 
 			void visit(const lang::$if& data) override
 			{
-				this->out << "(if;";
+				this->out << "(if";
+				this->out << " ";
 				this->visit(data.block);
-				this->out << ";";
+				this->out << " ";
 				this->visit(data.cases);
 				this->out << ")";
 			}
 
 			void visit(const lang::$match& data) override
 			{
-				this->out << "(match;";
+				this->out << "(match";
+				this->out << " ";
 				this->visit(data.input);
-				this->out << ";";
+				this->out << " ";
 				this->visit(data.block);
-				this->out << ";";
+				this->out << " ";
 				this->visit(data.cases);
 				this->out << ")";
 			}
 
 			void visit(const lang::$for& data) override
 			{
-				this->out << "(for;";
+				this->out << "(for";
+				this->out << " ";
 				this->visit(data.setup);
-				this->out << ";";
+				this->out << " ";
 				this->visit(data.input);
-				this->out << ";";
+				this->out << " ";
 				this->visit(data.after);
-				this->out << ";";
+				this->out << " ";
 				this->visit(data.block);
 				this->out << ")";
 			}
 
 			void visit(const lang::$while& data) override
 			{
-				this->out << "(while;";
+				this->out << "(while";
+				this->out << " ";
 				this->visit(data.input);
-				this->out << ";";
+				this->out << " ";
 				this->visit(data.block);
 				this->out << ")";
 			}
 
 			void visit(const lang::$break& data) override
 			{
-				this->out << "(break;";
+				this->out << "(break";
+				this->out << " ";
 				this->out << data.label;
 				this->out << ")";
 			}
 
 			void visit(const lang::$return& data) override
 			{
-				this->out << "(return;";
+				this->out << "(return";
+				this->out << " ";
 				this->visit(data.value);
 				this->out << ")";
 			}
 
 			void visit(const lang::$continue& data) override
 			{
-				this->out << "(continue;";
+				this->out << "(continue";
+				this->out << " ";
 				this->out << data.label;
 				this->out << ")";
 			}
@@ -841,61 +858,70 @@ public:
 
 			void visit(const lang::$unary_l& data) override
 			{
-				this->out << "(unary_l;";
+				this->out << "(unary_l";
+				this->out << " ";
 				this->out << data.lhs;
-				this->out << ";";
+				this->out << " ";
 				this->visit(data.rhs);
 				this->out << ")";
 			}
 
 			void visit(const lang::$binary& data) override
 			{
-				this->out << "(binary;";
+				this->out << "(binary";
+				this->out << " ";
 				this->visit(data.lhs);
-				this->out << ";";
+				this->out << " ";
 				this->out << data.mhs;
-				this->out << ";";
+				this->out << " ";
 				this->visit(data.rhs);
 				this->out << ")";
 			}
 
 			void visit(const lang::$unary_r& data) override
 			{
-				this->out << "(unary_r;";
+				this->out << "(unary_r";
+				this->out << " ";
 				this->visit(data.lhs);
-				this->out << ";";
+				this->out << " ";
 				this->out << data.rhs;
 				this->out << ")";
 			}
 
 			void visit(const lang::$literal& data) override
 			{
-				this->out << "(literal;";
+				this->out << "(literal";
+				this->out << " ";
 				this->out << data.type;
-				this->out << ";";
+				this->out << " ";
 				this->out << data.data;
 				this->out << ")";
 			}
 
 			void visit(const lang::$symbol& data) override
 			{
-				this->out << "(symbol;";
+				this->out << "(symbol";
+				this->out << " ";
 				this->out << data.name;
 				this->out << ")";
 			}
 
 			void visit(const lang::$group& data) override
 			{
-				this->out << "(group;";
+				this->out << "(group";
+				this->out << " ";
 				this->visit(data.expr);
 				this->out << ")";
 			}
 
 			void visit(const lang::$call& data) override
 			{
-				this->out << "(call;";
+				this->out << "(call";
+				this->out << " ";
 				this->out << data.type;
+				this->out << " ";
 				this->out << data.name;
+				this->out << " ";
 				this->visit(data.args);
 				this->out << ")";
 			}
