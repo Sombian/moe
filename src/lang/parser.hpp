@@ -129,8 +129,6 @@ class parser
 
 	auto next(const lexeme type) -> bool
 	{
-		auto result {this->lexer.pull()};
-
 		// step 1. update buffer
 		this->buffer = this->lexer.pull();
 
@@ -620,9 +618,10 @@ private:
 		{
 			if (this->next(lexeme::IF))
 			{
-				this->next(); goto else_if;
+				this->next();
+				goto else_if;
 			}
-			this->next(); goto if_block;
+			goto if_block;
 		}
 
 		return std::make_unique /*(wrap)*/
