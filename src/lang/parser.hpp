@@ -23,12 +23,14 @@ template
 >
 class parser
 {
+	//|--<safe ref>---|
 	lexer<A, B>& lexer;
-
-	//|-<data>-|
+	//|---------------|
 	uint16_t x;
 	uint16_t y;
-	//|--------|
+	//|---------<buffer>---------|
+	decltype(lexer.pull()) buffer;
+	//|--------------------------|
 
 	#define E($value) error \
 	{                       \
@@ -50,22 +52,29 @@ class parser
 	typedef std::optional<token<B>> maybe;
 	//|----------------------------------|
 
-	//----------------<buffer>----------------|
-	std::vector<decltype(lexer.pull())> buffer;
-	//----------------------------------------|
-
 	auto peek() -> maybe
 	{
-		if (const auto ptr {std::get_if<token<B>>(&this->buffer.back())})
-		{ /* fuck you GCC */ return *ptr; } else { return std::nullopt; }
+		return std::visit([&](auto&& arg) -> maybe
+		{
+			typedef std::decay_t<decltype(arg)> T;
+
+			if constexpr (std::is_same_v<T, token<B>>)
+			{
+				return /**/ arg /**/;
+			}
+			if constexpr (std::is_same_v<T, error>)
+			{
+				return std::nullopt;
+			}
+			return std::nullopt;
+		},
+		this->buffer);
 	}
 
 	auto next() -> maybe
 	{
-		auto result {this->lexer.pull()};
-
-		// step 1. accumulate buffer
-		this->buffer.push_back(result);
+		// step 1. update buffer
+		this->buffer = this->lexer.pull();
 
 		// step 2. update x & y position
 		return std::visit([&](auto&& arg) -> maybe
@@ -96,21 +105,34 @@ class parser
 			}
 			return std::nullopt;
 		},
-		this->buffer.back());
+		this->buffer);
 	}
 
 	auto peek(const lexeme type) -> bool
 	{
-		if (const auto ptr {std::get_if<token<B>>(&this->buffer.back())})
-		{ /* fuck you GCC */ return *ptr == type; } else { return false; }
+		return std::visit([&](auto&& arg) -> bool
+		{
+			typedef std::decay_t<decltype(arg)> T;
+
+			if constexpr (std::is_same_v<T, token<B>>)
+			{
+				return arg == type;
+			}
+			if constexpr (std::is_same_v<T, error>)
+			{
+				return false;
+			}
+			return false;
+		},
+		this->buffer);
 	}
 
 	auto next(const lexeme type) -> bool
 	{
 		auto result {this->lexer.pull()};
 
-		// step 1. accumulate buffer
-		this->buffer.push_back(result);
+		// step 1. update buffer
+		this->buffer = this->lexer.pull();
 
 		// step 2. update x & y position
 		return std::visit([&](auto&& arg) -> bool
@@ -141,7 +163,7 @@ class parser
 			}
 			return false;
 		},
-		this->buffer.back());
+		this->buffer);
 	}
 
 public:
@@ -150,10 +172,11 @@ public:
 	//| the rule of 0 |
 	//|---------------|
 
-	parser(decltype(lexer) lexer) : lexer {lexer}
-	{
-		this->next(); // on construct, pull a token
-	}
+	parser
+	(
+		decltype(lexer) lexer
+	)
+	: lexer {lexer}, buffer {lexer.pull()} {}
 
 	//|-----------------|
 	//| member function |

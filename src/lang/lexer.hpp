@@ -24,13 +24,12 @@ template
 >
 class lexer
 {
-	const fs::file<A, B>& file;
-
+	//|---<safe ref>---|
+	fs::file<A, B>& file;
+	//|----------------|
 	span span;
-	//--[data]--//
-	uint16_t x; //
-	uint16_t y; //
-	//----------//
+	uint16_t x;
+	uint16_t y;
 	
 	decltype(file.data.begin()) it;
 	decltype(&file.data.begin()) ptr {0};

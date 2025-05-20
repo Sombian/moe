@@ -9,7 +9,7 @@ auto main() -> int
 		// see [launch.json]
 		if (std::getenv("MSVC"))
 		{
-			//-----[change code page]-----//
+			//-----<change code page>-----//
 			std::system("chcp 65001 > NUL");
 			//----------------------------//
 		}
