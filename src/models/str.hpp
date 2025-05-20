@@ -248,9 +248,6 @@ public:
 			this->large.size = value;
 			this->large.capacity = value;
 			this->large.metadata = tag::LARGE;
-			//|---------------------------------------------------------------------|
-			assert(this->mode() == tag::LARGE); // <- make sure we're on large mode |
-			//|---------------------------------------------------------------------|
 		}
 		else // no need for extra capacity
 		{
@@ -281,9 +278,6 @@ public:
 					//|------------|    |-----------------|
 
 					this->bytes[RMB] = slot << SFT;
-					//|---------------------------------------------------------------------|
-					assert(this->mode() == tag::SMALL); // <- make sure we're on small mode |
-					//|---------------------------------------------------------------------|
 					break;
 				}
 			}
@@ -339,9 +333,6 @@ public:
 			this->large.size = size;
 			this->large.capacity = value;
 			this->large.metadata = tag::LARGE;
-			//|---------------------------------------------------------------------|
-			assert(this->mode() == tag::LARGE); // <- make sure we're on large mode |
-			//|---------------------------------------------------------------------|
 		}
 		else // no need for extra capacity
 		{

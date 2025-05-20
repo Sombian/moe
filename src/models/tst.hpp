@@ -58,25 +58,31 @@ class tst
 			// left heavy
 			if (+1 < balance)
 			{
-				if (0 < node::factor(a))
+				// LL case
+				if (a->left->code < a->code)
 				{
-					a = node::rotate_LL(a);
+					return a = node::rotate_r(a);
 				}
-				else
+				// LR case
+				if (a->code < a->left->code)
 				{
-					a = node::rotate_LR(a);
+					a->left = node::rotate_l(a->left);
+					return a = node::rotate_r(a);
 				}
 			}
 			// right heavy
 			if (balance < -1)
 			{
-				if (node::factor(a) < 0)
+				// RR case
+				if (a->code < a->right->code)
 				{
-					a = node::rotate_RR(a);
+					return a = node::rotate_l(a);
 				}
-				else
+				// RL case
+				if (a->right->code < a->code)
 				{
-					a = node::rotate_RL(a);
+					a->right = node::rotate_r(a->right);
+					return a = node::rotate_l(a);
 				}
 			}
 			return a;
@@ -88,48 +94,22 @@ class tst
 		auto factor(node* a) -> int8_t
 		{
 			if (a == nullptr) { return 0; }
-			int8_t left {node::height(a->left)};
-			int8_t right {node::height(a->right)};
-			return left - right; // calculate delta
+			auto left {node::height(a->left)};
+			auto right {node::height(a->right)};
+			return left - right; // delta
 		}
 
 		[[nodiscard]] static
 		auto height(node* a) -> int8_t
 		{
 			if (a == nullptr) { return 0; }
-			int8_t left {node::height(a->left)};
-			int8_t right {node::height(a->right)};
+			auto left {node::height(a->left)};
+			auto right {node::height(a->right)};
 			return std::max(left, right) + 1;
 		}
 
 		[[nodiscard]] static
-		auto rotate_LL(node* a) -> node*
-		{
-			//|--------|-------|-------|-------|
-			//|        |     A |       |   B   |
-			//|        |    ╱  |       |  ╱ ╲  |
-			//| BEFORE |   B   | AFTER | C   A |
-			//|        |  ╱    |       |       |
-			//|        | C     |       |       |
-			//|--------|-------|-------|-------|
-
-			auto b {a->left};
-
-			a->left = b->right;
-			b->right = a;
-
-			return b;
-		}
-
-		[[nodiscard]] static
-		auto rotate_LR(node* a) -> node*
-		{
-			a->left = node::rotate_RR(a->left);
-			return node::rotate_LL(a); // *wink*
-		}
-
-		[[nodiscard]] static
-		auto rotate_RR(node* a) -> node*
+		auto rotate_l(node* a) -> node*
 		{
 			//|--------|-------|-------|-------|
 			//|        | A     |       |   B   |
@@ -140,18 +120,32 @@ class tst
 			//|--------|-------|-------|-------|
 
 			auto b {a->right};
+			auto c {b->left};
 
-			a->right = b->left;
 			b->left = a;
+			a->right = c;
 
 			return b;
 		}
 
 		[[nodiscard]] static
-		auto rotate_RL(node* a) -> node*
+		auto rotate_r(node* a) -> node*
 		{
-			a->right = node::rotate_LL(a->right);
-			return node::rotate_RR(a); // *wink*
+			//|--------|-------|-------|-------|
+			//|        |     A |       |   B   |
+			//|        |    ╱  |       |  ╱ ╲  |
+			//| BEFORE |   B   | AFTER | C   A |
+			//|        |  ╱    |       |       |
+			//|        | C     |       |       |
+			//|--------|-------|-------|-------|
+
+			auto b {a->left};
+			auto c {b->right};
+
+			b->right = a;
+			a->left = c;
+
+			return b;
 		}
 	};
 
