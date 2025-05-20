@@ -755,9 +755,18 @@ public:
 				}
 				else
 				{
+					size_t i {0};
+
 					for (const auto& node : data)
 					{
 						this->visit(node);
+					
+						if (++i < data.size())
+						{
+							//|-------<seperator>-------|
+							this->gap(); this->out << ",";
+							//|-------------------------|
+						}
 					}
 				}
 			}
@@ -770,9 +779,20 @@ public:
 				}
 				else
 				{
+
+					size_t i {0};
+
 					for (const auto& node : data)
 					{
 						this->visit(node);
+					
+						// skip last comma
+						if (++i < data.size())
+						{
+							//|-------<seperator>-------|
+							this->gap(); this->out << ",";
+							//|-------------------------|
+						}
 					}
 				}
 			}
@@ -785,9 +805,19 @@ public:
 				}
 				else
 				{
+					size_t i {0};
+
 					for (const auto& node : data)
 					{
 						this->visit(node);
+					
+						// skip last comma
+						if (++i < data.size())
+						{
+							//|-------<seperator>-------|
+							this->gap(); this->out << ",";
+							//|-------------------------|
+						}
 					}
 				}
 			}
@@ -800,9 +830,19 @@ public:
 				}
 				else
 				{
+					size_t i {0};
+
 					for (const auto& node : data)
 					{
 						this->visit(node);
+					
+						// skip last comma
+						if (++i < data.size())
+						{
+							//|-------<seperator>-------|
+							this->gap(); this->out << ",";
+							//|-------------------------|
+						}
 					}
 				}
 			}
@@ -815,9 +855,19 @@ public:
 				}
 				else
 				{
+					size_t i {0};
+
 					for (const auto& node : data)
 					{
 						this->visit(node);
+					
+						// skip last comma
+						if (++i < data.size())
+						{
+							//|-------<seperator>-------|
+							this->gap(); this->out << ",";
+							//|-------------------------|
+						}
 					}
 				}
 			}
