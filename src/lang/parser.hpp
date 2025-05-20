@@ -1006,7 +1006,7 @@ private:
 								{ throw E(u8"[parser] N/A expr");}) };
 								//|-----------------------------------|
 
-								lang::$unary_l node
+								lang::$unary node
 								{
 									.lhs {((op::l(*tkn)))},
 									.rhs {std::move(*rhs)},
