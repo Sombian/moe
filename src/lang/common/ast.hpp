@@ -53,6 +53,7 @@ namespace lang
 	struct $binary;
 	struct $literal;
 	struct $symbol;
+	struct $access;
 	struct $group;
 	struct $call;
 }
@@ -63,6 +64,7 @@ typedef std::variant
 	std::unique_ptr<lang::$binary>,
 	std::unique_ptr<lang::$literal>,
 	std::unique_ptr<lang::$symbol>,
+	std::unique_ptr<lang::$access>,
 	std::unique_ptr<lang::$group>,
 	std::unique_ptr<lang::$call>
 >
@@ -88,6 +90,7 @@ namespace lang
 		virtual void visit(const $binary&) = 0;
 		virtual void visit(const $literal&) = 0;
 		virtual void visit(const $symbol&) = 0;
+		virtual void visit(const $access&) = 0;
 		virtual void visit(const $group&) = 0;
 		virtual void visit(const $call&) = 0;
 	};
@@ -631,6 +634,16 @@ namespace lang
 		auto accept(visitor& impl) const { impl.visit(*this); }
 	};
 
+	struct $access
+	{
+		only<expr> expr;
+		only<op_r> type;
+		only<utf8> name;
+
+		// visitor pattern
+		auto accept(visitor& impl) const { impl.visit(*this); }
+	};
+
 	struct $group
 	{
 		only<expr> expr;
@@ -641,8 +654,7 @@ namespace lang
 
 	struct $call
 	{
-		only<utf8> name;
-		only<op_r> type;
+		only<expr> call;
 		many<expr> args;
 
 		// visitor pattern
@@ -737,41 +749,76 @@ public:
 
 			auto visit(const many<decl>& data)
 			{
-				for (const auto& node : data)
+				if (data.empty())
 				{
-					this->visit(node);
+					this->out << "[empty]\n";
+				}
+				else
+				{
+					for (const auto& node : data)
+					{
+						this->visit(node);
+					}
 				}
 			}
 
 			auto visit(const many<stmt>& data)
 			{
-				for (const auto& node : data)
+				if (data.empty())
 				{
-					this->visit(node);
+					this->out << "[empty]\n";
+				}
+				else
+				{
+					for (const auto& node : data)
+					{
+						this->visit(node);
+					}
 				}
 			}
 
 			auto visit(const many<expr>& data)
 			{
-				for (const auto& node : data)
+				if (data.empty())
 				{
-					this->visit(node);
+					this->out << "[empty]\n";
+				}
+				else
+				{
+					for (const auto& node : data)
+					{
+						this->visit(node);
+					}
 				}
 			}
 
 			auto visit(const many<node>& data)
 			{
-				for (const auto& node : data)
+				if (data.empty())
 				{
-					this->visit(node);
+					this->out << "[empty]\n";
+				}
+				else
+				{
+					for (const auto& node : data)
+					{
+						this->visit(node);
+					}
 				}
 			}
 
 			auto visit(const many<body>& data)
 			{
-				for (const auto& node : data)
+				if (data.empty())
 				{
-					this->visit(node);
+					this->out << "[empty]\n";
+				}
+				else
+				{
+					for (const auto& node : data)
+					{
+						this->visit(node);
+					}
 				}
 			}
 
@@ -908,6 +955,16 @@ public:
 				CLOSE
 			}
 
+			void visit(const lang::$access& data) override
+			{
+				START
+				this->gap(); this->out << "[access]" << "\n";
+				this->gap(); this->out << "expr" << ": "; this->visit(data.expr);
+				this->gap(); this->out << "type" << ": " << data.type << "\n";
+				this->gap(); this->out << "name" << ": " << data.name << "\n";
+				CLOSE
+			}
+
 			void visit(const lang::$group& data) override
 			{
 				START
@@ -920,8 +977,7 @@ public:
 			{
 				START
 				this->gap(); this->out << "[call]" << "\n";
-				this->gap(); this->out << "type" << ": " << data.name << "\n";
-				this->gap(); this->out << "name" << ": " << data.type << "\n";
+				this->gap(); this->out << "call" << ": "; this->visit(data.call);
 				this->gap(); this->out << "args" << ": "; this->visit(data.args);
 				CLOSE
 			}

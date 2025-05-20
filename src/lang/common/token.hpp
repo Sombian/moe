@@ -94,12 +94,12 @@ namespace lang
 
 	#define operator_r(macro) \
 	/*|--------|*/            \
-	/*| callee |*/            \
+	/*| access |*/            \
 	/*|--------|*/            \
-	macro(CALL_M, u8".")      \
-	macro(CALL_S, u8"?.")     \
-	macro(CALL_U, u8"!.")     \
-	macro(CALL_N, u8"::")     \
+	macro(ACCESS_F, u8".")    \
+	macro(ACCESS_S, u8"?.")   \
+	macro(ACCESS_U, u8"!.")   \
+	macro(ACCESS_N, u8"::")   \
 
 	#define keywords(macro)       \
 	/*|---------|*/               \

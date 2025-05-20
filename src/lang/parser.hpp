@@ -479,7 +479,7 @@ private:
 					this->next();
 				}
 				else throw E(u8"[parser] N/A ';'");
-				// again!
+				// again..!
 				continue;
 			}
 			break;
@@ -598,7 +598,7 @@ private:
 					this->next();
 				}
 				else throw E(u8"[parser] N/A ';'");
-				// again!
+				// again..!
 				continue;
 			}
 			break;
@@ -712,7 +712,7 @@ private:
 					this->next();
 				}
 				else throw E(u8"[parser] N/A ';'");
-				// again!
+				// again..!
 				continue;
 			}
 			break;
@@ -826,7 +826,7 @@ private:
 					this->next();
 				}
 				else throw E(u8"[parser] N/A ';'");
-				// again!
+				// again..!
 				continue;
 			}
 			break;
@@ -893,7 +893,7 @@ private:
 					this->next();
 				}
 				else throw E(u8"[parser] N/A ';'");
-				// again!
+				// again..!
 				continue;
 			}
 			break;
@@ -1016,10 +1016,6 @@ private:
 								<decltype(node)>(std::move(node));
 							}
 							// handle primary
-							if (auto out {this->expr_call()})
-							{
-								return std::move(out);
-							}
 							if (auto out {this->expr_group()})
 							{
 								return std::move(out);
@@ -1142,6 +1138,73 @@ private:
 							<decltype(node)>(std::move(node));
 							continue;
 						}
+
+						// handle postfix
+						if (op::is_r(*tkn))
+						{
+								this->next();
+
+								lang::$access node
+								{
+									.expr {std::move(*lhs)},
+									.type {((op::r(*tkn)))},
+								};
+
+								if (this->peek(lexeme::SYMBOL))
+								{
+									//|----------<copy>----------|
+									const auto tkn {*this->peek()};
+									//|--------------------------|
+
+									this->next();
+
+									//|----------<update>----------|
+									node.name = std::move(tkn.data);
+									//|----------------------------|
+								}
+								else throw E(u8"[parser] N/A <sym>");
+								
+								lhs = std::make_unique /*(wrap)*/
+								<decltype(node)>(std::move(node));
+								continue;
+						}
+
+						// handle function
+						if (tkn == lexeme::L_PAREN)
+						{
+							this->next();
+						
+							lang::$call node;
+
+							//|--------<update>--------|
+							node.call = std::move(*lhs);
+							//|------------------------|
+
+							start:
+							if (auto ast {this->expr_t()})
+							{
+								//|------------<insert>------------|
+								node.args.push_back(std::move(*ast));
+								//|--------------------------------|
+
+								if (this->peek(lexeme::COMMA))
+								{
+									this->next();
+									goto start;
+								}
+								// else throw E(u8"[parser] N/A ','");
+							}
+
+							if (this->peek(lexeme::R_PAREN))
+							{
+								this->next();
+							}
+							else throw E(u8"[parser] N/A ')'");
+
+							lhs = std::make_unique /*(wrap)*/
+							<decltype(node)>(std::move(node));
+							continue;
+						}
 						break;
 					}
 				}
@@ -1149,74 +1212,6 @@ private:
 			}
 		};
 		return impl(0);
-	}
-
-	auto expr_call() -> decltype(this->expr_t())
-	{
-		if (auto tkn {this->peek()})
-		{
-			switch (tkn->type)
-			{
-				case lexeme::CALL_M:
-				case lexeme::CALL_S:
-				case lexeme::CALL_U:
-				case lexeme::CALL_N:
-				{
-					this->next();
-
-					lang::$call node;
-
-					//|------<update>------|
-					node.type = op::r(*tkn);
-					//|--------------------|
-					
-					if (this->peek(lexeme::SYMBOL))
-					{
-						//|----------<copy>----------|
-						const auto tkn {*this->peek()};
-						//|--------------------------|
-
-						this->next();
-
-						//|----------<update>----------|
-						node.name = std::move(tkn.data);
-						//|----------------------------|
-					}
-					else throw E(u8"[parser] N/A <sym>");
-
-					if (this->peek(lexeme::L_PAREN))
-					{
-						this->next();
-					}
-					else throw E(u8"[parser] N/A '('");
-
-					start:
-					if (auto ast {this->expr_t()})
-					{
-						//|------------<insert>------------|
-						node.args.push_back(std::move(*ast));
-						//|--------------------------------|
-
-						if (this->peek(lexeme::COMMA))
-						{
-							this->next();
-							goto start;
-						}
-						// else throw E(u8"[parser] N/A ','");
-					}
-
-					if (this->peek(lexeme::R_PAREN))
-					{
-						this->next();
-					}
-					else throw E(u8"[parser] N/A ')'");
-
-					return std::make_unique /*(wrap)*/
-					<decltype(node)>(std::move(node));
-				}
-			}
-		}
-		return std::nullopt;
 	}
 
 	auto expr_group() -> decltype(this->expr_t())
@@ -1262,7 +1257,7 @@ private:
 					this->next();
 
 					lang::$symbol node;
-
+					
 					//|----------<update>----------|
 					node.name = std::move(tkn->data);
 					//|----------------------------|
