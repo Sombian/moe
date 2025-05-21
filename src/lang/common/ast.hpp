@@ -10,17 +10,22 @@
 #include "token.hpp"
 
 #include "models/str.hpp"
+#include "traits/printable.hpp"
 
 namespace lang
 {
 	struct $var;
 	struct $fun;
+	struct $trait;
+	struct $struct;
 }
 
 typedef std::variant
 <
 	std::unique_ptr<lang::$var>,
-	std::unique_ptr<lang::$fun>
+	std::unique_ptr<lang::$fun>,
+	std::unique_ptr<lang::$trait>,
+	std::unique_ptr<lang::$struct>
 >
 decl;
 
@@ -69,32 +74,6 @@ typedef std::variant
 	std::unique_ptr<lang::$call>
 >
 expr;
-
-namespace lang
-{
-	struct visitor
-	{
-		// decl
-		virtual void visit(const $var&) = 0;
-		virtual void visit(const $fun&) = 0;
-		// stmt
-		virtual void visit(const $if&) = 0;
-		virtual void visit(const $match&) = 0;
-		virtual void visit(const $for&) = 0;
-		virtual void visit(const $while&) = 0;
-		virtual void visit(const $break&) = 0;
-		virtual void visit(const $return&) = 0;
-		virtual void visit(const $continue&) = 0;
-		// expr
-		virtual void visit(const $unary&) = 0;
-		virtual void visit(const $binary&) = 0;
-		virtual void visit(const $literal&) = 0;
-		virtual void visit(const $symbol&) = 0;
-		virtual void visit(const $access&) = 0;
-		virtual void visit(const $group&) = 0;
-		virtual void visit(const $call&) = 0;
-	};
-}
 
 typedef std::variant
 <
@@ -498,6 +477,34 @@ namespace op
 	}
 }
 
+namespace lang
+{
+	struct visitor
+	{
+		// decl
+		virtual void visit(const $var&) = 0;
+		virtual void visit(const $fun&) = 0;
+		virtual void visit(const $trait&) = 0;
+		virtual void visit(const $struct&) = 0;
+		// stmt
+		virtual void visit(const $if&) = 0;
+		virtual void visit(const $match&) = 0;
+		virtual void visit(const $for&) = 0;
+		virtual void visit(const $while&) = 0;
+		virtual void visit(const $break&) = 0;
+		virtual void visit(const $return&) = 0;
+		virtual void visit(const $continue&) = 0;
+		// expr
+		virtual void visit(const $unary&) = 0;
+		virtual void visit(const $binary&) = 0;
+		virtual void visit(const $literal&) = 0;
+		virtual void visit(const $symbol&) = 0;
+		virtual void visit(const $access&) = 0;
+		virtual void visit(const $group&) = 0;
+		virtual void visit(const $call&) = 0;
+	};
+}
+
 // decl
 namespace lang
 {
@@ -513,6 +520,7 @@ namespace lang
 		// visitor pattern
 		auto accept(visitor& impl) const { impl.visit(*this); }
 	};
+
 	struct $fun
 	{
 		//------------//
@@ -522,6 +530,24 @@ namespace lang
 		only<utf8> name;
 		only<utf8> type;
 		only<body> body;
+
+		// visitor pattern
+		auto accept(visitor& impl) const { impl.visit(*this); }
+	};
+
+	struct $trait
+	{
+		only<utf8> name;
+		many<$fun> body;
+
+		// visitor pattern
+		auto accept(visitor& impl) const { impl.visit(*this); }
+	};
+
+	struct $struct
+	{
+		only<utf8> name;
+		many<$var> body;
 
 		// visitor pattern
 		auto accept(visitor& impl) const { impl.visit(*this); }
@@ -670,378 +696,317 @@ struct program
 {
 	many<node> ast;
 
+	// symbolic expression printer
+	class printer final : lang::visitor
+	{
+		size_t tab {0};
+		std::ostream& out;
+
+		#define START          \
+		{                      \
+			this->out << "\n"; \
+			this->gap();       \
+			this->out << "{";  \
+			this->out << "\n"; \
+			this->tab++;       \
+		}                      \
+
+		#define CLOSE          \
+		{                      \
+			this->tab--;       \
+			this->gap();       \
+			this->out << "}" ; \
+			this->out << "\n"; \
+		}                      \
+
+		auto gap()
+		{
+			for (size_t i {0}; i < this->tab; ++i)
+			{ /*-!-*/ this->out << "\t"; /*-!-*/ }
+		}
+
+	public:
+
+		printer(decltype(out) out) : out {out} {}
+
+		//|---------|
+		//| helpers |
+		//|---------|
+
+		#define ONLY($T)                 \
+		                                 \
+		auto visit(const only<$T>& data) \
+		{                                \
+			std::visit([&](auto&& arg)   \
+			{                            \
+				arg->accept(*this);      \
+			},                           \
+			data);                       \
+		}                                \
+
+		ONLY(decl)
+		ONLY(stmt)
+		ONLY(expr)
+		#undef ONLY
+
+		auto visit(const only<node>& data)
+		{
+			std::visit([&](auto&& arg)
+			{
+				this->visit(arg);
+			},
+			data);
+		}
+		
+		#define MANY($T)                               \
+		                                               \
+		auto visit(const many<$T>& data)               \
+		{                                              \
+			if (!data.empty())                         \
+			{                                          \
+				size_t count {0};                      \
+				                                       \
+				for (const auto& node : data)          \
+				{                                      \
+					this->visit(node);                 \
+					                                   \
+					if (++count < data.size())         \
+					{                                  \
+						this->gap(); this->out << "&"; \
+					}                                  \
+				}                                      \
+			}                                          \
+			else                                       \
+			{                                          \
+				this->out << "[empty]\n";              \
+			}                                          \
+		}                                              \
+
+		MANY(decl)
+		MANY(stmt)
+		MANY(expr)
+		MANY(node)
+		MANY(body)
+
+		template<typename T>
+		void visit(const T& data)
+		{
+			this->out << data << "\n";
+		}
+
+		//|------|
+		//| decl |
+		//|------|
+
+		void visit(const lang::$var& data) override
+		{
+			START
+			this->gap(); this->out << "[var]" << "\n";
+			this->gap(); this->out << "name" << ": "; this->visit(data.name);
+			this->gap(); this->out << "type" << ": "; this->visit(data.type);
+			this->gap(); this->out << "init" << ": "; this->visit(data.init);
+			CLOSE
+		}
+		MANY(lang::$var) // vector ver. codegen
+
+		void visit(const lang::$fun& data) override
+		{
+
+			START
+			this->gap(); this->out << "[fun]" << "\n";
+			this->gap(); this->out << "name" << ": "; this->visit(data.name);
+			this->gap(); this->out << "type" << ": "; this->visit(data.type);
+			this->gap(); this->out << "body" << ": "; this->visit(data.body);
+			CLOSE
+		}
+		MANY(lang::$fun) // vector ver. codegen
+
+		void visit(const lang::$trait& data) override
+		{
+			START
+			this->gap(); this->out << "[trait]" << "\n";
+			this->gap(); this->out << "name" << ": "; this->visit(data.name);
+			this->gap(); this->out << "body" << ": "; this->visit(data.body);
+			CLOSE
+		}
+		MANY(lang::$trait) // vector ver. codegen
+
+		void visit(const lang::$struct& data) override
+		{
+			START
+			this->gap(); this->out << "[struct]" << "\n";
+			this->gap(); this->out << "name" << ": "; this->visit(data.name);
+			this->gap(); this->out << "body" << ": "; this->visit(data.body);
+			CLOSE
+		}
+		MANY(lang::$struct) // vector ver. codegen
+
+		//|------|
+		//| stmt |
+		//|------|
+
+		void visit(const lang::$if& data) override
+		{
+			START
+			this->gap(); this->out << "[if]" << "\n";
+			this->gap(); this->out << "block" << ": "; this->visit(data.block);
+			this->gap(); this->out << "cases" << ": "; this->visit(data.cases);
+			CLOSE
+		}
+		MANY(lang::$if) // vector ver. codegen
+
+		void visit(const lang::$match& data) override
+		{
+			START
+			this->gap(); this->out << "[match]" << "\n";
+			this->gap(); this->out << "input" << ": "; this->visit(data.input);
+			this->gap(); this->out << "block" << ": "; this->visit(data.block);
+			this->gap(); this->out << "cases" << ": "; this->visit(data.cases);
+			CLOSE
+		}
+		MANY(lang::$match) // vector ver. codegen
+
+		void visit(const lang::$for& data) override
+		{
+			START
+			this->gap(); this->out << "[for]" << "\n";
+			this->gap(); this->out << "setup" << ": "; this->visit(data.setup);
+			this->gap(); this->out << "input" << ": "; this->visit(data.input);
+			this->gap(); this->out << "after" << ": "; this->visit(data.after);
+			this->gap(); this->out << "block" << ": "; this->visit(data.block);
+			CLOSE
+		}
+		MANY(lang::$for) // vector ver. codegen
+
+		void visit(const lang::$while& data) override
+		{
+			START
+			this->gap(); this->out << "[while]" << "\n";
+			this->gap(); this->out << "input" << ": "; this->visit(data.input);
+			this->gap(); this->out << "block" << ": "; this->visit(data.block);
+			CLOSE
+		}
+		MANY(lang::$while) // vector ver. codegen
+
+		void visit(const lang::$break& data) override
+		{
+			START
+			this->gap(); this->out << "[break]" << "\n";
+			this->gap(); this->out << "label" << ": "; this->visit(data.label);
+			CLOSE
+		}
+		MANY(lang::$break) // vector ver. codegen
+
+		void visit(const lang::$return& data) override
+		{
+			START
+			this->gap(); this->out << "[return]" << "\n";
+			this->gap(); this->out << "value" << ": "; this->visit(data.value);
+			CLOSE
+		}
+		MANY(lang::$return) // vector ver. codegen
+
+		void visit(const lang::$continue& data) override
+		{
+			START
+			this->gap(); this->out << "[continue]" << "\n";
+			this->gap(); this->out << "label" << ": "; this->visit(data.label);
+			CLOSE
+		}
+		MANY(lang::$continue) // vector ver. codegen
+
+		//|------|
+		//| expr |
+		//|------|
+
+		void visit(const lang::$unary& data) override
+		{
+			START
+			this->gap(); this->out << "[unary]" << "\n";
+			this->gap(); this->out << "lhs" << ": "; this->visit(data.lhs);
+			this->gap(); this->out << "rhs" << ": "; this->visit(data.rhs);
+			CLOSE
+		}
+		MANY(lang::$unary) // vector ver. codegen
+
+		void visit(const lang::$binary& data) override
+		{
+			START
+			this->gap(); this->out << "[binary]" << "\n";
+			this->gap(); this->out << "lhs" << ": "; this->visit(data.lhs);
+			this->gap(); this->out << "mhs" << ": "; this->visit(data.mhs);
+			this->gap(); this->out << "rhs" << ": "; this->visit(data.rhs);
+			CLOSE
+		}
+		MANY(lang::$binary) // vector ver. codegen
+
+		void visit(const lang::$literal& data) override
+		{
+			START
+			this->gap(); this->out << "[literal]" << "\n";
+			this->gap(); this->out << "type" << ": "; this->visit(data.type);
+			this->gap(); this->out << "data" << ": "; this->visit(data.data);
+			CLOSE
+		}
+		MANY(lang::$literal) // vector ver. codegen
+
+		void visit(const lang::$symbol& data) override
+		{
+
+			START
+			this->gap(); this->out << "[symbol]" << "\n";
+			this->gap(); this->out << "name" << ": "; this->visit(data.name);
+			CLOSE
+		}
+		MANY(lang::$symbol) // vector ver. codegen
+
+		void visit(const lang::$access& data) override
+		{
+			START
+			this->gap(); this->out << "[access]" << "\n";
+			this->gap(); this->out << "expr" << ": "; this->visit(data.expr);
+			this->gap(); this->out << "type" << ": "; this->visit(data.type);
+			this->gap(); this->out << "name" << ": "; this->visit(data.name);
+			CLOSE
+		}
+		MANY(lang::$access) // vector ver. codegen
+
+		void visit(const lang::$group& data) override
+		{
+			START
+			this->gap(); this->out << "[group]" << "\n";
+			this->gap(); this->out << "expr" << ": "; this->visit(data.expr);
+			CLOSE
+		}
+		MANY(lang::$group) // vector ver. codegen
+
+		void visit(const lang::$call& data) override
+		{
+			START
+			this->gap(); this->out << "[call]" << "\n";
+			this->gap(); this->out << "call" << ": "; this->visit(data.call);
+			this->gap(); this->out << "args" << ": "; this->visit(data.args);
+			CLOSE
+		}
+		MANY(lang::$call) // vector ver. codegen
+		#undef ONLY
+		#undef MANY
+
+		#undef START
+		#undef CLOSE
+	};
+
 public:
 
 	auto print() const
 	{
-		// symbolic expression printer
-		class printer final : lang::visitor
-		{
-			size_t tab {0};
-			std::ostream& out;
-
-			#define START          \
-			{                      \
-				this->out << "\n"; \
-				this->gap();       \
-				this->out << "{";  \
-				this->out << "\n"; \
-				this->tab++;       \
-			}                      \
-
-			#define CLOSE          \
-			{                      \
-				this->tab--;       \
-				this->gap();       \
-				this->out << "}" ; \
-				this->out << "\n"; \
-			}                      \
-
-			auto gap()
-			{
-				for (size_t i {0}; i < this->tab; ++i)
-				{ /*------*/ this->out << "\t"; /*------*/ }
-			}
-
-		public:
-
-			printer(decltype(out) out) : out {out} {}
-
-			//|---------|
-			//| helpers |
-			//|---------|
-
-			auto visit(const only<decl>& data)
-			{
-				std::visit([&](auto&& arg)
-				{
-					arg->accept(*this);
-				},
-				data);
-			}
-
-			auto visit(const only<stmt>& data)
-			{
-				std::visit([&](auto&& arg)
-				{
-					arg->accept(*this);
-				},
-				data);
-			}
-
-			auto visit(const only<expr>& data)
-			{
-				std::visit([&](auto&& arg)
-				{
-					arg->accept(*this);
-				},
-				data);
-			}
-
-			auto visit(const only<node>& data)
-			{
-				std::visit([&](auto&& arg)
-				{
-					this->visit(arg);
-				},
-				data);
-			}
-
-			auto visit(const many<decl>& data)
-			{
-				if (data.empty())
-				{
-					this->out << "[empty]\n";
-				}
-				else
-				{
-					size_t i {0};
-
-					for (const auto& node : data)
-					{
-						this->visit(node);
-					
-						if (++i < data.size())
-						{
-							//|-------<seperator>-------|
-							this->gap(); this->out << ",";
-							//|-------------------------|
-						}
-					}
-				}
-			}
-
-			auto visit(const many<stmt>& data)
-			{
-				if (data.empty())
-				{
-					this->out << "[empty]\n";
-				}
-				else
-				{
-
-					size_t i {0};
-
-					for (const auto& node : data)
-					{
-						this->visit(node);
-					
-						// skip last comma
-						if (++i < data.size())
-						{
-							//|-------<seperator>-------|
-							this->gap(); this->out << ",";
-							//|-------------------------|
-						}
-					}
-				}
-			}
-
-			auto visit(const many<expr>& data)
-			{
-				if (data.empty())
-				{
-					this->out << "[empty]\n";
-				}
-				else
-				{
-					size_t i {0};
-
-					for (const auto& node : data)
-					{
-						this->visit(node);
-					
-						// skip last comma
-						if (++i < data.size())
-						{
-							//|-------<seperator>-------|
-							this->gap(); this->out << ",";
-							//|-------------------------|
-						}
-					}
-				}
-			}
-
-			auto visit(const many<node>& data)
-			{
-				if (data.empty())
-				{
-					this->out << "[empty]\n";
-				}
-				else
-				{
-					size_t i {0};
-
-					for (const auto& node : data)
-					{
-						this->visit(node);
-					
-						// skip last comma
-						if (++i < data.size())
-						{
-							//|-------<seperator>-------|
-							this->gap(); this->out << ",";
-							//|-------------------------|
-						}
-					}
-				}
-			}
-
-			auto visit(const many<body>& data)
-			{
-				if (data.empty())
-				{
-					this->out << "[empty]\n";
-				}
-				else
-				{
-					size_t i {0};
-
-					for (const auto& node : data)
-					{
-						this->visit(node);
-					
-						// skip last comma
-						if (++i < data.size())
-						{
-							//|-------<seperator>-------|
-							this->gap(); this->out << ",";
-							//|-------------------------|
-						}
-					}
-				}
-			}
-
-			//|------|
-			//| decl |
-			//|------|
-
-			void visit(const lang::$var& data) override
-			{
-				START
-				this->gap(); this->out << "[var]" << "\n";
-				this->gap(); this->out << "name" << ": " << data.name << "\n";
-				this->gap(); this->out << "type" << ": " << data.type << "\n";
-				this->gap(); this->out << "init" << ": "; this->visit(data.init);
-				CLOSE
-			}
-
-			void visit(const lang::$fun& data) override
-			{
-	
-				START
-				this->gap(); this->out << "[fun]" << "\n";
-				this->gap(); this->out << "name" << ": " << data.name << "\n";
-				this->gap(); this->out << "type" << ": " << data.type << "\n";
-				this->gap(); this->out << "body" << ": "; this->visit(data.body);
-				CLOSE
-			}
-
-			//|------|
-			//| stmt |
-			//|------|
-
-			void visit(const lang::$if& data) override
-			{
-				START
-				this->gap(); this->out << "[if]" << "\n";
-				this->gap(); this->out << "block" << ": "; this->visit(data.block);
-				this->gap(); this->out << "cases" << ": "; this->visit(data.cases);
-				CLOSE
-			}
-
-			void visit(const lang::$match& data) override
-			{
-				START
-				this->gap(); this->out << "[match]" << "\n";
-				this->gap(); this->out << "input" << ": "; this->visit(data.input);
-				this->gap(); this->out << "block" << ": "; this->visit(data.block);
-				this->gap(); this->out << "cases" << ": "; this->visit(data.cases);
-				CLOSE
-			}
-
-			void visit(const lang::$for& data) override
-			{
-				START
-				this->gap(); this->out << "[for]" << "\n";
-				this->gap(); this->out << "setup" << ": "; this->visit(data.setup);
-				this->gap(); this->out << "input" << ": "; this->visit(data.input);
-				this->gap(); this->out << "after" << ": "; this->visit(data.after);
-				this->gap(); this->out << "block" << ": "; this->visit(data.block);
-				CLOSE
-			}
-
-			void visit(const lang::$while& data) override
-			{
-				START
-				this->gap(); this->out << "[while]" << "\n";
-				this->gap(); this->out << "input" << ": "; this->visit(data.input);
-				this->gap(); this->out << "block" << ": "; this->visit(data.block);
-				CLOSE
-			}
-
-			void visit(const lang::$break& data) override
-			{
-				START
-				this->gap(); this->out << "[break]" << "\n";
-				this->gap(); this->out << "label" << ": " << data.label << "\n";
-				CLOSE
-			}
-
-			void visit(const lang::$return& data) override
-			{
-				START
-				this->gap(); this->out << "[return]" << "\n";
-				this->gap(); this->out << "value" << ": "; this->visit(data.value);
-				CLOSE
-			}
-
-			void visit(const lang::$continue& data) override
-			{
-				START
-				this->gap(); this->out << "[continue]" << "\n";
-				this->gap(); this->out << "label" << ": " << data.label << "\n";
-				CLOSE
-			}
-
-			//|------|
-			//| expr |
-			//|------|
-
-			void visit(const lang::$unary& data) override
-			{
-				START
-				this->gap(); this->out << "[unary]" << "\n";
-				this->gap(); this->out << "lhs" << ": " << data.lhs << "\n";
-				this->gap(); this->out << "rhs" << ": "; this->visit(data.rhs);
-				CLOSE
-			}
-
-			void visit(const lang::$binary& data) override
-			{
-				START
-				this->gap(); this->out << "[binary]" << "\n";
-				this->gap(); this->out << "lhs" << ": "; this->visit(data.lhs);
-				this->gap(); this->out << "mhs" << ": " << data.mhs << "\n";
-				this->gap(); this->out << "rhs" << ": "; this->visit(data.rhs);
-				CLOSE
-			}
-
-			void visit(const lang::$literal& data) override
-			{
-				START
-				this->gap(); this->out << "[literal]" << "\n";
-				this->gap(); this->out << "type" << ": " << data.type << "\n";
-				this->gap(); this->out << "data" << ": " << data.data << "\n";
-				CLOSE
-			}
-
-			void visit(const lang::$symbol& data) override
-			{
-
-				START
-				this->gap(); this->out << "[symbol]" << "\n";
-				this->gap(); this->out << "name" << ": " << data.name << "\n";
-				CLOSE
-			}
-
-			void visit(const lang::$access& data) override
-			{
-				START
-				this->gap(); this->out << "[access]" << "\n";
-				this->gap(); this->out << "expr" << ": "; this->visit(data.expr);
-				this->gap(); this->out << "type" << ": " << data.type << "\n";
-				this->gap(); this->out << "name" << ": " << data.name << "\n";
-				CLOSE
-			}
-
-			void visit(const lang::$group& data) override
-			{
-				START
-				this->gap(); this->out << "[group]" << "\n";
-				this->gap(); this->out << "expr" << ": "; this->visit(data.expr);
-				CLOSE
-			}
-
-			void visit(const lang::$call& data) override
-			{
-				START
-				this->gap(); this->out << "[call]" << "\n";
-				this->gap(); this->out << "call" << ": "; this->visit(data.call);
-				this->gap(); this->out << "args" << ": "; this->visit(data.args);
-				CLOSE
-			}
-
-			#undef START
-			#undef CLOSE
-		}
-		printer {std::cout};
+		printer impl {std::cout};
 
 		for (const auto& node : this->ast)
 		{
-			std::visit([&](const auto& arg)
+			std::visit([&](auto&& arg)
 			{
-				printer.visit(arg);
+				impl.visit(arg);
 			},
 			node);
 		}

@@ -21,5 +21,5 @@
 
 fun! main(): i32
 {
-	println(69, 74);
+	io::println(69, 74);
 }
