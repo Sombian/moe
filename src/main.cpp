@@ -2,6 +2,7 @@
 
 #include "lang/lexer.hpp"
 #include "lang/parser.hpp"
+#include "lang/sentry.hpp"
 
 auto main() -> int
 {
@@ -33,7 +34,14 @@ auto main() -> int
 			>
 			parser {lexer};
 
-			if (const auto exe {parser.pull()})
+			sentry
+			<
+				decltype(file.path),
+				decltype(file.data)
+			>
+			sentry {parser};
+
+			if (auto&& exe {sentry.pull()})
 			{
 				exe->print();
 			}

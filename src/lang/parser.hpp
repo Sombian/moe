@@ -166,10 +166,6 @@ class parser
 
 public:
 
-	//|---------------|
-	//| the rule of 0 |
-	//|---------------|
-
 	parser
 	(
 		decltype(lexer) lexer
@@ -182,7 +178,6 @@ public:
 
 	auto pull() -> std::optional<program>
 	{
-		// full ast
 		program exe;
 		try
 		{
@@ -408,9 +403,9 @@ private:
 			}
 			// else throw E(u8"[parser] N/A '='");
 
-			//|------------<insert>------------|
-			node.args.push_back(std::move(args));
-			//|--------------------------------|
+			//|--------------<insert>--------------|
+			node.args.emplace_back(std::move(args));
+			//|------------------------------------|
 			
 			if (this->peek(lexeme::COMMA))
 			{
@@ -1183,9 +1178,9 @@ private:
 							start:
 							if (auto ast {this->expr_t()})
 							{
-								//|------------<insert>------------|
-								node.args.push_back(std::move(*ast));
-								//|--------------------------------|
+								//|--------------<insert>--------------|
+								node.args.emplace_back(std::move(*ast));
+								//|------------------------------------|
 
 								if (this->peek(lexeme::COMMA))
 								{

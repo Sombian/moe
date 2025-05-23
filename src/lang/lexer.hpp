@@ -120,11 +120,11 @@ class lexer
 
 public:
 
-	//|---------------|
-	//| the rule of 0 |
-	//|---------------|
-
-	lexer(decltype(file) file) : file {file}, it {file.data.begin()} {}
+	lexer
+	(
+		decltype(file) file
+	)
+	: file {file}, it {file.data.begin()} {}
 
 	//|-----------------|
 	//| member function |

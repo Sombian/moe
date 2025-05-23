@@ -35,20 +35,12 @@ class tst
 		node* middle {nullptr};
 		node* right {nullptr};
 
-		//|---------------|
-		//| the rule of 0 |
-		//|---------------|
-
 		~node()
 		{
 			delete this->left;
 			delete this->middle;
 			delete this->right;
 		}
-
-		//|-----------------|
-		//| member function |
-		//|-----------------|
 
 		[[nodiscard]] static
 		auto repair(node* a) -> node*
@@ -158,10 +150,6 @@ public:
 		delete this->root; // ok
 	}
 
-	//|---------------|
-	//| the rule of 5 |
-	//|---------------|
-
 	template<type::string S>
 	tst(std::initializer_list<std::pair<const S&, T>> args = {})
 	{
@@ -254,10 +242,6 @@ private:
 		node* ptr;
 
 	public:
-
-		//|---------------|
-		//| the rule of 0 |
-		//|---------------|
 
 		cursor
 		(
@@ -370,10 +354,6 @@ private:
 		const U str;
 
 	public:
-
-		//|---------------|
-		//| the rule of 0 |
-		//|---------------|
 
 		proxy
 		(

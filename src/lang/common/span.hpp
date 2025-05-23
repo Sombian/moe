@@ -14,10 +14,6 @@ class span
 
 	public:
 
-		//|---------------|
-		//| the rule of 0 |
-		//|---------------|
-
 		proxy_x(decltype(data) data) : data {data} {}
 
 		//|-----------------|
@@ -51,10 +47,6 @@ class span
 
 	public:
 
-		//|---------------|
-		//| the rule of 0 |
-		//|---------------|
-
 		proxy_y(decltype(data) data) : data {data} {}
 
 		//|-----------------|
@@ -87,10 +79,6 @@ class span
 	};
 
 public:
-
-	//|---------------|
-	//| the rule of 0 |
-	//|---------------|
 
 	span() = default;
 

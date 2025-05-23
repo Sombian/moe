@@ -236,10 +236,6 @@ struct token
 	// SFINE: use T::slice if T is a string impl, otherwise use T directly
 	typedef std::conditional_t<type::string_impl<T>, typename T::slice, T> string;
 
-	//|---------------|
-	//| the rule of 0 |
-	//|---------------|
-
 	lexeme type;
 	uint16_t x;
 	uint16_t y;
