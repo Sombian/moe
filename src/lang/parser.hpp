@@ -23,34 +23,28 @@ template
 >
 class parser
 {
-	//|--<safe ref>---|
-	lexer<A, B>& lexer;
-	//|---------------|
+	lexer<A, B>* lexer;
+	
 	uint16_t x;
 	uint16_t y;
 	//|---------<buffer>---------|
-	decltype(lexer.pull()) buffer;
+	decltype(lexer->pull()) buffer;
 	//|--------------------------|
 
-	#define E($value) error \
-	{                       \
-		.msg                \
-		{                   \
-			$value          \
-		},                  \
-		.x                  \
-		{                   \
-			this->x         \
-		},                  \
-		.y                  \
-		{                   \
-			this->y         \
-		},                  \
-	}                       \
+	#define E($value) error<A, B> \
+	{                             \
+		.file = *this,            \
+		.data = $value,           \
+		.span                     \
+		{                         \
+			this->x,              \
+			this->y,              \
+		},                        \
+	}                             \
 
-	//|--------------<maybe>-------------|
-	typedef std::optional<token<B>> maybe;
-	//|----------------------------------|
+	//|---------------<maybe>--------------|
+	typedef std::optional<token<A, B>> maybe;
+	//|------------------------------------|
 
 	auto peek() -> maybe
 	{
@@ -58,11 +52,11 @@ class parser
 		{
 			typedef std::decay_t<decltype(arg)> T;
 
-			if constexpr (std::is_same_v<T, token<B>>)
+			if constexpr (std::is_same_v<T, token<A, B>>)
 			{
 				return /**/ arg /**/;
 			}
-			if constexpr (std::is_same_v<T, error>)
+			if constexpr (std::is_same_v<T, error<A, B>>)
 			{
 				return std::nullopt;
 			}
@@ -74,17 +68,17 @@ class parser
 	auto next() -> maybe
 	{
 		// step 1. update buffer
-		this->buffer = this->lexer.pull();
+		this->buffer = this->lexer->pull();
 
 		// step 2. update x & y position
 		return std::visit([&](auto&& arg) -> maybe
 		{
 			typedef std::decay_t<decltype(arg)> T;
 
-			if constexpr (std::is_same_v<T, token<B>>)
+			if constexpr (std::is_same_v<T, token<A, B>>)
 			{
-				this->x = arg.x;
-				this->y = arg.y;
+				this->x = arg.span.x;
+				this->y = arg.span.y;
 
 				#ifndef NDEBUG //------------|
 				std::cout << arg << std::endl;
@@ -92,10 +86,10 @@ class parser
 
 				return /**/ arg /**/;
 			}
-			if constexpr (std::is_same_v<T, error>)
+			if constexpr (std::is_same_v<T, error<A, B>>)
 			{
-				this->x = arg.x;
-				this->y = arg.y;
+				this->x = arg.span.x;
+				this->y = arg.span.y;
 
 				#ifndef NDEBUG //------------|
 				std::cout << arg << std::endl;
@@ -108,17 +102,17 @@ class parser
 		this->buffer);
 	}
 
-	auto peek(const lexeme type) -> bool
+	auto peek(const atom type) -> bool
 	{
 		return std::visit([&](auto&& arg) -> bool
 		{
 			typedef std::decay_t<decltype(arg)> T;
 
-			if constexpr (std::is_same_v<T, token<B>>)
+			if constexpr (std::is_same_v<T, token<A, B>>)
 			{
 				return arg == type;
 			}
-			if constexpr (std::is_same_v<T, error>)
+			if constexpr (std::is_same_v<T, error<A, B>>)
 			{
 				return false;
 			}
@@ -127,20 +121,20 @@ class parser
 		this->buffer);
 	}
 
-	auto next(const lexeme type) -> bool
+	auto next(const atom type) -> bool
 	{
 		// step 1. update buffer
-		this->buffer = this->lexer.pull();
+		this->buffer = this->lexer->pull();
 
 		// step 2. update x & y position
 		return std::visit([&](auto&& arg) -> bool
 		{
 			typedef std::decay_t<decltype(arg)> T;
 
-			if constexpr (std::is_same_v<T, token<B>>)
+			if constexpr (std::is_same_v<T, token<A, B>>)
 			{
-				this->x = arg.x;
-				this->y = arg.y;
+				this->x = arg.span.x;
+				this->y = arg.span.y;
 
 				#ifndef NDEBUG //------------|
 				std::cout << arg << std::endl;
@@ -148,10 +142,10 @@ class parser
 
 				return arg == type;
 			}
-			if constexpr (std::is_same_v<T, error>)
+			if constexpr (std::is_same_v<T, error<A, B>>)
 			{
-				this->x = arg.x;
-				this->y = arg.y;
+				this->x = arg.span.x;
+				this->y = arg.span.y;
 
 				#ifndef NDEBUG //------------|
 				std::cout << arg << std::endl;
@@ -170,11 +164,21 @@ public:
 	(
 		decltype(lexer) lexer
 	)
-	: lexer {lexer}, buffer {lexer.pull()} {}
+	: lexer {lexer}, buffer {eof {}}
+	{
+		this->next(); // 1st token
+	}
 
 	//|-----------------|
 	//| member function |
 	//|-----------------|
+	
+	operator fs::file<A, B>*()
+	{
+		return static_cast
+		<fs::file<A, B>*>
+		(*this->lexer);
+	}
 
 	auto pull() -> std::optional<program>
 	{
@@ -200,7 +204,7 @@ public:
 				break;
 			}
 		}
-		catch (error& error)
+		catch (error<A, B>& error)
 		{
 			#ifndef NDEBUG //-------------|
 			std::cout << error << std::endl;
@@ -222,19 +226,19 @@ private:
 		{
 			switch (tkn->type)
 			{
-				case lexeme::LET:
+				case atom::LET:
 				{
 					return this->decl_var(false);
 				}
-				case lexeme::LET$:
+				case atom::LET$:
 				{
 					return this->decl_var(true);
 				}
-				case lexeme::FUN:
+				case atom::FUN:
 				{
 					return this->decl_fun(false);
 				}
-				case lexeme::FUN$:
+				case atom::FUN$:
 				{
 					return this->decl_fun(true);
 				}
@@ -245,15 +249,19 @@ private:
 
 	auto decl_var(const bool is_const) -> decltype(this->decl_t())
 	{
+		lang::$var node
+		{{
+			this->x,
+			this->y,
+		}};
+
 		this->next();
-		
-		lang::$var node;
 
 		//|-------<update>------|
 		node.is_const = is_const;
 		//|---------------------|
 
-		if (this->peek(lexeme::SYMBOL))
+		if (this->peek(atom::SYMBOL))
 		{
 			//|----------<copy>----------|
 			const auto tkn {*this->peek()};
@@ -267,13 +275,13 @@ private:
 		}
 		else throw E(u8"[parser] N/A <sym>");
 
-		if (this->peek(lexeme::COLON))
+		if (this->peek(atom::COLON))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] N/A ':'");
 
-		if (this->peek(lexeme::SYMBOL))
+		if (this->peek(atom::SYMBOL))
 		{
 			//|----------<copy>----------|
 			const auto tkn {*this->peek()};
@@ -289,7 +297,7 @@ private:
 
 		if (!node.is_const)
 		{
-			if (this->peek(lexeme::ASSIGN))
+			if (this->peek(atom::ASSIGN))
 			{
 				this->next();
 
@@ -303,7 +311,7 @@ private:
 		}
 		else // let! name
 		{
-			if (this->peek(lexeme::ASSIGN))
+			if (this->peek(atom::ASSIGN))
 			{
 				this->next();
 
@@ -316,7 +324,7 @@ private:
 			else throw E(u8"[parser] must init const var");
 		}
 
-		if (this->peek(lexeme::S_COLON))
+		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
@@ -328,15 +336,19 @@ private:
 
 	auto decl_fun(const bool is_pure) -> decltype(this->decl_t())
 	{
+		lang::$fun node
+		{{
+			this->x,
+			this->y,
+		}};
+		
 		this->next();
-
-		lang::$fun node;
 
 		//|------<update>-----|
 		node.is_pure = is_pure;
 		//|-------------------|
 
-		if (this->peek(lexeme::SYMBOL))
+		if (this->peek(atom::SYMBOL))
 		{
 			//|----------<copy>----------|
 			const auto tkn {*this->peek()};
@@ -350,14 +362,14 @@ private:
 		}
 		else throw E(u8"[parser] N/A <sym>");
 	
-		if (this->peek(lexeme::L_PAREN))
+		if (this->peek(atom::L_PAREN))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] N/A '('");
 
 		start:
-		if (this->peek(lexeme::SYMBOL))
+		if (this->peek(atom::SYMBOL))
 		{
 			//|----------<copy>----------|
 			const auto tkn {*this->peek()};
@@ -371,13 +383,13 @@ private:
 			args.name = std::move(tkn.data);
 			//|----------------------------|
 
-			if (this->peek(lexeme::COLON))
+			if (this->peek(atom::COLON))
 			{
 				this->next();
 			}
 			else throw E(u8"[parser] N/A ':'");
 
-			if (this->peek(lexeme::SYMBOL))
+			if (this->peek(atom::SYMBOL))
 			{
 				//|----------<copy>----------|
 				const auto tkn {*this->peek()};
@@ -391,7 +403,7 @@ private:
 			}
 			else throw E(u8"[parser] N/A <sym>");
 
-			if (this->peek(lexeme::ASSIGN))
+			if (this->peek(atom::ASSIGN))
 			{
 				this->next();
 
@@ -407,7 +419,7 @@ private:
 			node.args.emplace_back(std::move(args));
 			//|------------------------------------|
 			
-			if (this->peek(lexeme::COMMA))
+			if (this->peek(atom::COMMA))
 			{
 				this->next();
 				goto start;
@@ -415,19 +427,19 @@ private:
 			// else throw E(u8"[parser] N/A ','");
 		}
 
-		if (this->peek(lexeme::R_PAREN))
+		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] N/A ')'");
 
-		if (this->peek(lexeme::COLON))
+		if (this->peek(atom::COLON))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] N/A ':'");
 
-		if (this->peek(lexeme::SYMBOL))
+		if (this->peek(atom::SYMBOL))
 		{
 			//|----------<copy>----------|
 			const auto tkn {*this->peek()};
@@ -441,7 +453,7 @@ private:
 		}
 		else throw E(u8"[parser] N/A <sym>");
 
-		if (this->peek(lexeme::L_BRACE))
+		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
@@ -469,7 +481,7 @@ private:
 				node.body.emplace_back(std::move(*out));
 				//|------------------------------------|
 	
-				if (this->peek(lexeme::S_COLON))
+				if (this->peek(atom::S_COLON))
 				{
 					this->next();
 				}
@@ -480,7 +492,7 @@ private:
 			break;
 		}
 
-		if (this->peek(lexeme::R_BRACE))
+		if (this->peek(atom::R_BRACE))
 		{
 			this->next();
 		}
@@ -500,31 +512,31 @@ private:
 		{
 			switch (tkn->type)
 			{
-				case lexeme::IF:
+				case atom::IF:
 				{
 					return this->stmt_if();
 				}
-				case lexeme::MATCH:
+				case atom::MATCH:
 				{
 					return this->stmt_match();
 				}
-				case lexeme::FOR:
+				case atom::FOR:
 				{
 					return this->stmt_for();
 				}
-				case lexeme::WHILE:
+				case atom::WHILE:
 				{
 					return this->stmt_while();
 				}
-				case lexeme::BREAK:
+				case atom::BREAK:
 				{
 					return this->stmt_break();
 				}
-				case lexeme::RETURN:
+				case atom::RETURN:
 				{
 					return this->stmt_return();
 				}
-				case lexeme::CONTINUE:
+				case atom::CONTINUE:
 				{
 					return this->stmt_continue();
 				}
@@ -535,15 +547,19 @@ private:
 
 	auto stmt_if() -> decltype(this->stmt_t())
 	{
+		lang::$if node
+		{{
+			this->x,
+			this->y,
+		}};
+		
 		this->next();
-
-		lang::$if node;
 
 		expr expr;
 		body body;
 		
 		else_if:
-		if (this->peek(lexeme::L_PAREN))
+		if (this->peek(atom::L_PAREN))
 		{
 			this->next();
 		}
@@ -559,14 +575,14 @@ private:
 		node.cases.emplace_back(std::move(expr));
 		//|------------------------------------|
 
-		if (this->peek(lexeme::R_PAREN))
+		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] N/A ')'");
 
 		if_block:
-		if (this->peek(lexeme::L_BRACE))
+		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
@@ -588,7 +604,7 @@ private:
 				body.emplace_back(std::move(*out));
 				//|------------------------------|
 
-				if (this->peek(lexeme::S_COLON))
+				if (this->peek(atom::S_COLON))
 				{
 					this->next();
 				}
@@ -603,15 +619,15 @@ private:
 		node.block.emplace_back(std::move(body));
 		//|------------------------------------|
 
-		if (this->peek(lexeme::R_BRACE))
+		if (this->peek(atom::R_BRACE))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] N/A '}'");
 
-		if (this->peek(lexeme::ELSE))
+		if (this->peek(atom::ELSE))
 		{
-			if (this->next(lexeme::IF))
+			if (this->next(atom::IF))
 			{
 				this->next();
 				goto else_if;
@@ -625,14 +641,18 @@ private:
 
 	auto stmt_match() -> decltype(this->stmt_t())
 	{
+		lang::$match node
+		{{
+			this->x,
+			this->y,
+		}};
+		
 		this->next();
-
-		lang::$match node;
 
 		expr expr;
 		body body;
 
-		if (this->peek(lexeme::L_PAREN))
+		if (this->peek(atom::L_PAREN))
 		{
 			this->next();
 		}
@@ -644,19 +664,19 @@ private:
 		{ throw E(u8"[parser] N/A expr"); });
 		//|-----------------------------------|
 
-		if (this->peek(lexeme::R_PAREN))
+		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] N/A ')'");
 
-		if (this->peek(lexeme::L_BRACE))
+		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] N/A '{'");
 
-		if (this->peek(lexeme::CASE))
+		if (this->peek(atom::CASE))
 		{
 			this->next();
 		}
@@ -674,13 +694,13 @@ private:
 		//|------------------------------------|
 
 		else_block:
-		if (this->peek(lexeme::COLON))
+		if (this->peek(atom::COLON))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] N/A ':'");
 
-		if (this->peek(lexeme::L_BRACE))
+		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
@@ -702,7 +722,7 @@ private:
 				body.emplace_back(std::move(*out));
 				//|------------------------------|
 
-				if (this->peek(lexeme::S_COLON))
+				if (this->peek(atom::S_COLON))
 				{
 					this->next();
 				}
@@ -717,26 +737,26 @@ private:
 		node.block.emplace_back(std::move(body));
 		//|------------------------------------|
 
-		if (this->peek(lexeme::R_BRACE))
+		if (this->peek(atom::R_BRACE))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] N/A '}'");
 
 		// check if theres more...
-		if (this->peek(lexeme::CASE))
+		if (this->peek(atom::CASE))
 		{
 			this->next();
 			goto case_block;
 		}
 		// check if theres more...
-		if (this->peek(lexeme::ELSE))
+		if (this->peek(atom::ELSE))
 		{
 			this->next();
 			goto else_block;
 		}
 
-		if (this->peek(lexeme::R_BRACE))
+		if (this->peek(atom::R_BRACE))
 		{
 			this->next();
 		}
@@ -748,11 +768,15 @@ private:
 
 	auto stmt_for() -> decltype(this->stmt_t())
 	{
+		lang::$for node
+		{{
+			this->x,
+			this->y,
+		}};
+		
 		this->next();
 
-		lang::$for node;
-
-		if (this->peek(lexeme::L_PAREN))
+		if (this->peek(atom::L_PAREN))
 		{
 			this->next();
 		}
@@ -764,7 +788,7 @@ private:
 		{ throw E(u8"[parser] N/A expr"); });
 		//|-----------------------------------|
 
-		if (this->peek(lexeme::S_COLON))
+		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
@@ -776,7 +800,7 @@ private:
 		{ throw E(u8"[parser] N/A expr"); });
 		//|-----------------------------------|
 
-		if (this->peek(lexeme::S_COLON))
+		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
@@ -788,13 +812,13 @@ private:
 		{ throw E(u8"[parser] N/A expr"); });
 		//|-----------------------------------|
 
-		if (this->peek(lexeme::R_PAREN))
+		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] N/A ')'");
 
-		if (this->peek(lexeme::L_BRACE))
+		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
@@ -816,7 +840,7 @@ private:
 				node.block.emplace_back(std::move(*out));
 				//|------------------------------------|
 
-				if (this->peek(lexeme::S_COLON))
+				if (this->peek(atom::S_COLON))
 				{
 					this->next();
 				}
@@ -827,7 +851,7 @@ private:
 			break;
 		}
 
-		if (this->peek(lexeme::R_BRACE))
+		if (this->peek(atom::R_BRACE))
 		{
 			this->next();
 		}
@@ -839,11 +863,15 @@ private:
 
 	auto stmt_while() -> decltype(this->stmt_t())
 	{
+		lang::$while node
+		{{
+			this->x,
+			this->y,
+		}};
+		
 		this->next();
 
-		lang::$while node;
-
-		if (this->peek(lexeme::L_PAREN))
+		if (this->peek(atom::L_PAREN))
 		{
 			this->next();
 		}
@@ -855,13 +883,13 @@ private:
 		{ throw E(u8"[parser] N/A expr"); });
 		//|-----------------------------------|
 
-		if (this->peek(lexeme::R_PAREN))
+		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
 		else throw E(u8"[parser] N/A ')'");
 
-		if (this->peek(lexeme::L_BRACE))
+		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
@@ -883,7 +911,7 @@ private:
 				node.block.emplace_back(std::move(*out));
 				//|------------------------------------|
 
-				if (this->peek(lexeme::S_COLON))
+				if (this->peek(atom::S_COLON))
 				{
 					this->next();
 				}
@@ -894,7 +922,7 @@ private:
 			break;
 		}
 
-		if (this->peek(lexeme::R_BRACE))
+		if (this->peek(atom::R_BRACE))
 		{
 			this->next();
 		}
@@ -906,11 +934,15 @@ private:
 
 	auto stmt_break() -> decltype(this->stmt_t())
 	{
+		lang::$break node
+		{{
+			this->x,
+			this->y,
+		}};
+		
 		this->next();
 
-		lang::$break node;
-
-		if (this->peek(lexeme::SYMBOL))
+		if (this->peek(atom::SYMBOL))
 		{
 			//|----------<copy>----------|
 			const auto tkn {*this->peek()};
@@ -929,9 +961,13 @@ private:
 
 	auto stmt_return() -> decltype(this->stmt_t())
 	{
-		this->next();
+		lang::$return node
+		{{
+			this->x,
+			this->y,
+		}};
 
-		lang::$return node;
+		this->next();
 
 		if (auto out {this->expr_t()})
 		{
@@ -940,7 +976,7 @@ private:
 			//|-------------------------|
 		}
 
-		if (this->peek(lexeme::S_COLON))
+		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
@@ -952,11 +988,15 @@ private:
 
 	auto stmt_continue() -> decltype(this->stmt_t())
 	{
+		lang::$continue node
+		{{
+			this->x,
+			this->y,
+		}};
+		
 		this->next();
 
-		lang::$continue node;
-
-		if (this->peek(lexeme::SYMBOL))
+		if (this->peek(atom::SYMBOL))
 		{
 			//|----------<copy>----------|
 			const auto tkn {*this->peek()};
@@ -991,21 +1031,24 @@ private:
 						if (auto tkn {this->peek()})
 						{
 							// handle prefix
-							if (op::is_l(*tkn))
+							if (opr::is_l(*tkn))
 							{
-								this->next();
+								lang::$unary node
+								{{
+									this->x,
+									this->y,
+								}};
 								
+								this->next();
+
 								//|--------------<catch>--------------|
 								std::optional rhs {impl(69).or_else([&]
 									-> decltype(this->expr_t())
 								{ throw E(u8"[parser] N/A expr");}) };
 								//|-----------------------------------|
 
-								lang::$unary node
-								{
-									.lhs {((op::l(*tkn)))},
-									.rhs {std::move(*rhs)},
-								};
+								node.lhs = opr::to_l(*tkn);
+								node.rhs = std::move(*rhs);
 
 								return std::make_unique /*(wrap)*/
 								<decltype(node)>(std::move(node));
@@ -1037,7 +1080,7 @@ private:
 					while (auto tkn {this->peek()})
 					{
 						// handle infix
-						if (op::is_i(*tkn))
+						if (opr::is_i(*tkn))
 						{
 							auto [lbp, rbp]
 							{
@@ -1045,59 +1088,59 @@ private:
 								{
 									switch (tkn->type)
 									{
-										case lexeme::ASSIGN:
-										case lexeme::ASSIGN_ADD:
-										case lexeme::ASSIGN_SUB:
-										case lexeme::ASSIGN_MUL:
-										case lexeme::ASSIGN_DIV:
-										case lexeme::ASSIGN_MOD:
-										case lexeme::ASSIGN_POW:
+										case atom::ASSIGN:
+										case atom::ASSIGN_ADD:
+										case atom::ASSIGN_SUB:
+										case atom::ASSIGN_MUL:
+										case atom::ASSIGN_DIV:
+										case atom::ASSIGN_MOD:
+										case atom::ASSIGN_POW:
 										{
 											return {1, 2};
 										}
-										case lexeme::NIL:
+										case atom::NIL:
 										{
 											return {3, 4};
 										}
-										case lexeme::B_OR:
-										case lexeme::L_OR:
+										case atom::B_OR:
+										case atom::L_OR:
 										{
 											return {5, 6};
 										}
-										case lexeme::B_AND:
-										case lexeme::L_AND:
+										case atom::B_AND:
+										case atom::L_AND:
 										{
 											return {7, 8};
 										}
-										case lexeme::EQ:
-										case lexeme::NE:
+										case atom::EQ:
+										case atom::NE:
 										{
 											return {9, 10};
 										}
-										case lexeme::LT:
-										case lexeme::GT:
-										case lexeme::LTE:
-										case lexeme::GTE:
+										case atom::LT:
+										case atom::GT:
+										case atom::LTE:
+										case atom::GTE:
 										{
 											return {11, 12};
 										}
-										case lexeme::SHL:
-										case lexeme::SHR:
+										case atom::SHL:
+										case atom::SHR:
 										{
 											return {13, 14};
 										}
-										case lexeme::ADD:
-										case lexeme::SUB:
+										case atom::ADD:
+										case atom::SUB:
 										{
 											return {15, 16};
 										}
-										case lexeme::MUL:
-										case lexeme::DIV:
-										case lexeme::MOD:
+										case atom::MUL:
+										case atom::DIV:
+										case atom::MOD:
 										{
 											return {17, 18};
 										}
-										case lexeme::POW:
+										case atom::POW:
 										{
 											return {19, 18};
 										}
@@ -1114,6 +1157,13 @@ private:
 							{
 								break;
 							}
+
+							lang::$binary node
+							{{
+								this->x,
+								this->y,
+							}};
+							
 							this->next();
 
 							//|--------------<catch>--------------|
@@ -1122,12 +1172,9 @@ private:
 							{ throw E(u8"[parser] N/A expr"); })};
 							//|-----------------------------------|
 
-							lang::$binary node
-							{
-								.lhs {std::move(*lhs)},
-								.mhs {((op::i(*tkn)))},
-								.rhs {std::move(*rhs)},
-							};
+							node.lhs = std::move(*lhs);
+							node.mhs = opr::to_i(*tkn);
+							node.rhs = std::move(*rhs);
 
 							lhs = std::make_unique /*(wrap)*/
 							<decltype(node)>(std::move(node));
@@ -1135,41 +1182,48 @@ private:
 						}
 
 						// handle postfix
-						if (op::is_r(*tkn))
+						if (opr::is_r(*tkn))
 						{
+							lang::$access node
+							{{
+								this->x,
+								this->y,
+							}};
+							
+							this->next();
+
+							if (this->peek(atom::SYMBOL))
+							{
+								//|----------<copy>----------|
+								const auto tkn {*this->peek()};
+								//|--------------------------|
+
 								this->next();
 
-								lang::$access node
-								{
-									.expr {std::move(*lhs)},
-									.type {((op::r(*tkn)))},
-								};
+								//|----------<update>----------|
+								node.name = std::move(tkn.data);
+								//|----------------------------|
+							}
+							else throw E(u8"[parser] N/A <sym>");
 
-								if (this->peek(lexeme::SYMBOL))
-								{
-									//|----------<copy>----------|
-									const auto tkn {*this->peek()};
-									//|--------------------------|
-
-									this->next();
-
-									//|----------<update>----------|
-									node.name = std::move(tkn.data);
-									//|----------------------------|
-								}
-								else throw E(u8"[parser] N/A <sym>");
-								
-								lhs = std::make_unique /*(wrap)*/
-								<decltype(node)>(std::move(node));
-								continue;
+							node.expr = std::move(*lhs);
+							node.type = opr::to_r(*tkn);
+							
+							lhs = std::make_unique /*(wrap)*/
+							<decltype(node)>(std::move(node));
+							continue;
 						}
 
 						// handle function
-						if (tkn == lexeme::L_PAREN)
+						if (tkn == atom::L_PAREN)
 						{
+							lang::$call node
+							{{
+								this->x,
+								this->y,
+							}};
+							
 							this->next();
-						
-							lang::$call node;
 
 							//|--------<update>--------|
 							node.call = std::move(*lhs);
@@ -1182,7 +1236,7 @@ private:
 								node.args.emplace_back(std::move(*ast));
 								//|------------------------------------|
 
-								if (this->peek(lexeme::COMMA))
+								if (this->peek(atom::COMMA))
 								{
 									this->next();
 									goto start;
@@ -1190,7 +1244,7 @@ private:
 								// else throw E(u8"[parser] N/A ','");
 							}
 
-							if (this->peek(lexeme::R_PAREN))
+							if (this->peek(atom::R_PAREN))
 							{
 								this->next();
 							}
@@ -1215,11 +1269,15 @@ private:
 		{
 			switch (tkn->type)
 			{
-				case lexeme::L_PAREN:
+				case atom::L_PAREN:
 				{
-					this->next();
+					lang::$group node
+					{{
+						this->x,
+						this->y,
+					}};
 					
-					lang::$group node;
+					this->next();
 
 					//|--------------<catch>--------------|
 					node.expr = *this->expr_t().or_else([&]
@@ -1227,7 +1285,7 @@ private:
 					{ throw E(u8"[parser] N/A expr"); });
 					//|-----------------------------------|
 
-					if (this->peek(lexeme::R_PAREN))
+					if (this->peek(atom::R_PAREN))
 					{
 						this->next();
 					}
@@ -1247,11 +1305,15 @@ private:
 		{
 			switch (tkn->type)
 			{
-				case lexeme::SYMBOL:
+				case atom::SYMBOL:
 				{
+					lang::$symbol node
+					{{
+						this->x,
+						this->y,
+					}};
+					
 					this->next();
-
-					lang::$symbol node;
 					
 					//|----------<update>----------|
 					node.name = std::move(tkn->data);
@@ -1271,12 +1333,16 @@ private:
 		{
 			switch (tkn->type)
 			{
-				case lexeme::TRUE:
-				case lexeme::FALSE:
+				case atom::TRUE:
+				case atom::FALSE:
 				{
-					this->next();
+					lang::$literal node
+					{{
+						this->x,
+						this->y,
+					}};
 					
-					lang::$literal node;
+					this->next();
 
 					//|----------<update>----------|
 					node.data = std::move(tkn->data);
@@ -1286,11 +1352,15 @@ private:
 					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
-				case lexeme::CHAR:
+				case atom::CHAR:
 				{
+					lang::$literal node
+					{{
+						this->x,
+						this->y,
+					}};
+					
 					this->next();
-
-					lang::$literal node;
 
 					//|----------<update>----------|
 					node.data = std::move(tkn->data);
@@ -1300,11 +1370,15 @@ private:
 					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
-				case lexeme::TEXT:
+				case atom::TEXT:
 				{
+					lang::$literal node
+					{{
+						this->x,
+						this->y,
+					}};
+					
 					this->next();
-
-					lang::$literal node;
 
 					//|----------<update>----------|
 					node.data = std::move(tkn->data);
@@ -1314,11 +1388,15 @@ private:
 					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
-				case lexeme::DEC:
+				case atom::DEC:
 				{
+					lang::$literal node
+					{{
+						this->x,
+						this->y,
+					}};
+					
 					this->next();
-
-					lang::$literal node;
 
 					//|----------<update>----------|
 					node.data = std::move(tkn->data);
@@ -1328,14 +1406,18 @@ private:
 					return std::make_unique /*(wrap)*/
 					<decltype(node)>(std::move(node));
 				}
-				case lexeme::INT:
-				case lexeme::BIN:
-				case lexeme::OCT:
-				case lexeme::HEX:
+				case atom::INT:
+				case atom::BIN:
+				case atom::OCT:
+				case atom::HEX:
 				{
+					lang::$literal node
+					{{
+						this->x,
+						this->y,
+					}};
+					
 					this->next();
-
-					lang::$literal node;
 
 					//|----------<update>----------|
 					node.data = std::move(tkn->data);

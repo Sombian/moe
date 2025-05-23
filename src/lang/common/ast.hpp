@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <cstddef>
 
-#include "token.hpp"
+#include "./token.hpp"
 
 #include "models/str.hpp"
 #include "traits/printable.hpp"
@@ -188,26 +188,26 @@ namespace lang
 
 		virtual void visit(const many<body>&) = 0;
 		// decl
-		virtual void visit(const $var&) = 0;
-		virtual void visit(const $fun&) = 0;
-		virtual void visit(const $trait&) = 0;
-		virtual void visit(const $class&) = 0;
+		virtual void visit($var&) = 0;
+		virtual void visit($fun&) = 0;
+		virtual void visit($trait&) = 0;
+		virtual void visit($class&) = 0;
 		// stmt
-		virtual void visit(const $if&) = 0;
-		virtual void visit(const $match&) = 0;
-		virtual void visit(const $for&) = 0;
-		virtual void visit(const $while&) = 0;
-		virtual void visit(const $break&) = 0;
-		virtual void visit(const $return&) = 0;
-		virtual void visit(const $continue&) = 0;
+		virtual void visit($if&) = 0;
+		virtual void visit($match&) = 0;
+		virtual void visit($for&) = 0;
+		virtual void visit($while&) = 0;
+		virtual void visit($break&) = 0;
+		virtual void visit($return&) = 0;
+		virtual void visit($continue&) = 0;
 		// expr
-		virtual void visit(const $unary&) = 0;
-		virtual void visit(const $binary&) = 0;
-		virtual void visit(const $literal&) = 0;
-		virtual void visit(const $symbol&) = 0;
-		virtual void visit(const $access&) = 0;
-		virtual void visit(const $group&) = 0;
-		virtual void visit(const $call&) = 0;
+		virtual void visit($unary&) = 0;
+		virtual void visit($binary&) = 0;
+		virtual void visit($literal&) = 0;
+		virtual void visit($symbol&) = 0;
+		virtual void visit($access&) = 0;
+		virtual void visit($group&) = 0;
+		virtual void visit($call&) = 0;
 	};
 }
 
@@ -216,6 +216,7 @@ namespace lang
 {
 	struct $var
 	{
+		span span;
 		only<utf8> name;
 		only<utf8> type;
 		only<expr> init;
@@ -223,11 +224,12 @@ namespace lang
 		bool is_const; //
 		//-------------//
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $fun
 	{
+		span span;
 		many<$var> args;
 		only<utf8> name;
 		only<utf8> type;
@@ -236,23 +238,25 @@ namespace lang
 		bool is_pure; //
 		//------------//
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $trait
 	{
+		span span;
 		only<utf8> name;
 		many<$fun> body;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $class
 	{
+		span span;
 		only<utf8> name;
 		many<$var> body;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 }
 
@@ -261,58 +265,65 @@ namespace lang
 {
 	struct $if
 	{
+		span span;
 		many<expr> cases;
 		many<body> block;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $match
 	{
+		span span;
 		only<expr> input;
 		many<expr> cases;
 		many<body> block;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $for
 	{
+		span span;
 		only<expr> setup;
 		only<expr> input;
 		only<expr> after;
 		only<body> block;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $while
 	{
+		span span;
 		only<expr> input;
 		only<body> block;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 	
 	struct $break
 	{
+		span span;
 		only<utf8> label;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $return
 	{
+		span span;
 		only<expr> value;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $continue
 	{
+		span span;
 		only<utf8> label;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 }
 
@@ -321,58 +332,65 @@ namespace lang
 {
 	struct $unary
 	{
+		span span;
 		only<op_l> lhs;
 		only<expr> rhs;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $binary
 	{
+		span span;
 		only<expr> lhs;
 		only<op_i> mhs;
 		only<expr> rhs;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $literal
 	{
+		span span;
 		only<data> type;
 		only<utf8> data;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $symbol
 	{
+		span span;
 		only<utf8> name;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $access
 	{
+		span span;
 		only<expr> expr;
 		only<op_r> type;
 		only<utf8> name;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $group
 	{
+		span span;
 		only<expr> expr;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 
 	struct $call
 	{
+		span span;
 		only<expr> call;
 		many<expr> args;
 
-		auto accept(visitor& impl) const { impl.visit(*this); }
+		auto accept(visitor& impl) { impl.visit(*this); }
 	};
 }
 
@@ -380,26 +398,30 @@ namespace lang
 //| operators |
 //|-----------|
 
-namespace op
+namespace opr
 {
-	template<typename B>
-	auto is_l(const token<B>& tkn) -> bool
+	template
+	<
+		typename A,
+		typename B
+	>
+	auto is_l(const token<A, B>& tkn) -> bool
 	{
 		switch (tkn.type)
 		{
 			#define macro(K, V)  \
 			/*|---------------|*/\
-			case lexeme::K:      \
+			case atom::K:        \
 			{                    \
 				return true;     \
 			}                    \
 			/*|---------------|*/\
 		
-			case lexeme::ADD:
+			case atom::ADD:
 			{
 				return true;
 			}
-			case lexeme::SUB:
+			case atom::SUB:
 			{
 				return true;
 			}
@@ -412,24 +434,28 @@ namespace op
 		}
 	}
 
-	template<typename B>
-	auto l(const token<B>& tkn) -> op_l
+	template
+	<
+		typename A,
+		typename B
+	>
+	auto to_l(const token<A, B>& tkn) -> op_l
 	{
 		switch (tkn.type)
 		{
 			#define macro(K, V)  \
 			/*|---------------|*/\
-			case lexeme::K:      \
+			case atom::K:        \
 			{                    \
 				return op_l::K;  \
 			}                    \
 			/*|---------------|*/\
 		
-			case lexeme::ADD:
+			case atom::ADD:
 			{
 				return op_l::ADD;
 			}
-			case lexeme::SUB:
+			case atom::SUB:
 			{
 				return op_l::SUB;
 			}
@@ -443,14 +469,18 @@ namespace op
 		}
 	}
 
-	template<typename B>
-	auto is_i(const token<B>& tkn) -> bool
+	template
+	<
+		typename A,
+		typename B
+	>
+	auto is_i(const token<A, B>& tkn) -> bool
 	{
 		switch (tkn.type)
 		{
 			#define macro(K, V)  \
 			/*|---------------|*/\
-			case lexeme::K:      \
+			case atom::K:        \
 			{                    \
 				return true;     \
 			}                    \
@@ -465,14 +495,18 @@ namespace op
 		}
 	}
 
-	template<typename B>
-	auto i(const token<B>& tkn) -> op_i
+	template
+	<
+		typename A,
+		typename B
+	>
+	auto to_i(const token<A, B>& tkn) -> op_i
 	{
 		switch (tkn.type)
 		{
 			#define macro(K, V)  \
 			/*|---------------|*/\
-			case lexeme::K:      \
+			case atom::K:        \
 			{                    \
 				return op_i::K;  \
 			}                    \
@@ -488,14 +522,18 @@ namespace op
 		}
 	}
 
-	template<typename B>
-	auto is_r(const token<B>& tkn) -> bool
+	template
+	<
+		typename A,
+		typename B
+	>
+	auto is_r(const token<A, B>& tkn) -> bool
 	{
 		switch (tkn.type)
 		{
 			#define macro(K, V)  \
 			/*|---------------|*/\
-			case lexeme::K:      \
+			case atom::K:        \
 			{                    \
 				return true;     \
 			}                    \
@@ -510,14 +548,18 @@ namespace op
 		}
 	}
 
-	template<typename B>
-	auto r(const token<B>& tkn) -> op_r
+	template
+	<
+		typename A,
+		typename B
+	>
+	auto to_r(const token<A, B>& tkn) -> op_r
 	{
 		switch (tkn.type)
 		{
 			#define macro(K, V)  \
 			/*|---------------|*/\
-			case lexeme::K:      \
+			case atom::K:        \
 			{                    \
 				return op_r::K;  \
 			}                    \
@@ -726,7 +768,7 @@ struct program
 		//| member function |
 		//|-----------------|
 
-		void visit(const traits::printable auto& data)
+		void visit(traits::printable auto& data)
 		{
 			this->out << data << "\n";
 		}
@@ -894,7 +936,7 @@ struct program
 		
 		#define VISIT($T)                      \
 		                                       \
-		void visit(const many<$T>& data)       \
+		void visit(many<$T>& data)             \
 		{                                      \
 			if (!data.empty())                 \
 			{                                  \
@@ -923,7 +965,7 @@ struct program
 		//| variant::decl |
 		//|---------------|
 
-		void visit(const lang::$var& data) override
+		void visit(lang::$var& data) override
 		{
 			START
 			this->gap(); this->out << "[var]" << "\n";
@@ -934,7 +976,7 @@ struct program
 		}
 		VISIT(lang::$var) // vector ver. codegen
 
-		void visit(const lang::$fun& data) override
+		void visit(lang::$fun& data) override
 		{
 
 			START
@@ -946,7 +988,7 @@ struct program
 		}
 		VISIT(lang::$fun) // vector ver. codegen
 
-		void visit(const lang::$trait& data) override
+		void visit(lang::$trait& data) override
 		{
 			START
 			this->gap(); this->out << "[trait]" << "\n";
@@ -956,7 +998,7 @@ struct program
 		}
 		VISIT(lang::$trait) // vector ver. codegen
 
-		void visit(const lang::$class& data) override
+		void visit(lang::$class& data) override
 		{
 			START
 			this->gap(); this->out << "[class]" << "\n";
@@ -970,7 +1012,7 @@ struct program
 		//| variant::stmt |
 		//|---------------|
 
-		void visit(const lang::$if& data) override
+		void visit(lang::$if& data) override
 		{
 			START
 			this->gap(); this->out << "[if]" << "\n";
@@ -980,7 +1022,7 @@ struct program
 		}
 		VISIT(lang::$if) // vector ver. codegen
 
-		void visit(const lang::$match& data) override
+		void visit(lang::$match& data) override
 		{
 			START
 			this->gap(); this->out << "[match]" << "\n";
@@ -991,7 +1033,7 @@ struct program
 		}
 		VISIT(lang::$match) // vector ver. codegen
 
-		void visit(const lang::$for& data) override
+		void visit(lang::$for& data) override
 		{
 			START
 			this->gap(); this->out << "[for]" << "\n";
@@ -1003,7 +1045,7 @@ struct program
 		}
 		VISIT(lang::$for) // vector ver. codegen
 
-		void visit(const lang::$while& data) override
+		void visit(lang::$while& data) override
 		{
 			START
 			this->gap(); this->out << "[while]" << "\n";
@@ -1013,7 +1055,7 @@ struct program
 		}
 		VISIT(lang::$while) // vector ver. codegen
 
-		void visit(const lang::$break& data) override
+		void visit(lang::$break& data) override
 		{
 			START
 			this->gap(); this->out << "[break]" << "\n";
@@ -1022,7 +1064,7 @@ struct program
 		}
 		VISIT(lang::$break) // vector ver. codegen
 
-		void visit(const lang::$return& data) override
+		void visit(lang::$return& data) override
 		{
 			START
 			this->gap(); this->out << "[return]" << "\n";
@@ -1031,7 +1073,7 @@ struct program
 		}
 		VISIT(lang::$return) // vector ver. codegen
 
-		void visit(const lang::$continue& data) override
+		void visit(lang::$continue& data) override
 		{
 			START
 			this->gap(); this->out << "[continue]" << "\n";
@@ -1044,7 +1086,7 @@ struct program
 		//| variant::expr |
 		//|---------------|
 
-		void visit(const lang::$unary& data) override
+		void visit(lang::$unary& data) override
 		{
 			START
 			this->gap(); this->out << "[unary]" << "\n";
@@ -1054,7 +1096,7 @@ struct program
 		}
 		VISIT(lang::$unary) // vector ver. codegen
 
-		void visit(const lang::$binary& data) override
+		void visit(lang::$binary& data) override
 		{
 			START
 			this->gap(); this->out << "[binary]" << "\n";
@@ -1065,7 +1107,7 @@ struct program
 		}
 		VISIT(lang::$binary) // vector ver. codegen
 
-		void visit(const lang::$literal& data) override
+		void visit(lang::$literal& data) override
 		{
 			START
 			this->gap(); this->out << "[literal]" << "\n";
@@ -1075,7 +1117,7 @@ struct program
 		}
 		VISIT(lang::$literal) // vector ver. codegen
 
-		void visit(const lang::$symbol& data) override
+		void visit(lang::$symbol& data) override
 		{
 
 			START
@@ -1085,7 +1127,7 @@ struct program
 		}
 		VISIT(lang::$symbol) // vector ver. codegen
 
-		void visit(const lang::$access& data) override
+		void visit(lang::$access& data) override
 		{
 			START
 			this->gap(); this->out << "[access]" << "\n";
@@ -1096,7 +1138,7 @@ struct program
 		}
 		VISIT(lang::$access) // vector ver. codegen
 
-		void visit(const lang::$group& data) override
+		void visit(lang::$group& data) override
 		{
 			START
 			this->gap(); this->out << "[group]" << "\n";
@@ -1105,7 +1147,7 @@ struct program
 		}
 		VISIT(lang::$group) // vector ver. codegen
 
-		void visit(const lang::$call& data) override
+		void visit(lang::$call& data) override
 		{
 			START
 			this->gap(); this->out << "[call]" << "\n";

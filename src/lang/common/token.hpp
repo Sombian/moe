@@ -6,6 +6,10 @@
 #include <iomanip>
 #include <iostream>
 
+#include "core/fs.hpp"
+
+#include "./span.hpp"
+
 #include "models/str.hpp"
 
 namespace lang
@@ -188,7 +192,7 @@ namespace lang
 
 }
 
-enum class lexeme : uint8_t
+enum class atom : uint8_t
 #define macro(K, V) K,
 {
 	delimeters(macro)
@@ -200,13 +204,13 @@ enum class lexeme : uint8_t
 };
 #undef macro
 
-auto operator<<(std::ostream& os, const lexeme data) -> std::ostream&
+auto operator<<(std::ostream& os, const atom data) -> std::ostream&
 {
 	switch (data)
 	{
 		#define macro(K, V)  \
 		/*|---------------|*/\
-		case lexeme::K:      \
+		case atom::K:        \
 		{                    \
 			return os << #K; \
 		}                    \
@@ -229,23 +233,35 @@ auto operator<<(std::ostream& os, const lexeme data) -> std::ostream&
 
 template
 <
-	type::string T
+	type::string A,
+	type::string B
 >
 struct token
 {
 	// SFINE: use T::slice if T is a string impl, otherwise use T directly
-	typedef std::conditional_t<type::string_impl<T>, typename T::slice, T> string;
+	typedef std::conditional_t<type::string_impl<B>, typename B::slice, B> view;
 
-	lexeme type;
-	uint16_t x;
-	uint16_t y;
-	string data;
+	//|---<safe ptr>---|
+	fs::file<A, B>* file;
+	//|----------------|
+	atom type;
+	view data;
+	span span;
 
 public:
 
-	auto operator==(const lexeme type) const -> bool
+	//|-----------------|
+	//| member function |
+	//|-----------------|
+
+	auto operator==(const atom type) const -> bool
 	{
-		return this->type == type; // shallow equality
+		return this->type == type;
+	}
+
+	auto operator!=(const atom type) const -> bool
+	{
+		return this->type != type;
 	}
 
 	//|----------------------|
@@ -260,13 +276,17 @@ public:
 			<<
 			"\033[30m" // set color
 			<<
-			"L"
+			token.file->path
 			<<
-			std::setfill('0') << std::setw(2) << token.y
+			"("
 			<<
-			":"
+			std::setfill('0') << std::setw(2) << token.span.y + 0
 			<<
-			std::setfill('0') << std::setw(2) << token.x
+			","
+			<<
+			std::setfill('0') << std::setw(2) << token.span.x + 1
+			<<
+			")"
 			<<
 			" "
 			<<

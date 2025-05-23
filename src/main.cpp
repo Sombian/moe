@@ -25,21 +25,21 @@ auto main() -> int
 				decltype(file.path),
 				decltype(file.data)
 			>
-			lexer {file};
+			lexer {&file};
 
 			parser
 			<
 				decltype(file.path),
 				decltype(file.data)
 			>
-			parser {lexer};
+			parser {&lexer};
 
 			sentry
 			<
 				decltype(file.path),
 				decltype(file.data)
 			>
-			sentry {parser};
+			sentry {&parser};
 
 			if (auto&& exe {sentry.pull()})
 			{

@@ -15,13 +15,11 @@ template
 >
 class sentry
 {
-	//|---<safe ref>----|
-	parser<A, B>& parser;
-	//|-----------------|
+	parser<A, B>* parser;
 
-	//|---------<buffer>---------|
-	decltype(parser.pull()) buffer;
-	//|--------------------------|
+	//|----------<buffer>----------|
+	decltype(parser->pull()) buffer;
+	//|----------------------------|
 
 	struct context
 	{
@@ -123,100 +121,100 @@ class sentry
 		//| variant::decl |
 		//|---------------|
 
-		void visit(const lang::$var& data) override
+		void visit(lang::$var& data) override
 		{
 
 		}
 
-		void visit(const lang::$fun& data) override
+		void visit(lang::$fun& data) override
 		{
-			
+
 		}
 
-		void visit(const lang::$trait& data) override
+		void visit(lang::$trait& data) override
 		{
-			
+
 		}
 
-		void visit(const lang::$class& data) override
+		void visit(lang::$class& data) override
 		{
-			
+
 		}
 
 		//|---------------|
 		//| variant::stmt |
 		//|---------------|
 
-		void visit(const lang::$if& data) override
+		void visit(lang::$if& data) override
 		{
-			
+
 		}
 
-		void visit(const lang::$match& data) override
+		void visit(lang::$match& data) override
 		{
-			
+
 		}
 
-		void visit(const lang::$for& data) override
+		void visit(lang::$for& data) override
 		{
-			
+
 		}
 
-		void visit(const lang::$while& data) override
+		void visit(lang::$while& data) override
 		{
-			
+
 		}
 
-		void visit(const lang::$break& data) override
+		void visit(lang::$break& data) override
 		{
-			
+
 		}
 
-		void visit(const lang::$return& data) override
+		void visit(lang::$return& data) override
 		{
-			
+
 		}
 
-		void visit(const lang::$continue& data) override
+		void visit(lang::$continue& data) override
 		{
-			
+
 		}
 
 		//|---------------|
 		//| variant::expr |
 		//|---------------|
 
-		void visit(const lang::$unary& data) override
+		void visit(lang::$unary& data) override
+		{
+
+		}
+
+		void visit(lang::$binary& data) override
 		{
 			
 		}
 
-		void visit(const lang::$binary& data) override
+		void visit(lang::$literal& data) override
 		{
 			
 		}
 
-		void visit(const lang::$literal& data) override
+		void visit(lang::$symbol& data) override
+		{
+
+		}
+
+		void visit(lang::$access& data) override
 		{
 			
 		}
 
-		void visit(const lang::$symbol& data) override
+		void visit(lang::$group& data) override
 		{
 			
 		}
 
-		void visit(const lang::$access& data) override
-		{
-			
-		}
-
-		void visit(const lang::$group& data) override
-		{
-			
-		}
-
-		void visit(const lang::$call& data) override
+		void visit(lang::$call& data) override
 		{
 			
 		}
@@ -228,15 +226,22 @@ public:
 	(
 		decltype(parser) parser
 	)
-	: parser {parser}, buffer {parser.pull()} {}
+	: parser {parser}, buffer {parser->pull()} {}
 
 	//|-----------------|
 	//| member function |
 	//|-----------------|
 
+	operator fs::file<A, B>*()
+	{
+		return static_cast
+		<fs::file<A, B>*>
+		(*this->parser);
+	}
+
 	auto pull() -> std::optional<program>&
 	{
-		checker impl {{}};
+		checker impl {{{}}};
 
 		if (auto&& exe {this->buffer})
 		{

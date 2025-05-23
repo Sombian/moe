@@ -1316,8 +1316,7 @@ public:
 				{
 					return false;
 				}
-				// skip a null terminator, thus - 1
-				const auto total {(rhs.size() - 1) * sizeof(T)};
+				const auto total {rhs.size() * sizeof(T)};
 				// content equality without null terminator
 				return std::memcmp(this->head, rhs.c_str(), total) == 0;
 			}
@@ -2121,8 +2120,7 @@ public:
 			{
 				return false;
 			}
-			// skip a null terminator, thus - 1
-			const auto total {(this->size() - 1) * sizeof(T)};
+			const auto total {this->size() * sizeof(T)};
 			// content equality without null terminator
 			return std::memcmp(this->c_str(), rhs.c_str(), total) == 0;
 		}
@@ -2161,8 +2159,7 @@ public:
 		{
 			return false;
 		}
-		// skip a null terminator, thus - 1
-		const auto total {(this->size() - 1) * sizeof(T)};
+		const auto total {this->size() * sizeof(T)};
 		// content equality without null terminator
 		return std::memcmp(this->c_str(), rhs.head, total) == 0;
 	}

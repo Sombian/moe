@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <numeric>
 #include <variant>
 
 #include "core/fs.hpp"
@@ -10,7 +11,6 @@
 #include "models/tst.hpp"
 
 #include "./common/eof.hpp"
-#include "./common/span.hpp"
 #include "./common/token.hpp"
 #include "./common/error.hpp"
 
@@ -24,53 +24,155 @@ template
 >
 class lexer
 {
-	//|---<safe ref>---|
-	fs::file<A, B>& file;
-	//|----------------|
-	span span;
+	class trail
+	{
+		// column
+		class proxy_x
+		{
+			std::vector<size_t>& data;
+
+		public:
+
+			proxy_x(decltype(data) data): data {data} {}
+
+			//|-----------------|
+			//| member function |
+			//|-----------------|
+			
+			operator size_t() const
+			{
+				return this->data.back();
+			}
+
+			auto operator++() -> size_t
+			{
+				++this->data.back();
+				return this->data.back();
+			}
+
+			auto operator--() -> size_t
+			{
+				--this->data.back();
+				return this->data.back();
+			}
+		};
+
+		// line
+		class proxy_y
+		{
+			std::vector<size_t>& data;
+
+		public:
+
+			proxy_y(decltype(data) data) : data {data} {}
+
+			//|-----------------|
+			//| member function |
+			//|-----------------|
+
+			operator size_t() const
+			{
+				return this->data.size();
+			}
+
+			auto operator++() -> size_t
+			{
+				this->data.push_back(0);
+				return this->data.size();
+			}
+
+			auto operator--() -> size_t
+			{
+				this->data.pop_back();
+				return this->data.size();
+			}
+		};
+
+		std::vector<size_t> data
+		{
+			0 // <- column
+		};
+
+	public:
+
+		trail() = default;
+
+		//|-----------------|
+		//| member function |
+		//|-----------------|
+
+		// offset
+		operator size_t() const
+		{
+			return std::reduce
+			(
+				this->data.begin(),
+				// begin ~ end
+				this->data.end()
+			);
+		}
+
+		// x = column
+		auto x() const -> size_t
+		{
+			return this->data.back();
+		}
+
+		// x = column
+		auto x() -> proxy_x
+		{
+			return {this->data};
+		}
+
+		// y = line
+		auto y() const -> size_t
+		{
+			return this->data.size();
+		}
+
+		// y = line
+		auto y() -> proxy_y
+		{
+			return {this->data};
+		}
+	}
+	span;
+
+	fs::file<A, B>* file;
+
 	uint16_t x;
 	uint16_t y;
 	
-	decltype(file.data.begin()) it;
-	decltype(&file.data.begin()) ptr {0};
-	decltype(*file.data.begin()) out {0};
+	decltype(file->data.begin()) it;
+	decltype(&file->data.begin()) ptr {0};
+	decltype(*file->data.begin()) out {0};
 
-	#define T($value) token<B> \
-	{                          \
-		.type                  \
-		{                      \
-			$value             \
-		},                     \
-		.x                     \
-		{                      \
-			this->x            \
-		},                     \
-		.y                     \
-		{                      \
-			this->y            \
-		},                     \
-		.data                  \
-		{                      \
-			this->ptr,         \
-			&this->it,         \
-		},                     \
-	}                          \
+	#define T($value) token<A, B> \
+	{                             \
+		.file = *this,            \
+		.type = $value,           \
+		.data                     \
+		{                         \
+			this->ptr,            \
+			&this->it,            \
+		},                        \
+		.span                     \
+		{                         \
+			this->x,              \
+			this->y,              \
+		},                        \
+	}                             \
 
-	#define E($value) error \
-	{                       \
-		.msg                \
-		{                   \
-			$value          \
-		},                  \
-		.x                  \
-		{                   \
-			this->x         \
-		},                  \
-		.y                  \
-		{                   \
-			this->y         \
-		},                  \
-	}                       \
+	#define E($value) error<A, B> \
+	{                             \
+		.file = *this,            \
+		.data = $value,           \
+		.span                     \
+		{                         \
+			this->x,              \
+			this->y,              \
+		},                        \
+	}                             \
 
 	auto next() -> char32_t
 	{
@@ -124,13 +226,20 @@ public:
 	(
 		decltype(file) file
 	)
-	: file {file}, it {file.data.begin()} {}
+	: file {file}, it {file->data.begin()} {}
 
 	//|-----------------|
 	//| member function |
 	//|-----------------|
 
-	auto pull() -> std::variant<token<B>, eof, error>
+	operator fs::file<A, B>*()
+	{
+		return static_cast
+		<fs::file<A, B>*>
+		(this->file);
+	}
+
+	auto pull() -> std::variant<token<A, B>, eof, error<A, B>>
 	{
 		for
 		(
@@ -271,7 +380,7 @@ private:
 		{
 			return E(u8"[lexer] incomplete code literal");
 		}
-		return T(lexeme::CHAR);
+		return T(atom::CHAR);
 	}
 
 	auto scan_N_code() -> decltype(this->pull())
@@ -287,7 +396,7 @@ private:
 		{
 			return E(u8"[lexer] incomplete string literal");
 		}
-		return T(lexeme::TEXT);
+		return T(atom::TEXT);
 	}
 
 	//|----------------|
@@ -322,7 +431,7 @@ private:
 		{
 			return E(u8"[lexer] incomplete bin literal");
 		}
-		return T(lexeme::BIN);
+		return T(atom::BIN);
 	}
 
 	auto scan_oct() -> decltype(this->pull())
@@ -359,7 +468,7 @@ private:
 		{
 			return E(u8"[lexer] incomplete oct literal");
 		}
-		return T(lexeme::OCT);
+		return T(atom::OCT);
 	}
 
 	auto scan_hex() -> decltype(this->pull())
@@ -405,12 +514,12 @@ private:
 		{
 			return E(u8"[lexer] incomplete hex literal");
 		}
-		return T(lexeme::HEX);
+		return T(atom::HEX);
 	}
 
 	auto scan_num() -> decltype(this->pull())
 	{
-		auto type {lexeme::INT};
+		auto type {atom::INT};
 
 		while (this->next())
 		{
@@ -432,7 +541,7 @@ private:
 				}
 				case '.':
 				{
-					if (type == lexeme::INT)
+					if (type == atom::INT)
 					{
 						switch (*this->it)
 						{
@@ -448,7 +557,7 @@ private:
 							case '8':
 							case '9':
 							{
-								type = lexeme::DEC;
+								type = atom::DEC;
 								// (⸝⸝ᵕᴗᵕ⸝⸝)
 								this->next();
 								// (๑•᎑•๑)
@@ -476,12 +585,9 @@ private:
 
 	auto scan_sym() -> decltype(this->pull())
 	{
-		#define macro(K, V)\
-		/*--------------*/ \
-		{ V, lexeme::K },  \
-		/*--------------*/ \
+		#define macro(K, V) { V, atom::K },
 		
-		static const tst<lexeme> TBL
+		static const tst<atom> TBL
 		{
 			delimeters(macro)
 			operator_l(macro)
@@ -535,11 +641,11 @@ private:
 		{
 			case utils::ordering::LESS:
 			{
-				return T(lexeme::SYMBOL); // <- always symbol
+				return T(atom::SYMBOL); // <- always symbol
 			}
 			case utils::ordering::EQUAL:
 			{
-				return T(view.get().value_or(lexeme::SYMBOL));
+				return T(view.get().value_or(atom::SYMBOL));
 			}
 			case utils::ordering::GREATER:
 			{

@@ -1,16 +1,35 @@
 #pragma once
 
-#include <cstdint>
 #include <iomanip>
 #include <iostream>
 
+#include "core/fs.hpp"
+
+#include "./span.hpp"
+
 #include "models/str.hpp"
 
+template
+<
+	type::string A,
+	type::string B
+>
 struct error
 {
-	utf8 msg;
-	uint16_t x;
-	uint16_t y;
+	//|---<safe ptr>---|
+	fs::file<A, B>* file;
+	//|----------------|
+	utf8 data;
+	span span;
+
+public:
+
+	//|-----------------|
+	//| member function |
+	//|-----------------|
+
+	auto operator==(const error& type) const -> bool = default;
+	auto operator!=(const error& type) const -> bool = default;
 
 	//|----------------------|
 	//| traits::printable<T> |
@@ -24,17 +43,21 @@ struct error
 			<<
 			"\033[31m" // set color
 			<<
-			"L"
+			error.file->path
 			<<
-			std::setfill('0') << std::setw(2) << error.y
+			"("
 			<<
-			":"
+			std::setfill('0') << std::setw(2) << error.span.y + 0
 			<<
-			std::setfill('0') << std::setw(2) << error.x
+			","
+			<<
+			std::setfill('0') << std::setw(2) << error.span.x + 1
+			<<
+			")"
 			<<
 			" "
 			<<
-			error.msg
+			error.data
 			<<
 			"\033[0m" // reset color
 		);
