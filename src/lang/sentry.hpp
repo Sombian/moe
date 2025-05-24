@@ -23,6 +23,8 @@ class sentry
 
 	struct context
 	{
+		bool isolate;
+
 		std::map<utf8, lang::$var*> $var;
 		std::map<utf8, lang::$fun*> $fun;
 		
@@ -42,183 +44,256 @@ class sentry
 		//| member function |
 		//|-----------------|
 
-		void visit(const only<decl>& data) override
+		void visit(const only<decl>& ast) override
 		{
 			std::visit([&](auto&& arg)
 			{
 				arg->accept(*this);
 			},
-			data);
+			ast);
 		}
 
-		void visit(const many<decl>& data) override
+		void visit(const many<decl>& ast) override
 		{
-			for (auto&& node : data)
+			for (auto&& node : ast)
 			{
 				this->visit(node);
 			}
 		}
 
-		void visit(const only<stmt>& data) override
+		void visit(const only<stmt>& ast) override
 		{
 			std::visit([&](auto&& arg)
 			{
 				arg->accept(*this);
 			},
-			data);
+			ast);
 		}
 
-		void visit(const many<stmt>& data) override
+		void visit(const many<stmt>& ast) override
 		{
-			for (auto&& node : data)
+			for (auto&& node : ast)
 			{
 				this->visit(node);
 			}
 		}
 
-		void visit(const only<expr>& data) override
+		void visit(const only<expr>& ast) override
 		{
 			std::visit([&](auto&& arg)
 			{
 				arg->accept(*this);
 			},
-			data);
+			ast);
 		}
 
-		void visit(const many<expr>& data) override
+		void visit(const many<expr>& ast) override
 		{
-			for (auto&& node : data)
+			for (auto&& node : ast)
 			{
 				this->visit(node);
 			}
 		}
 
-		void visit(const only<node>& data) override
+		void visit(const only<node>& ast) override
 		{
 			std::visit([&](auto&& arg)
 			{
 				this->visit(arg);
 			},
-			data);
+			ast);
 		}
 
-		void visit(const many<node>& data) override
+		void visit(const many<node>& ast) override
 		{
-			for (auto&& node : data)
+			for (auto&& node : ast)
 			{
 				this->visit(node);
 			}
 		}
 
-		void visit(const many<body>& data) override
+		void visit(const many<body>& ast) override
 		{
-			for (auto&& node : data)
+			for (auto&& node : ast)
 			{
 				this->visit(node);
 			}
 		}
+
+		#define VISIT($T)           \
+		                            \
+		void visit(many<$T>& list)  \
+		{                           \
+			for (auto&& ast : list) \
+			{                       \
+				this->visit(ast);   \
+			}                       \
+		}                           \
 
 		//|---------------|
 		//| variant::decl |
 		//|---------------|
 
-		void visit(lang::$var& data) override
+		void visit(lang::$var& ast) override
 		{
+			// try to insert
+			auto [pair, insert] {this->ctx.back().$var.try_emplace(ast.name, &ast)};
 
+			// visit children
+			this->visit(ast.init);
+
+			if (!insert)
+			{
+				std::cout << "[sentry] redefinition of var '" << ast.name << "'" << std::endl;
+			}
 		}
+		VISIT(lang::$var)
 
-		void visit(lang::$fun& data) override
+		void visit(lang::$fun& ast) override
 		{
+			// try to insert
+			auto [pair, insert] {this->ctx.back().$fun.try_emplace(ast.name, &ast)};
 
+			// visit children
+			this->visit(ast.args);
+			this->visit(ast.body);
+
+			if (!insert)
+			{
+				std::cout << "[sentry] redefinition of fun '" << ast.name << "'" << std::endl;
+			}
 		}
+		VISIT(lang::$fun)
 
-		void visit(lang::$trait& data) override
+		void visit(lang::$trait& ast) override
 		{
+			// try to insert
+			auto [pair, insert] {this->ctx.back().$trait.try_emplace(ast.name, &ast)};
 
+			// visit children
+			this->visit(ast.body);
+
+			if (!insert)
+			{
+				std::cout << "[sentry] redefinition of trait '" << ast.name << "'" << std::endl;
+			}
 		}
+		VISIT(lang::$trait)
 
-		void visit(lang::$class& data) override
+		void visit(lang::$class& ast) override
 		{
+			// try to insert
+			auto [pair, insert] {this->ctx.back().$class.try_emplace(ast.name, &ast)};
 
+			// visit children
+			this->visit(ast.body);
+
+			if (!insert)
+			{
+				std::cout << "[sentry] redefinition of class '" << ast.name << "'" << std::endl;
+			}
 		}
+		VISIT(lang::$class)
 
 		//|---------------|
 		//| variant::stmt |
 		//|---------------|
 
-		void visit(lang::$if& data) override
+		void visit(lang::$if& ast) override
 		{
-
+			this->visit(ast.cases);
+			this->visit(ast.block);
 		}
+		VISIT(lang::$if)
 
-		void visit(lang::$match& data) override
+		void visit(lang::$match& ast) override
 		{
-
+			this->visit(ast.input);
+			this->visit(ast.cases);
+			this->visit(ast.block);
 		}
+		VISIT(lang::$match)
 
-		void visit(lang::$for& data) override
+		void visit(lang::$for& ast) override
 		{
-
+			this->visit(ast.setup);
+			this->visit(ast.input);
+			this->visit(ast.after);
+			this->visit(ast.block);
 		}
+		VISIT(lang::$for)
 
-		void visit(lang::$while& data) override
+		void visit(lang::$while& ast) override
 		{
-
+			this->visit(ast.input);
+			this->visit(ast.block);
 		}
+		VISIT(lang::$while)
 
-		void visit(lang::$break& data) override
+		void visit(lang::$break& ast) override
 		{
-
+			// this->visit(ast.label);
 		}
+		VISIT(lang::$break)
 
-		void visit(lang::$return& data) override
+		void visit(lang::$return& ast) override
 		{
-
+			this->visit(ast.value);
 		}
+		VISIT(lang::$return)
 
-		void visit(lang::$continue& data) override
+		void visit(lang::$continue& ast) override
 		{
-
+			// this->visit(ast.label);
 		}
+		VISIT(lang::$continue)
 
 		//|---------------|
 		//| variant::expr |
 		//|---------------|
 
-		void visit(lang::$unary& data) override
+		void visit(lang::$unary& ast) override
 		{
-
+			this->visit(ast.rhs);
 		}
+		VISIT(lang::$unary)
 
-		void visit(lang::$binary& data) override
+		void visit(lang::$binary& ast) override
 		{
-			
+			this->visit(ast.lhs);
+			this->visit(ast.rhs);
 		}
+		VISIT(lang::$binary)
 
-		void visit(lang::$literal& data) override
-		{
-			
-		}
-
-		void visit(lang::$symbol& data) override
-		{
-
-		}
-
-		void visit(lang::$access& data) override
+		void visit(lang::$literal& ast) override
 		{
 			
 		}
+		VISIT(lang::$literal)
 
-		void visit(lang::$group& data) override
+		void visit(lang::$symbol& ast) override
 		{
 			
 		}
+		VISIT(lang::$symbol)
 
-		void visit(lang::$call& data) override
+		void visit(lang::$access& ast) override
 		{
 			
 		}
+		VISIT(lang::$access)
+
+		void visit(lang::$group& ast) override
+		{
+			
+		}
+		VISIT(lang::$group)
+
+		void visit(lang::$call& ast) override
+		{
+			
+		}
+		VISIT(lang::$call)
 	};
 
 public:
@@ -248,11 +323,20 @@ public:
 		{
 			for (auto&& node : exe->ast)
 			{
-				std::visit([&](auto&& arg)
+				try
 				{
-					impl.visit(arg);
-				},
-				node);
+					std::visit([&](auto&& arg)
+					{
+						impl.visit(arg);
+					},
+					node);
+				}
+				catch (error<A, B>& error)
+				{
+					#ifndef NDEBUG //-------------|
+					std::cout << error << std::endl;
+					#endif //---------------------|
+				}
 			}
 		}
 		return this->buffer;

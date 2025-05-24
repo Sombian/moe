@@ -1344,6 +1344,30 @@ public:
 			return U'\0';
 		}
 
+		//|-----------|
+		//| lhs < rhs |
+		//|-----------|
+
+		friend auto operator<(const slice& lhs, const slice& rhs) -> bool
+		{
+			const auto len {std::min
+			(lhs.size(), rhs.size())};
+
+			size_t i {0};
+
+			const auto foo {lhs.head};
+			const auto bar {rhs.head};
+
+			for (; i < len; ++i)
+			{
+				if (foo[i] != bar[i])
+				{
+					return foo[i] < bar[i];
+				}
+			}
+			return lhs.size() < rhs.size();
+		}
+
 		//|------------|
 		//| lhs == rhs |
 		//|------------|
@@ -2168,48 +2192,6 @@ public:
 		return {*this, nth};
 	}
 
-	//|-----------|
-	//| lhs + rhs |
-	//|-----------|
-
-	template<typename U>
-	auto operator+(const text<U>& rhs) const -> text<T>
-	{
-		text<T> rvalue {this->size() + rhs.size()};
-
-		// copy lhs
-		rvalue += *this;
-		// copy rhs
-		rvalue += rhs;
-
-		return rvalue;
-	}
-
-	auto operator+(const slice& rhs) const -> text<T>
-	{
-		text<T> rvalue {this->size() + rhs.size()};
-
-		// copy lhs
-		rvalue += *this;
-		// copy rhs
-		rvalue += rhs;
-
-		return rvalue;
-	}
-
-	template<size_t N>
-	auto operator+(const T (&rhs)[N]) const -> text<T>
-	{
-		text<T> rvalue {this->size() + N - 1};
-
-		// copy lhs
-		rvalue += *this;
-		// copy rhs
-		rvalue += rhs;
-
-		return rvalue;
-	}
-
 	//|------------|
 	//| lhs += rhs |
 	//|------------|
@@ -2305,6 +2287,85 @@ public:
 		this->size(total);
 
 		return *this;
+	}
+
+	//|-----------|
+	//| lhs + rhs |
+	//|-----------|
+
+	template<typename U>
+	friend auto operator+(const text<T> lhs, const text<U>& rhs) -> text<T>
+	{
+		text<T> rvalue {lhs->size() + rhs.size()};
+
+		// copy lhs
+		rvalue += lhs;
+		// copy rhs
+		rvalue += rhs;
+
+		return rvalue;
+	}
+
+	friend auto operator+(const text<T> lhs, const slice& rhs) -> text<T>
+	{
+		text<T> rvalue {lhs->size() + rhs.size()};
+
+		// copy lhs
+		rvalue += lhs;
+		// copy rhs
+		rvalue += rhs;
+
+		return rvalue;
+	}
+
+	// reverse op overloading
+	friend auto operator+(const slice& lhs, const text<T> rhs) -> text<T>
+	{
+		return rhs + lhs;
+	}
+
+	template<size_t N>
+	friend auto operator+(const text<T> lhs, const T (&rhs)[N]) -> text<T>
+	{
+		text<T> rvalue {lhs->size() + N - 1};
+
+		// copy lhs
+		rvalue += lhs;
+		// copy rhs
+		rvalue += rhs;
+
+		return rvalue;
+	}
+
+	template<size_t N>
+	// reverse op overloading
+	friend auto operator+(const T (&lhs)[N], const text<T> rhs) -> text<T>
+	{
+		return rhs + lhs;
+	}
+
+	//|-----------|
+	//| lhs < rhs |
+	//|-----------|
+
+	friend auto operator<(const text<T>& lhs, const text<T>& rhs) -> bool
+	{
+		const auto len {std::min
+		(lhs.size(), rhs.size())};
+
+		size_t i {0};
+
+		const auto foo {lhs.c_str()};
+		const auto bar {rhs.c_str()};
+
+		for (; i < len; ++i)
+		{
+			if (foo[i] != bar[i])
+			{
+				return foo[i] < bar[i];
+			}
+		}
+		return lhs.size() < rhs.size();
 	}
 
 	//|------------|

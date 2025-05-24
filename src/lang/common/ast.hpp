@@ -768,31 +768,31 @@ struct program
 		//| member function |
 		//|-----------------|
 
-		void visit(traits::printable auto& data)
+		void visit(traits::printable auto& ast)
 		{
-			this->out << data << "\n";
+			this->out << ast << "\n";
 		}
 
-		void visit(const only<decl>& data) override
+		void visit(const only<decl>& ast) override
 		{
 			std::visit([&](auto&& arg)
 			{
 				arg->accept(*this);
 			},
-			data);
+			ast);
 		}
 
-		void visit(const many<decl>& data) override
+		void visit(const many<decl>& ast) override
 		{
-			if (!data.empty())
+			if (!ast.empty())
 			{
 				size_t count {0};
 
-				for (auto&& node : data)
+				for (auto&& node : ast)
 				{
 					this->visit(node);
 
-					if (++count < data.size())
+					if (++count < ast.size())
 					{
 						this->gap();
 						/*-<seperator>-*/
@@ -807,26 +807,26 @@ struct program
 			}
 		}
 
-		void visit(const only<stmt>& data) override
+		void visit(const only<stmt>& ast) override
 		{
 			std::visit([&](auto&& arg)
 			{
 				arg->accept(*this);
 			},
-			data);
+			ast);
 		}
 
-		void visit(const many<stmt>& data) override
+		void visit(const many<stmt>& ast) override
 		{
-			if (!data.empty())
+			if (!ast.empty())
 			{
 				size_t count {0};
 
-				for (auto&& node : data)
+				for (auto&& node : ast)
 				{
 					this->visit(node);
 
-					if (++count < data.size())
+					if (++count < ast.size())
 					{
 						this->gap();
 						/*-<seperator>-*/
@@ -841,26 +841,26 @@ struct program
 			}
 		}
 
-		void visit(const only<expr>& data) override
+		void visit(const only<expr>& ast) override
 		{
 			std::visit([&](auto&& arg)
 			{
 				arg->accept(*this);
 			},
-			data);
+			ast);
 		}
 
-		void visit(const many<expr>& data) override
+		void visit(const many<expr>& ast) override
 		{
-			if (!data.empty())
+			if (!ast.empty())
 			{
 				size_t count {0};
 
-				for (auto&& node : data)
+				for (auto&& node : ast)
 				{
 					this->visit(node);
 
-					if (++count < data.size())
+					if (++count < ast.size())
 					{
 						this->gap();
 						/*-<seperator>-*/
@@ -875,26 +875,26 @@ struct program
 			}
 		}
 
-		void visit(const only<node>& data) override
+		void visit(const only<node>& ast) override
 		{
 			std::visit([&](auto&& arg)
 			{
 				this->visit(arg);
 			},
-			data);
+			ast);
 		}
 
-		void visit(const many<node>& data) override
+		void visit(const many<node>& ast) override
 		{
-			if (!data.empty())
+			if (!ast.empty())
 			{
 				size_t count {0};
 
-				for (auto&& node : data)
+				for (auto&& node : ast)
 				{
 					this->visit(node);
 
-					if (++count < data.size())
+					if (++count < ast.size())
 					{
 						this->gap();
 						/*-<seperator>-*/
@@ -909,17 +909,17 @@ struct program
 			}
 		}
 
-		void visit(const many<body>& data) override
+		void visit(const many<body>& ast) override
 		{
-			if (!data.empty())
+			if (!ast.empty())
 			{
 				size_t count {0};
 
-				for (auto&& node : data)
+				for (auto&& node : ast)
 				{
 					this->visit(node);
 
-					if (++count < data.size())
+					if (++count < ast.size())
 					{
 						this->gap();
 						/*-<seperator>-*/
@@ -936,17 +936,17 @@ struct program
 		
 		#define VISIT($T)                      \
 		                                       \
-		void visit(many<$T>& data)             \
+		void visit(many<$T>& list)             \
 		{                                      \
-			if (!data.empty())                 \
+			if (!list.empty())                 \
 			{                                  \
 				size_t count {0};              \
 				                               \
-				for (auto&& node : data)       \
+				for (auto&& ast : list)        \
 				{                              \
-					this->visit(node);         \
+					this->visit(ast);          \
 					                           \
-					if (++count < data.size()) \
+					if (++count < list.size()) \
 					{                          \
 						this->gap();           \
 						/*-<seperator>-*/      \
@@ -965,167 +965,167 @@ struct program
 		//| variant::decl |
 		//|---------------|
 
-		void visit(lang::$var& data) override
+		void visit(lang::$var& ast) override
 		{
 			START
 			this->gap(); this->out << "[var]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(data.name);
-			this->gap(); this->out << "type" << ": "; this->visit(data.type);
-			this->gap(); this->out << "init" << ": "; this->visit(data.init);
+			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
+			this->gap(); this->out << "type" << ": "; this->visit(ast.type);
+			this->gap(); this->out << "init" << ": "; this->visit(ast.init);
 			CLOSE
 		}
-		VISIT(lang::$var) // vector ver. codegen
+		VISIT(lang::$var)
 
-		void visit(lang::$fun& data) override
+		void visit(lang::$fun& ast) override
 		{
 
 			START
 			this->gap(); this->out << "[fun]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(data.name);
-			this->gap(); this->out << "type" << ": "; this->visit(data.type);
-			this->gap(); this->out << "body" << ": "; this->visit(data.body);
+			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
+			this->gap(); this->out << "type" << ": "; this->visit(ast.type);
+			this->gap(); this->out << "body" << ": "; this->visit(ast.body);
 			CLOSE
 		}
-		VISIT(lang::$fun) // vector ver. codegen
+		VISIT(lang::$fun)
 
-		void visit(lang::$trait& data) override
+		void visit(lang::$trait& ast) override
 		{
 			START
 			this->gap(); this->out << "[trait]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(data.name);
-			this->gap(); this->out << "body" << ": "; this->visit(data.body);
+			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
+			this->gap(); this->out << "body" << ": "; this->visit(ast.body);
 			CLOSE
 		}
-		VISIT(lang::$trait) // vector ver. codegen
+		VISIT(lang::$trait)
 
-		void visit(lang::$class& data) override
+		void visit(lang::$class& ast) override
 		{
 			START
 			this->gap(); this->out << "[class]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(data.name);
-			this->gap(); this->out << "body" << ": "; this->visit(data.body);
+			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
+			this->gap(); this->out << "body" << ": "; this->visit(ast.body);
 			CLOSE
 		}
-		VISIT(lang::$class) // vector ver. codegen
+		VISIT(lang::$class)
 
 		//|---------------|
 		//| variant::stmt |
 		//|---------------|
 
-		void visit(lang::$if& data) override
+		void visit(lang::$if& ast) override
 		{
 			START
 			this->gap(); this->out << "[if]" << "\n";
-			this->gap(); this->out << "block" << ": "; this->visit(data.block);
-			this->gap(); this->out << "cases" << ": "; this->visit(data.cases);
+			this->gap(); this->out << "block" << ": "; this->visit(ast.block);
+			this->gap(); this->out << "cases" << ": "; this->visit(ast.cases);
 			CLOSE
 		}
-		VISIT(lang::$if) // vector ver. codegen
+		VISIT(lang::$if)
 
-		void visit(lang::$match& data) override
+		void visit(lang::$match& ast) override
 		{
 			START
 			this->gap(); this->out << "[match]" << "\n";
-			this->gap(); this->out << "input" << ": "; this->visit(data.input);
-			this->gap(); this->out << "block" << ": "; this->visit(data.block);
-			this->gap(); this->out << "cases" << ": "; this->visit(data.cases);
+			this->gap(); this->out << "input" << ": "; this->visit(ast.input);
+			this->gap(); this->out << "block" << ": "; this->visit(ast.block);
+			this->gap(); this->out << "cases" << ": "; this->visit(ast.cases);
 			CLOSE
 		}
-		VISIT(lang::$match) // vector ver. codegen
+		VISIT(lang::$match)
 
-		void visit(lang::$for& data) override
+		void visit(lang::$for& ast) override
 		{
 			START
 			this->gap(); this->out << "[for]" << "\n";
-			this->gap(); this->out << "setup" << ": "; this->visit(data.setup);
-			this->gap(); this->out << "input" << ": "; this->visit(data.input);
-			this->gap(); this->out << "after" << ": "; this->visit(data.after);
-			this->gap(); this->out << "block" << ": "; this->visit(data.block);
+			this->gap(); this->out << "setup" << ": "; this->visit(ast.setup);
+			this->gap(); this->out << "input" << ": "; this->visit(ast.input);
+			this->gap(); this->out << "after" << ": "; this->visit(ast.after);
+			this->gap(); this->out << "block" << ": "; this->visit(ast.block);
 			CLOSE
 		}
-		VISIT(lang::$for) // vector ver. codegen
+		VISIT(lang::$for)
 
-		void visit(lang::$while& data) override
+		void visit(lang::$while& ast) override
 		{
 			START
 			this->gap(); this->out << "[while]" << "\n";
-			this->gap(); this->out << "input" << ": "; this->visit(data.input);
-			this->gap(); this->out << "block" << ": "; this->visit(data.block);
+			this->gap(); this->out << "input" << ": "; this->visit(ast.input);
+			this->gap(); this->out << "block" << ": "; this->visit(ast.block);
 			CLOSE
 		}
-		VISIT(lang::$while) // vector ver. codegen
+		VISIT(lang::$while)
 
-		void visit(lang::$break& data) override
+		void visit(lang::$break& ast) override
 		{
 			START
 			this->gap(); this->out << "[break]" << "\n";
-			this->gap(); this->out << "label" << ": "; this->visit(data.label);
+			this->gap(); this->out << "label" << ": "; this->visit(ast.label);
 			CLOSE
 		}
-		VISIT(lang::$break) // vector ver. codegen
+		VISIT(lang::$break)
 
-		void visit(lang::$return& data) override
+		void visit(lang::$return& ast) override
 		{
 			START
 			this->gap(); this->out << "[return]" << "\n";
-			this->gap(); this->out << "value" << ": "; this->visit(data.value);
+			this->gap(); this->out << "value" << ": "; this->visit(ast.value);
 			CLOSE
 		}
-		VISIT(lang::$return) // vector ver. codegen
+		VISIT(lang::$return)
 
-		void visit(lang::$continue& data) override
+		void visit(lang::$continue& ast) override
 		{
 			START
 			this->gap(); this->out << "[continue]" << "\n";
-			this->gap(); this->out << "label" << ": "; this->visit(data.label);
+			this->gap(); this->out << "label" << ": "; this->visit(ast.label);
 			CLOSE
 		}
-		VISIT(lang::$continue) // vector ver. codegen
+		VISIT(lang::$continue)
 
 		//|---------------|
 		//| variant::expr |
 		//|---------------|
 
-		void visit(lang::$unary& data) override
+		void visit(lang::$unary& ast) override
 		{
 			START
 			this->gap(); this->out << "[unary]" << "\n";
-			this->gap(); this->out << "lhs" << ": "; this->visit(data.lhs);
-			this->gap(); this->out << "rhs" << ": "; this->visit(data.rhs);
+			this->gap(); this->out << "lhs" << ": "; this->visit(ast.lhs);
+			this->gap(); this->out << "rhs" << ": "; this->visit(ast.rhs);
 			CLOSE
 		}
-		VISIT(lang::$unary) // vector ver. codegen
+		VISIT(lang::$unary)
 
-		void visit(lang::$binary& data) override
+		void visit(lang::$binary& ast) override
 		{
 			START
 			this->gap(); this->out << "[binary]" << "\n";
-			this->gap(); this->out << "lhs" << ": "; this->visit(data.lhs);
-			this->gap(); this->out << "mhs" << ": "; this->visit(data.mhs);
-			this->gap(); this->out << "rhs" << ": "; this->visit(data.rhs);
+			this->gap(); this->out << "lhs" << ": "; this->visit(ast.lhs);
+			this->gap(); this->out << "mhs" << ": "; this->visit(ast.mhs);
+			this->gap(); this->out << "rhs" << ": "; this->visit(ast.rhs);
 			CLOSE
 		}
-		VISIT(lang::$binary) // vector ver. codegen
+		VISIT(lang::$binary)
 
-		void visit(lang::$literal& data) override
+		void visit(lang::$literal& ast) override
 		{
 			START
 			this->gap(); this->out << "[literal]" << "\n";
-			this->gap(); this->out << "type" << ": "; this->visit(data.type);
-			this->gap(); this->out << "data" << ": "; this->visit(data.data);
+			this->gap(); this->out << "type" << ": "; this->visit(ast.type);
+			this->gap(); this->out << "data" << ": "; this->visit(ast.data);
 			CLOSE
 		}
-		VISIT(lang::$literal) // vector ver. codegen
+		VISIT(lang::$literal)
 
-		void visit(lang::$symbol& data) override
+		void visit(lang::$symbol& ast) override
 		{
 
 			START
 			this->gap(); this->out << "[symbol]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(data.name);
+			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
 			CLOSE
 		}
-		VISIT(lang::$symbol) // vector ver. codegen
+		VISIT(lang::$symbol)
 
 		void visit(lang::$access& data) override
 		{
@@ -1136,7 +1136,7 @@ struct program
 			this->gap(); this->out << "name" << ": "; this->visit(data.name);
 			CLOSE
 		}
-		VISIT(lang::$access) // vector ver. codegen
+		VISIT(lang::$access)
 
 		void visit(lang::$group& data) override
 		{
@@ -1145,7 +1145,7 @@ struct program
 			this->gap(); this->out << "expr" << ": "; this->visit(data.expr);
 			CLOSE
 		}
-		VISIT(lang::$group) // vector ver. codegen
+		VISIT(lang::$group)
 
 		void visit(lang::$call& data) override
 		{
@@ -1155,7 +1155,7 @@ struct program
 			this->gap(); this->out << "args" << ": "; this->visit(data.args);
 			CLOSE
 		}
-		VISIT(lang::$call) // vector ver. codegen
+		VISIT(lang::$call)
 
 		#undef START
 		#undef CLOSE
