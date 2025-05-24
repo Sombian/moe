@@ -164,9 +164,23 @@ public:
 	(
 		decltype(lexer) lexer
 	)
-	: lexer {lexer}, buffer {eof {}}
+	: lexer {lexer}, buffer {this->lexer->pull()}
 	{
-		this->next(); // 1st token
+		std::visit([&](auto&& arg)
+		{
+			typedef std::decay_t<decltype(arg)> T;
+
+			if constexpr (!std::is_same_v<T, eof>)
+			{
+				this->x = arg.span.x;
+				this->y = arg.span.y;
+
+				#ifndef NDEBUG //------------|
+				std::cout << arg << std::endl;
+				#endif //--------------------|
+			}
+		},
+		this->buffer);
 	}
 
 	//|-----------------|

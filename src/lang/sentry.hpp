@@ -23,10 +23,11 @@ class sentry
 
 	struct context
 	{
-		std::vector<lang::$var*> $var;
-		std::vector<lang::$fun*> $fun;
-		std::vector<lang::$trait*> $trait;
-		std::vector<lang::$class*> $class;
+		std::map<utf8, lang::$var*> $var;
+		std::map<utf8, lang::$fun*> $fun;
+		
+		std::map<utf8, lang::$trait*> $trait;
+		std::map<utf8, lang::$class*> $class;
 	};
 
 	struct checker : lang::visitor

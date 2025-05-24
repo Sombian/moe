@@ -49,7 +49,7 @@ namespace
 
 	template<size_t N>
 	[[nodiscard]] static
-	// converting constructor support
+	// converting constructor
 	auto UnicodeData(const char8_t (&name)[N]) -> auto
 	{
 		return UnicodeData(utf8 {name});
@@ -57,7 +57,7 @@ namespace
 
 	template<size_t N>
 	[[nodiscard]] static
-	// converting constructor support
+	// converting constructor
 	auto UnicodeData(const char16_t (&name)[N]) -> auto
 	{
 		return UnicodeData(utf16 {name});
@@ -65,7 +65,7 @@ namespace
 
 	template<size_t N>
 	[[nodiscard]] static
-	// converting constructor support
+	// converting constructor
 	auto UnicodeData(const char32_t (&name)[N]) -> auto
 	{
 		return UnicodeData(utf32 {name});
@@ -95,7 +95,7 @@ namespace
 
 	template<size_t N>
 	[[nodiscard]] static
-	// converting constructor support
+	// converting constructor
 	auto CaseFolding(const char8_t (&name)[N]) -> auto
 	{
 		return CaseFolding(utf8 {name});
@@ -103,7 +103,7 @@ namespace
 
 	template<size_t N>
 	[[nodiscard]] static
-	// converting constructor support
+	// converting constructor
 	auto CaseFolding(const char16_t (&name)[N]) -> auto
 	{
 		return CaseFolding(utf16 {name});
@@ -111,7 +111,7 @@ namespace
 
 	template<size_t N>
 	[[nodiscard]] static
-	// converting constructor support
+	// converting constructor
 	auto CaseFolding(const char32_t (&name)[N]) -> auto
 	{
 		return CaseFolding(utf32 {name});
@@ -142,7 +142,7 @@ namespace
 
 	template<size_t N>
 	[[nodiscard]] static
-	// converting constructor support
+	// converting constructor
 	auto CompositionExclusions(const char8_t (&name)[N]) -> auto
 	{
 		return CompositionExclusions(utf8 {name});
@@ -150,7 +150,7 @@ namespace
 
 	template<size_t N>
 	[[nodiscard]] static
-	// converting constructor support
+	// converting constructor
 	auto CompositionExclusions(const char16_t (&name)[N]) -> auto
 	{
 		return CompositionExclusions(utf16 {name});
@@ -158,7 +158,7 @@ namespace
 
 	template<size_t N>
 	[[nodiscard]] static
-	// converting constructor support
+	// converting constructor
 	auto CompositionExclusions(const char32_t (&name)[N]) -> auto
 	{
 		return CompositionExclusions(utf32 {name});
@@ -223,7 +223,7 @@ namespace
 
 	template<size_t N>
 	[[nodiscard]] static
-	// converting constructor support
+	// converting constructor
 	auto DerivedCoreProperties(const char8_t (&name)[N]) -> auto
 	{
 		return DerivedCoreProperties(utf8 {name});
@@ -231,7 +231,7 @@ namespace
 
 	template<size_t N>
 	[[nodiscard]] static
-	// converting constructor support
+	// converting constructor
 	auto DerivedCoreProperties(const char16_t (&name)[N]) -> auto
 	{
 		return DerivedCoreProperties(utf16 {name});
@@ -239,7 +239,7 @@ namespace
 
 	template<size_t N>
 	[[nodiscard]] static
-	// converting constructor support
+	// converting constructor
 	auto DerivedCoreProperties(const char32_t (&name)[N]) -> auto
 	{
 		return DerivedCoreProperties(utf32 {name});

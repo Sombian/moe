@@ -1091,21 +1091,21 @@ public:
 		}
 
 		template<size_t N>
-		// converting constructor support
+		// converting constructor
 		auto split(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
 		{
 			return this->split(text<char8_t>{str});
 		}
 
 		template<size_t N>
-		// converting constructor support
+		// converting constructor
 		auto split(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
 		{
 			return this->split(text<char16_t>{str});
 		}
 
 		template<size_t N>
-		// converting constructor support
+		// converting constructor
 		auto split(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
 		{
 			return this->split(text<char32_t>{str});
@@ -1250,21 +1250,21 @@ public:
 		}
 
 		template<size_t N>
-		// converting constructor support
+		// converting constructor
 		auto find(const char8_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char8_t>)
 		{
 			return this->find(text<char8_t>{str}, offset);
 		}
 
 		template<size_t N>
-		// converting constructor support
+		// converting constructor
 		auto find(const char16_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char16_t>)
 		{
 			return this->find(text<char16_t>{str}, offset);
 		}
 
 		template<size_t N>
-		// converting constructor support
+		// converting constructor
 		auto find(const char32_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char32_t>)
 		{
 			return this->find(text<char32_t>{str}, offset);
@@ -1301,138 +1301,6 @@ public:
 				i += codec::next(ptr + i);
 			}
 			return j; // <- O(N)
-		}
-
-		//|------------|
-		//| lhs == rhs |
-		//|------------|
-
-		template<typename U>
-		auto operator==(const text<U>& rhs) const -> bool
-		{
-			if constexpr (std::is_same_v<T, U>)
-			{
-				if (this->tail - this->head != rhs.size())
-				{
-					return false;
-				}
-				const auto total {rhs.size() * sizeof(T)};
-				// content equality without null terminator
-				return std::memcmp(this->head, rhs.c_str(), total) == 0;
-			}
-			else // if (!std::is_same_v<T, U>)
-			{
-				auto it_lb {this->begin()};
-				auto it_le {this->end()};
-
-				auto it_rb {rhs.begin()};
-				auto it_re {rhs.end()};
-
-				for
-				( 
-					;
-					it_lb != it_le
-					||
-					it_rb != it_re
-					;
-					++it_lb // next!
-					,
-					++it_rb // next!
-				)
-				{
-					if (*it_lb != *it_rb)
-					{
-						return false;
-					}
-				}
-				return true;
-			}
-		}
-
-		auto operator==(const slice& rhs) const -> bool
-		{
-			return
-			(
-				this->head == rhs.head
-				&&
-				this->tail == rhs.tail
-			);
-		}
-
-		template<size_t N>
-		auto operator==(const T (&rhs)[N]) const -> bool
-		{
-			if (this->tail - this->head != N)
-			{
-				return false;
-			}
-			// skip a null terminator, thus - 1
-			const auto total {(N - 1) * sizeof(T)};
-			// content equality without null terminator
-			return std::memcmp(this->head, rhs, total) == 0;
-		}
-
-		template<size_t N>
-		// converting constructor support
-		auto operator==(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
-		{
-			return this->operator==(text<char8_t>{str});
-		}
-
-		template<size_t N>
-		// converting constructor support
-		auto operator==(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
-		{
-			return this->operator==(text<char16_t>{str});
-		}
-
-		template<size_t N>
-		// converting constructor support
-		auto operator==(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
-		{
-			return this->operator==(text<char32_t>{str});
-		}
-
-		//|------------|
-		//| lhs != rhs |
-		//|------------|
-
-		template<typename U>
-		auto operator!=(const text<U>& rhs) const -> bool
-		{
-			return !this->operator==(rhs);
-		}
-	
-		auto operator!=(const slice& rhs) const -> bool
-		{
-			return !this->operator==(rhs);
-		}
-
-		template<size_t N>
-		auto operator!=(const T (&rhs)[N]) const -> bool
-		{
-			return !this->operator==(rhs);
-		}
-
-		template<size_t N>
-		// converting constructor support
-		auto operator!=(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
-		{
-			return !this->operator==(text<char8_t>{str});
-		}
-
-		template<size_t N>
-		// converting constructor support
-		auto operator!=(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
-		{
-			return !this->operator==(text<char16_t>{str});
-		}
-
-		template<size_t N>
-		// converting constructor support
-		auto operator!=(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
-		{
-			return !this->operator==(text<char32_t>{str});
 		}
 
 		//|--------|
@@ -1474,6 +1342,185 @@ public:
 			}
 			// no exception
 			return U'\0';
+		}
+
+		//|------------|
+		//| lhs == rhs |
+		//|------------|
+
+		friend auto operator==(const slice& lhs, const slice& rhs) -> bool
+		{
+			return
+			(
+				lhs->head == rhs.head
+				&&
+				lhs->tail == rhs.tail
+			);
+		}
+
+		template<typename U>
+		friend auto operator==(const slice& lhs, const text<U>& rhs) -> bool
+		{
+			if constexpr (std::is_same_v<T, U>)
+			{
+				if (lhs->tail - lhs->head != rhs.size())
+				{
+					return false;
+				}
+				const auto total {rhs.size() * sizeof(T)};
+				// content equality without null terminator
+				return std::memcmp(lhs->head, rhs.c_str(), total) == 0;
+			}
+			else // if (!std::is_same_v<T, U>)
+			{
+				auto l_b {lhs->begin()};
+				auto l_e {lhs->end()};
+
+				auto r_b {rhs.begin()};
+				auto r_e {rhs.end()};
+
+				for (;l_b != l_e || r_b != r_e;)
+				{
+					if (*l_b != *r_b)
+					{
+						return false;
+					}
+					++l_b; // next..!
+					++r_b; // next..!
+				}
+				return l_b == l_e && r_b == r_e;
+			}
+		}
+
+		template<size_t N>
+		friend auto operator==(const slice& lhs, const T (&rhs)[N]) -> bool
+		{
+			if (lhs->tail - lhs->head != N)
+			{
+				return false;
+			}
+			// skip a null terminator, thus - 1
+			const auto total {(N - 1) * sizeof(T)};
+			// content equality without null terminator
+			return std::memcmp(lhs->head, rhs, total) == 0;
+		}
+
+		template<size_t N>
+		// reverse op overloading
+		friend auto operator==(const T (&lhs)[N], const slice& rhs) -> bool
+		{
+			return rhs == lhs;
+		}
+
+		template<size_t N>
+		// converting constructor
+		friend auto operator==(const slice& lhs, const char8_t (&rhs)[N]) -> bool requires (!std::is_same_v<T, char8_t>)
+		{
+			return lhs == text<char8_t>{rhs};
+		}
+
+		template<size_t N>
+		// reverse op overloading
+		friend auto operator==(const char8_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char8_t>)
+		{
+			return rhs == lhs;
+		}
+
+		template<size_t N>
+		// converting constructor
+		friend auto operator==(const slice& lhs, const char16_t (&rhs)[N]) -> bool requires (!std::is_same_v<T, char16_t>)
+		{
+			return lhs == text<char16_t>{rhs};
+		}
+
+		template<size_t N>
+		// reverse op overloading
+		friend auto operator==(const char16_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char16_t>)
+		{
+			return rhs == lhs;
+		}
+
+		template<size_t N>
+		// converting constructor
+		friend auto operator==(const slice& lhs, const char32_t (&rhs)[N]) -> bool requires (!std::is_same_v<T, char32_t>)
+		{
+			return lhs == text<char32_t>{rhs};
+		}
+
+		template<size_t N>
+		// reverse op overloading
+		friend auto operator==(const char32_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char32_t>)
+		{
+			return rhs == lhs;
+		}
+
+		//|------------|
+		//| lhs != rhs |
+		//|------------|
+
+		friend auto operator!=(const slice& lhs, const slice& rhs) -> bool
+		{
+			return !(lhs == rhs);
+		}
+
+		template<typename U>
+		friend auto operator!=(const slice& lhs, const text<U>& rhs) -> bool
+		{
+			return !(lhs == rhs);
+		}
+
+		template<size_t N>
+		friend auto operator!=(const slice& lhs, const T (&rhs)[N]) -> bool
+		{
+			return !(lhs == rhs);
+		}
+
+		template<size_t N>
+		friend auto operator!=(const T (&lhs)[N], const slice& rhs) -> bool
+		{
+			return !(lhs == rhs);
+		}
+
+		template<size_t N>
+		// converting constructor
+		friend auto operator!=(const slice& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
+		{
+			return !(lhs == rhs);
+		}
+
+		template<size_t N>
+		// reverse op overloading
+		friend auto operator!=(const char8_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char8_t>)
+		{
+			return rhs != lhs;
+		}
+
+		template<size_t N>
+		// converting constructor
+		friend auto operator!=(const slice& lhs, const char16_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char16_t>)
+		{
+			return !(lhs == rhs);
+		}
+
+		template<size_t N>
+		// reverse op overloading
+		friend auto operator!=(const char16_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char16_t>)
+		{
+			return rhs != lhs;
+		}
+
+		template<size_t N>
+		// converting constructor
+		friend auto operator!=(const slice& lhs, const char32_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char32_t>)
+		{
+			return !(lhs == rhs);
+		}
+
+		template<size_t N>
+		// reverse op overloading
+		friend auto operator!=(const char32_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char32_t>)
+		{
+			return rhs != lhs;
 		}
 
 		//|---------------------|
@@ -1895,21 +1942,21 @@ public:
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto split(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
 	{
 		return this->split(text<char8_t>{str});
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto split(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
 	{
 		return this->split(text<char16_t>{str});
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto split(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
 	{
 		return this->split(text<char32_t>{str});
@@ -2063,21 +2110,21 @@ public:
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto find(const char8_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char8_t>)
 	{
 		return this->find(text<char8_t>{str}, offset);
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto find(const char16_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char16_t>)
 	{
 		return this->find(text<char16_t>{str}, offset);
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto find(const char32_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char32_t>)
 	{
 		return this->find(text<char32_t>{str}, offset);
@@ -2107,137 +2154,60 @@ public:
 		return j; // <- O(N)
 	}
 
-	//|------------|
-	//| lhs == rhs |
-	//|------------|
+	//|--------|
+	//| lhs[N] |
+	//|--------|
+
+	auto operator[](const size_t nth) const -> proxy<decltype(*this)>
+	{
+		return {*this, nth};
+	}
+
+	auto operator[](const size_t nth) -> proxy<decltype(*this)>
+	{
+		return {*this, nth};
+	}
+
+	//|-----------|
+	//| lhs + rhs |
+	//|-----------|
 
 	template<typename U>
-	auto operator==(const text<U>& rhs) const -> bool
+	auto operator+(const text<U>& rhs) const -> text<T>
 	{
-		if constexpr (std::is_same_v<T, U>)
-		{
-			if (this->size() != rhs.size())
-			{
-				return false;
-			}
-			const auto total {this->size() * sizeof(T)};
-			// content equality without null terminator
-			return std::memcmp(this->c_str(), rhs.c_str(), total) == 0;
-		}
-		else // if (!std::is_same_v<T, U>)
-		{
-			auto it_lb {this->begin()};
-			auto it_le {this->end()};
+		text<T> rvalue {this->size() + rhs.size()};
 
-			auto it_rb {rhs.begin()};
-			auto it_re {rhs.end()};
+		// copy lhs
+		rvalue += *this;
+		// copy rhs
+		rvalue += rhs;
 
-			for
-			( 
-				;
-				it_lb != it_le
-				||
-				it_rb != it_re
-				;
-				++it_lb // next!
-				,
-				++it_rb // next!
-			)
-			{
-				if (*it_lb != *it_rb)
-				{
-					return false;
-				}
-			}
-			return true;
-		}
+		return rvalue;
 	}
 
-	auto operator==(const slice& rhs) const -> bool
+	auto operator+(const slice& rhs) const -> text<T>
 	{
-		if (this->size() != rhs.tail - rhs.head)
-		{
-			return false;
-		}
-		const auto total {this->size() * sizeof(T)};
-		// content equality without null terminator
-		return std::memcmp(this->c_str(), rhs.head, total) == 0;
+		text<T> rvalue {this->size() + rhs.size()};
+
+		// copy lhs
+		rvalue += *this;
+		// copy rhs
+		rvalue += rhs;
+
+		return rvalue;
 	}
 
 	template<size_t N>
-	auto operator==(const T (&rhs)[N]) const -> bool
+	auto operator+(const T (&rhs)[N]) const -> text<T>
 	{
-		if (this->size() != N)
-		{
-			return false;
-		}
-		// skip a null terminator, thus - 1
-		const auto total {(N - 1) * sizeof(T)};
-		// content equality without null terminator
-		return std::memcmp(this->c_str(), rhs, total) == 0;
-	}
+		text<T> rvalue {this->size() + N - 1};
 
-	template<size_t N>
-	// converting constructor support
-	auto operator==(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
-	{
-		return this->operator==(text<char8_t>{str});
-	}
+		// copy lhs
+		rvalue += *this;
+		// copy rhs
+		rvalue += rhs;
 
-	template<size_t N>
-	// converting constructor support
-	auto operator==(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
-	{
-		return this->operator==(text<char16_t>{str});
-	}
-
-	template<size_t N>
-	// converting constructor support
-	auto operator==(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
-	{
-		return this->operator==(text<char32_t>{str});
-	}
-
-	//|------------|
-	//| lhs != rhs |
-	//|------------|
-
-	template<typename U>
-	auto operator!=(const text<U>& rhs) const -> bool
-	{
-		return !this->operator==(rhs);
-	}
-
-	auto operator!=(const slice& rhs) const -> bool
-	{
-		return !this->operator==(rhs);
-	}
-
-	template<size_t N>
-	auto operator!=(const T (&rhs)[N]) const -> bool
-	{
-		return !this->operator==(rhs);
-	}
-
-	template<size_t N>
-	// converting constructor support
-	auto operator!=(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
-	{
-		return !this->operator==(text<char8_t>{str});
-	}
-
-	template<size_t N>
-	// converting constructor support
-	auto operator!=(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
-	{
-		return !this->operator==(text<char16_t>{str});
-	}
-
-	template<size_t N>
-	// converting constructor support
-	auto operator!=(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
-	{
-		return !this->operator==(text<char32_t>{str});
+		return rvalue;
 	}
 
 	//|------------|
@@ -2337,60 +2307,185 @@ public:
 		return *this;
 	}
 
-	//|-----------|
-	//| lhs + rhs |
-	//|-----------|
+	//|------------|
+	//| lhs == rhs |
+	//|------------|
 
 	template<typename U>
-	auto operator+(const text<U>& rhs) const -> text<T>
+	friend auto operator==(const text<T>& lhs, const text<U>& rhs) -> bool
 	{
-		text<T> rvalue {this->size() + rhs.size()};
+		if constexpr (std::is_same_v<T, U>)
+		{
+			if (lhs->size() != rhs.size())
+			{
+				return false;
+			}
+			const auto total {lhs->size() * sizeof(T)};
+			// content equality without null terminator
+			return std::memcmp(lhs->c_str(), rhs.c_str(), total) == 0;
+		}
+		else // if (!std::is_same_v<T, U>)
+		{
+			auto l_b {lhs->begin()};
+			auto l_e {lhs->end()};
 
-		// copy lhs
-		rvalue += *this;
-		// copy rhs
-		rvalue += rhs;
+			auto r_b {rhs.begin()};
+			auto r_e {rhs.end()};
 
-		return rvalue;
+			for (;l_b != l_e || r_b != r_e;)
+			{
+				if (*l_b != *r_b)
+				{
+					return false;
+				}
+				++l_b; // next..!
+				++r_b; // next..!
+			}
+			return l_b == l_e && r_b == r_e;
+		}
 	}
 
-	auto operator+(const slice& rhs) const -> text<T>
+	friend auto operator==(const text<T>& lhs, const slice& rhs) -> bool
 	{
-		text<T> rvalue {this->size() + rhs.size()};
-
-		// copy lhs
-		rvalue += *this;
-		// copy rhs
-		rvalue += rhs;
-
-		return rvalue;
+		if (lhs->size() != rhs.tail - rhs.head)
+		{
+			return false;
+		}
+		const auto total {lhs->size() * sizeof(T)};
+		// content equality without null terminator
+		return std::memcmp(lhs->c_str(), rhs.head, total) == 0;
 	}
 
 	template<size_t N>
-	auto operator+(const T (&rhs)[N]) const -> text<T>
+	friend auto operator==(const text<T>& lhs, const T (&rhs)[N]) -> bool
 	{
-		text<T> rvalue {this->size() + N - 1};
-
-		// copy lhs
-		rvalue += *this;
-		// copy rhs
-		rvalue += rhs;
-
-		return rvalue;
+		if (lhs->size() != N)
+		{
+			return false;
+		}
+		// skip a null terminator, thus - 1
+		const auto total {(N - 1) * sizeof(T)};
+		// content equality without null terminator
+		return std::memcmp(lhs->c_str(), rhs, total) == 0;
 	}
 
-	//|--------|
-	//| lhs[N] |
-	//|--------|
-
-	auto operator[](const size_t nth) const -> proxy<decltype(*this)>
+	template<size_t N>
+	// reverse op overloading
+	friend auto operator==(const T (&lhs)[N], const text<T>& rhs) -> bool
 	{
-		return {*this, nth};
+		return rhs == lhs;
 	}
 
-	auto operator[](const size_t nth) -> proxy<decltype(*this)>
+	template<size_t N>
+	// converting constructor
+	friend auto operator==(const text<T>& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
 	{
-		return {*this, nth};
+		return lhs == text<char8_t>{rhs};
+	}
+
+	template<size_t N>
+	// reverse op overloading
+	friend auto operator==(const char8_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char8_t>)
+	{
+		return rhs == lhs;
+	}
+
+	template<size_t N>
+	// converting constructor
+	friend auto operator==(const text<T>& lhs, const char16_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char16_t>)
+	{
+		return lhs == text<char16_t>{rhs};
+	}
+
+	template<size_t N>
+	// reverse op overloading
+	friend auto operator==(const char16_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char16_t>)
+	{
+		return rhs == lhs;
+	}
+
+	template<size_t N>
+	// converting constructor
+	friend auto operator==(const text<T>& lhs, const char32_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char32_t>)
+	{
+		return lhs == text<char32_t>{rhs};
+	}
+
+	template<size_t N>
+	// reverse op overloading
+	friend auto operator==(const char32_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char32_t>)
+	{
+		return rhs == lhs;
+	}
+
+	//|------------|
+	//| lhs != rhs |
+	//|------------|
+
+	template<typename U>
+	friend auto operator!=(const text<T>& lhs, const text<U>& rhs) -> bool
+	{
+		return !(lhs == rhs);
+	}
+
+	friend auto operator!=(const text<T>& lhs, const slice& rhs) -> bool
+	{
+		return !(lhs == rhs);
+	}
+
+	template<size_t N>
+	friend auto operator!=(const text<T>& lhs, const T (&rhs)[N]) -> bool
+	{
+		return !(lhs == rhs);
+	}
+
+	template<size_t N>
+	// reverse op overloading
+	friend auto operator!=(const T (&lhs)[N], const text<T>& rhs) -> bool
+	{
+		return !(lhs == rhs);
+	}
+
+	template<size_t N>
+	// converting constructor
+	friend auto operator!=(const text<T>& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
+	{
+		return !(lhs == rhs);
+	}
+
+	template<size_t N>
+	// reverse op overloading
+	friend auto operator!=(const char8_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char8_t>)
+	{
+		return !(lhs == rhs);
+	}
+
+	template<size_t N>
+	// converting constructor
+	friend auto operator!=(const text<T>& lhs, const char16_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char16_t>)
+	{
+		return !(lhs == rhs);
+	}
+
+	template<size_t N>
+	// reverse op overloading
+	friend auto operator!=(const char16_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char16_t>)
+	{
+		return !(rhs == lhs);
+	}
+
+	template<size_t N>
+	// converting constructor
+	friend auto operator!=(const text<T>& lhs, const char32_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char32_t>)
+	{
+		return !(lhs == rhs);
+	}
+
+	template<size_t N>
+	// reverse op overloading
+	friend auto operator!=(const char32_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char32_t>)
+	{
+		return !(rhs == lhs);
 	}
 
 	//|---------------------|

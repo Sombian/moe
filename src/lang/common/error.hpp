@@ -28,8 +28,8 @@ public:
 	//| member function |
 	//|-----------------|
 
-	auto operator==(const error& type) const -> bool = default;
-	auto operator!=(const error& type) const -> bool = default;
+	friend auto operator==(const error& lhs, const error& rhs) -> bool = default;
+	friend auto operator!=(const error& lhs, const error& rhs) -> bool = default;
 
 	//|----------------------|
 	//| traits::printable<T> |

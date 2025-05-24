@@ -280,21 +280,21 @@ namespace fs
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto open(const char8_t (&path)[N])
 	{
 		return open(utf8 {path});
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto open(const char16_t (&path)[N])
 	{
 		return open(utf16 {path});
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto open(const char32_t (&path)[N])
 	{
 		return open(utf32 {path});

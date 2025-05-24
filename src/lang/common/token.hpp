@@ -254,14 +254,14 @@ public:
 	//| member function |
 	//|-----------------|
 
-	auto operator==(const atom type) const -> bool
+	friend auto operator==(const token& lhs, const atom rhs) -> bool
 	{
-		return this->type == type;
+		return lhs.type == rhs;
 	}
 
-	auto operator!=(const atom type) const -> bool
+	friend auto operator!=(const token& lhs, const atom rhs) -> bool
 	{
-		return this->type != type;
+		return lhs.type != rhs;
 	}
 
 	//|----------------------|
