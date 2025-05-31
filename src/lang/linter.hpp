@@ -14,6 +14,7 @@
 
 #include "./common/ast.hpp"
 #include "./common/error.hpp"
+#include "utils/ordering.hpp"
 
 template
 <
@@ -157,7 +158,7 @@ class linter
 		{
 			report result;
 
-			size_t counter {0};
+			size_t nth {0};
 			// scan current scope
 			for (auto&& node : ctx->define)
 			{
@@ -167,20 +168,25 @@ class linter
 				{
 					auto& [foo, bar] {*ptr};
 
-					if (ast.y < bar->y)
-					{
-						break;
-					}
 					if (ast.name == foo)
 					{
-						++counter;
+						++nth;
+					}
+					if
+					(
+						ast.x == bar->x
+						&&
+						ast.y == bar->y
+					)
+					{
+						break;
 					}
 				}
 			}
 			// if duplicate exists
-			if (1 < counter)
+			if (1 < nth)
 			{
-				std::cout << "redfine var: " << ast.name << std::endl;
+				std::cout << "redefine var: " << ast.name << std::endl;
 			}
 			return result;
 		}
@@ -197,7 +203,7 @@ class linter
 		{
 			report result;
 
-			size_t counter {0};
+			size_t nth {0};
 			// scan current scope
 			for (auto&& node : ctx->define)
 			{
@@ -205,18 +211,27 @@ class linter
 
 				if (auto ptr {std::get_if<T>(&node)})
 				{
-					auto& [name, _] {*ptr};
+					auto& [foo, bar] {*ptr};
 
-					if (name == ast.name)
+					if (ast.name == foo)
 					{
-						++counter;
+						++nth;
+					}
+					if
+					(
+						ast.x == bar->x
+						&&
+						ast.y == bar->y
+					)
+					{
+						break;
 					}
 				}
 			}
 			// if duplicate exists
-			if (1 < counter)
+			if (1 < nth)
 			{
-				std::cout << "redfine fun: " << ast.name << std::endl;
+				std::cout << "redefine fun: " << ast.name << std::endl;
 			}
 			return result;
 		}
@@ -233,7 +248,7 @@ class linter
 		{
 			report result;
 
-			size_t counter {0};
+			size_t nth {0};
 			// scan current scope
 			for (auto&& node : ctx->define)
 			{
@@ -241,18 +256,27 @@ class linter
 
 				if (auto ptr {std::get_if<T>(&node)})
 				{
-					auto& [name, _] {*ptr};
+					auto& [foo, bar] {*ptr};
 
-					if (name == ast.name)
+					if (ast.name == foo)
 					{
-						++counter;
+						++nth;
+					}
+					if
+					(
+						ast.x == bar->x
+						&&
+						ast.y == bar->y
+					)
+					{
+						break;
 					}
 				}
 			}
 			// if duplicate exists
-			if (1 < counter)
+			if (1 < nth)
 			{
-				std::cout << "redfine trait: " << ast.name << std::endl;
+				std::cout << "redefine trait: " << ast.name << std::endl;
 			}
 			return result;
 		}
@@ -269,7 +293,7 @@ class linter
 		{
 			report result;
 
-			size_t counter {0};
+			size_t nth {0};
 			// scan current scope
 			for (auto&& node : ctx->define)
 			{
@@ -277,18 +301,27 @@ class linter
 
 				if (auto ptr {std::get_if<T>(&node)})
 				{
-					auto& [name, _] {*ptr};
+					auto& [foo, bar] {*ptr};
 
-					if (name == ast.name)
+					if (ast.name == foo)
 					{
-						++counter;
+						++nth;
+					}
+					if
+					(
+						ast.x == bar->x
+						&&
+						ast.y == bar->y
+					)
+					{
+						break;
 					}
 				}
 			}
 			// if duplicate exists
-			if (1 < counter)
+			if (1 < nth)
 			{
-				std::cout << "redfine trait: " << ast.name << std::endl;
+				std::cout << "redefine trait: " << ast.name << std::endl;
 			}
 			return result;
 		}
