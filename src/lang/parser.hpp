@@ -195,13 +195,6 @@ public:
 		{
 			while (true)
 			{
-				if (auto out {this->stmt_t()})
-				{
-					//|-------------<insert>-------------|
-					exe.ast.emplace_back(std::move(*out));
-					//|----------------------------------|
-					continue;
-				}
 				if (auto out {this->decl_t()})
 				{
 					//|-------------<insert>-------------|
@@ -209,7 +202,19 @@ public:
 					//|----------------------------------|
 					continue;
 				}
+				if (auto out {this->stmt_t()})
+				{
+					//|-------------<insert>-------------|
+					exe.ast.emplace_back(std::move(*out));
+					//|----------------------------------|
+					continue;
+				}
 				break;
+			}
+			// if not EOF
+			if (this->peek())
+			{
+				throw E(u8"[parser] unknown token");
 			}
 		}
 		catch (error<A, B>& error)

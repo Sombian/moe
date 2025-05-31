@@ -14,7 +14,6 @@
 
 #include "./common/ast.hpp"
 #include "./common/error.hpp"
-#include "utils/ordering.hpp"
 
 template
 <
@@ -140,27 +139,27 @@ class linter
 		}
 
 		static constexpr
-		auto access_modifier(scope* ctx, $access& ast)
+		auto access_modifier(scope* ctx, $access& ast) -> report
 		{
 			report result;
 			return result;
 		}
 
 		static constexpr
-		auto unsafe_lifetime(scope* ctx, $return& ast)
+		auto unsafe_lifetime(scope* ctx, $return& ast) -> report
 		{
 			report result;
 			return result;
 		}
 
 		static constexpr
-		auto redefine_var(scope* ctx, $var& ast)
+		auto redefine_var(scope* ctx, $var& ast) -> report
 		{
 			report result;
 
 			size_t nth {0};
 			// scan current scope
-			for (auto&& node : ctx->define)
+			for (auto& node : ctx->define)
 			{
 				typedef std::pair<utf8, $var*> T;
 
@@ -172,12 +171,9 @@ class linter
 					{
 						++nth;
 					}
-					if
-					(
-						ast.x == bar->x
-						&&
-						ast.y == bar->y
-					)
+					if (ast.x == bar->x
+						      &&
+						ast.y == bar->y)
 					{
 						break;
 					}
@@ -186,26 +182,26 @@ class linter
 			// if duplicate exists
 			if (1 < nth)
 			{
-				std::cout << "redefine var: " << ast.name << std::endl;
+				std::cout << "redefine of var: " << ast.name << std::endl;
 			}
 			return result;
 		}
 
 		static constexpr
-		auto undefine_var(scope* ctx, $symbol& ast)
+		auto undefine_var(scope* ctx, $symbol& ast) -> report
 		{
 			report result;
 			return result;
 		}
 
 		static constexpr
-		auto redefine_fun(scope* ctx, $fun& ast)
+		auto redefine_fun(scope* ctx, $fun& ast) -> report
 		{
 			report result;
 
 			size_t nth {0};
 			// scan current scope
-			for (auto&& node : ctx->define)
+			for (auto& node : ctx->define)
 			{
 				typedef std::pair<utf8, $fun*> T;
 
@@ -217,12 +213,9 @@ class linter
 					{
 						++nth;
 					}
-					if
-					(
-						ast.x == bar->x
-						&&
-						ast.y == bar->y
-					)
+					if (ast.x == bar->x
+						      &&
+						ast.y == bar->y)
 					{
 						break;
 					}
@@ -231,26 +224,26 @@ class linter
 			// if duplicate exists
 			if (1 < nth)
 			{
-				std::cout << "redefine fun: " << ast.name << std::endl;
+				std::cout << "redefine of fun: " << ast.name << std::endl;
 			}
 			return result;
 		}
 
 		static constexpr
-		auto undefine_fun(scope* ctx, $symbol& ast)
+		auto undefine_fun(scope* ctx, $symbol& ast) -> report
 		{
 			report result;
 			return result;
 		}
 
 		static constexpr
-		auto redefine_trait(scope* ctx, $trait& ast)
+		auto redefine_trait(scope* ctx, $trait& ast) -> report
 		{
 			report result;
 
 			size_t nth {0};
 			// scan current scope
-			for (auto&& node : ctx->define)
+			for (auto& node : ctx->define)
 			{
 				typedef std::pair<utf8, $trait*> T;
 
@@ -262,12 +255,9 @@ class linter
 					{
 						++nth;
 					}
-					if
-					(
-						ast.x == bar->x
-						&&
-						ast.y == bar->y
-					)
+					if (ast.x == bar->x
+						      &&
+						ast.y == bar->y)
 					{
 						break;
 					}
@@ -276,26 +266,26 @@ class linter
 			// if duplicate exists
 			if (1 < nth)
 			{
-				std::cout << "redefine trait: " << ast.name << std::endl;
+				std::cout << "redefine of trait: " << ast.name << std::endl;
 			}
 			return result;
 		}
 
 		static constexpr
-		auto undefine_trait(scope* ctx, $symbol& ast)
+		auto undefine_trait(scope* ctx, $symbol& ast) -> report
 		{
 			report result;
 			return result;
 		}
 
 		static constexpr
-		auto redefine_class(scope* ctx, $class& ast)
+		auto redefine_class(scope* ctx, $class& ast) -> report
 		{
 			report result;
 
 			size_t nth {0};
 			// scan current scope
-			for (auto&& node : ctx->define)
+			for (auto& node : ctx->define)
 			{
 				typedef std::pair<utf8, $class*> T;
 
@@ -307,12 +297,9 @@ class linter
 					{
 						++nth;
 					}
-					if
-					(
-						ast.x == bar->x
-						&&
-						ast.y == bar->y
-					)
+					if (ast.x == bar->x
+						      &&
+						ast.y == bar->y)
 					{
 						break;
 					}
@@ -321,27 +308,27 @@ class linter
 			// if duplicate exists
 			if (1 < nth)
 			{
-				std::cout << "redefine trait: " << ast.name << std::endl;
+				std::cout << "redefine of trait: " << ast.name << std::endl;
 			}
 			return result;
 		}
 
 		static constexpr
-		auto undefine_class(scope* ctx, $symbol& ast)
+		auto undefine_class(scope* ctx, $symbol& ast) -> report
 		{
 			report result;
 			return result;
 		}
 
 		static constexpr
-		auto assign_to_this(scope* ctx, $binary& ast)
+		auto assign_to_this(scope* ctx, $binary& ast) -> report
 		{
 			report result;
 			return result;
 		}
 
 		static constexpr
-		auto assign_to_const(scope* ctx, $binary& ast)
+		auto assign_to_const(scope* ctx, $binary& ast) -> report
 		{
 			report result;
 			return result;
