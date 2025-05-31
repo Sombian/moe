@@ -6,5 +6,6 @@ Hover:
     ShowAKA: Yes
 
 InlayHints:
+    Designators: Off
     DeducedTypes: Off
     ParameterNames: Off

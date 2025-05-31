@@ -42,7 +42,7 @@ class tst
 			delete this->right;
 		}
 
-		[[nodiscard]] static
+		static constexpr
 		auto repair(node* a) -> node*
 		{
 			auto balance {node::factor(a)};
@@ -82,7 +82,7 @@ class tst
 
 	private:
 
-		[[nodiscard]] static
+		static constexpr
 		auto factor(node* a) -> int8_t
 		{
 			if (a == nullptr) { return 0; }
@@ -91,7 +91,7 @@ class tst
 			return left - right; // delta
 		}
 
-		[[nodiscard]] static
+		static constexpr
 		auto height(node* a) -> int8_t
 		{
 			if (a == nullptr) { return 0; }
@@ -100,7 +100,7 @@ class tst
 			return std::max(left, right) + 1;
 		}
 
-		[[nodiscard]] static
+		static constexpr
 		auto rotate_l(node* a) -> node*
 		{
 			//|--------|-------|-------|-------|
@@ -120,7 +120,7 @@ class tst
 			return b;
 		}
 
-		[[nodiscard]] static
+		static constexpr
 		auto rotate_r(node* a) -> node*
 		{
 			//|--------|-------|-------|-------|

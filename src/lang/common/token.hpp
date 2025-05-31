@@ -236,7 +236,7 @@ template
 	type::string A,
 	type::string B
 >
-struct token
+struct token : public span
 {
 	// SFINE: use T::slice if T is a string impl, otherwise use T directly
 	typedef std::conditional_t<type::string_impl<B>, typename B::slice, B> view;
@@ -246,9 +246,23 @@ struct token
 	//|----------------|
 	atom type;
 	view data;
-	span span;
 
 public:
+
+	token
+	(
+		decltype(x) x,
+		decltype(y) y,
+		decltype(file) file,
+		decltype(type) type,
+		decltype(data) data
+	)
+	:
+	span {x, y},
+	file {file},
+	type {type},
+	data {data}
+	{}
 
 	//|-----------------|
 	//| member function |
@@ -280,11 +294,11 @@ public:
 			<<
 			"("
 			<<
-			std::setfill('0') << std::setw(2) << token.span.y + 0
+			std::setfill('0') << std::setw(2) << token.y + 0
 			<<
 			","
 			<<
-			std::setfill('0') << std::setw(2) << token.span.x + 1
+			std::setfill('0') << std::setw(2) << token.x + 1
 			<<
 			")"
 			<<

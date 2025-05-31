@@ -14,15 +14,27 @@ template
 	type::string A,
 	type::string B
 >
-struct error
+struct error : public span
 {
 	//|---<safe ptr>---|
 	fs::file<A, B>* file;
 	//|----------------|
 	utf8 data;
-	span span;
 
 public:
+
+	error
+	(
+		decltype(x) x,
+		decltype(y) y,
+		decltype(file) file,
+		decltype(data) data
+	)
+	:
+	span {x, y},
+	file {file},
+	data {data}
+	{}
 
 	//|-----------------|
 	//| member function |
@@ -47,11 +59,11 @@ public:
 			<<
 			"("
 			<<
-			std::setfill('0') << std::setw(2) << error.span.y + 0
+			std::setfill('0') << std::setw(2) << error.y + 0
 			<<
 			","
 			<<
-			std::setfill('0') << std::setw(2) << error.span.x + 1
+			std::setfill('0') << std::setw(2) << error.x + 1
 			<<
 			")"
 			<<

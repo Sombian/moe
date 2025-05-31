@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bit>
+#include <vector>
 #include <string>
 #include <vector>
 #include <cassert>
@@ -780,22 +781,22 @@ public:
 
 	public:
 
-		[[nodiscard]] static
+		static inline
 		// where : 0 < result
 		auto next(const T* ptr) -> width_t;
 
-		[[nodiscard]] static
+		static inline
 		// where : result < 0
 		auto back(const T* ptr) -> width_t;
 
-		[[nodiscard]] static
+		static inline
 		// where : 0 < result
 		auto width(const char32_t code) -> width_t;
 
-		[[maybe_unused]] static
+		static inline
 		void encode(const char32_t in, T* out, width_t width);
 
-		[[maybe_unused]] static
+		static inline
 		void decode(const T* in, char32_t& out, width_t width);
 	};
 
@@ -1376,9 +1377,9 @@ public:
 		{
 			return
 			(
-				lhs->head == rhs.head
+				lhs.head == rhs.head
 				&&
-				lhs->tail == rhs.tail
+				lhs.tail == rhs.tail
 			);
 		}
 
@@ -1387,18 +1388,18 @@ public:
 		{
 			if constexpr (std::is_same_v<T, U>)
 			{
-				if (lhs->tail - lhs->head != rhs.size())
+				if (lhs.tail - lhs->head != rhs.size())
 				{
 					return false;
 				}
 				const auto total {rhs.size() * sizeof(T)};
 				// content equality without null terminator
-				return std::memcmp(lhs->head, rhs.c_str(), total) == 0;
+				return std::memcmp(lhs.head, rhs.c_str(), total) == 0;
 			}
 			else // if (!std::is_same_v<T, U>)
 			{
-				auto l_b {lhs->begin()};
-				auto l_e {lhs->end()};
+				auto l_b {lhs.begin()};
+				auto l_e {lhs.end()};
 
 				auto r_b {rhs.begin()};
 				auto r_e {rhs.end()};
@@ -1419,14 +1420,14 @@ public:
 		template<size_t N>
 		friend auto operator==(const slice& lhs, const T (&rhs)[N]) -> bool
 		{
-			if (lhs->tail - lhs->head != N)
+			if (lhs.tail - lhs.head != N)
 			{
 				return false;
 			}
 			// skip a null terminator, thus - 1
 			const auto total {(N - 1) * sizeof(T)};
 			// content equality without null terminator
-			return std::memcmp(lhs->head, rhs, total) == 0;
+			return std::memcmp(lhs.head, rhs, total) == 0;
 		}
 
 		template<size_t N>
@@ -2377,18 +2378,18 @@ public:
 	{
 		if constexpr (std::is_same_v<T, U>)
 		{
-			if (lhs->size() != rhs.size())
+			if (lhs.size() != rhs.size())
 			{
 				return false;
 			}
-			const auto total {lhs->size() * sizeof(T)};
+			const auto total {lhs.size() * sizeof(T)};
 			// content equality without null terminator
-			return std::memcmp(lhs->c_str(), rhs.c_str(), total) == 0;
+			return std::memcmp(lhs.c_str(), rhs.c_str(), total) == 0;
 		}
 		else // if (!std::is_same_v<T, U>)
 		{
-			auto l_b {lhs->begin()};
-			auto l_e {lhs->end()};
+			auto l_b {lhs.begin()};
+			auto l_e {lhs.end()};
 
 			auto r_b {rhs.begin()};
 			auto r_e {rhs.end()};
@@ -2408,26 +2409,26 @@ public:
 
 	friend auto operator==(const text<T>& lhs, const slice& rhs) -> bool
 	{
-		if (lhs->size() != rhs.tail - rhs.head)
+		if (lhs.size() != rhs.tail - rhs.head)
 		{
 			return false;
 		}
-		const auto total {lhs->size() * sizeof(T)};
+		const auto total {lhs.size() * sizeof(T)};
 		// content equality without null terminator
-		return std::memcmp(lhs->c_str(), rhs.head, total) == 0;
+		return std::memcmp(lhs.c_str(), rhs.head, total) == 0;
 	}
 
 	template<size_t N>
 	friend auto operator==(const text<T>& lhs, const T (&rhs)[N]) -> bool
 	{
-		if (lhs->size() != N)
+		if (lhs.size() != N)
 		{
 			return false;
 		}
 		// skip a null terminator, thus - 1
 		const auto total {(N - 1) * sizeof(T)};
 		// content equality without null terminator
-		return std::memcmp(lhs->c_str(), rhs, total) == 0;
+		return std::memcmp(lhs.c_str(), rhs, total) == 0;
 	}
 
 	template<size_t N>

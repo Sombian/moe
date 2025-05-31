@@ -28,7 +28,6 @@ struct props
 
 namespace
 {
-	[[nodiscard]] static
 	auto UnicodeData(const type::string auto& name) -> std::set<uint32_t>
 	{
 		static auto UnicodeData // <- cache the file
@@ -48,7 +47,6 @@ namespace
 	}
 
 	template<size_t N>
-	[[nodiscard]] static
 	// converting constructor
 	auto UnicodeData(const char8_t (&name)[N]) -> auto
 	{
@@ -56,7 +54,6 @@ namespace
 	}
 
 	template<size_t N>
-	[[nodiscard]] static
 	// converting constructor
 	auto UnicodeData(const char16_t (&name)[N]) -> auto
 	{
@@ -64,7 +61,6 @@ namespace
 	}
 
 	template<size_t N>
-	[[nodiscard]] static
 	// converting constructor
 	auto UnicodeData(const char32_t (&name)[N]) -> auto
 	{
@@ -72,9 +68,8 @@ namespace
 	}
 }
 
-namespace
+namespace detail
 {
-	[[nodiscard]] static
 	auto CaseFolding(const type::string auto& name) -> std::set<uint32_t>
 	{
 		static auto CaseFolding // <- cache the file
@@ -94,7 +89,6 @@ namespace
 	}
 
 	template<size_t N>
-	[[nodiscard]] static
 	// converting constructor
 	auto CaseFolding(const char8_t (&name)[N]) -> auto
 	{
@@ -102,7 +96,6 @@ namespace
 	}
 
 	template<size_t N>
-	[[nodiscard]] static
 	// converting constructor
 	auto CaseFolding(const char16_t (&name)[N]) -> auto
 	{
@@ -110,7 +103,6 @@ namespace
 	}
 
 	template<size_t N>
-	[[nodiscard]] static
 	// converting constructor
 	auto CaseFolding(const char32_t (&name)[N]) -> auto
 	{
@@ -118,9 +110,8 @@ namespace
 	}
 }
 
-namespace
+namespace detail
 {
-	[[nodiscard]] static
 	auto CompositionExclusions(const type::string auto& name) -> std::set<uint32_t>
 	{
 		static auto CompositionExclusions // <- cache the file
@@ -141,7 +132,6 @@ namespace
 	}
 
 	template<size_t N>
-	[[nodiscard]] static
 	// converting constructor
 	auto CompositionExclusions(const char8_t (&name)[N]) -> auto
 	{
@@ -149,7 +139,6 @@ namespace
 	}
 
 	template<size_t N>
-	[[nodiscard]] static
 	// converting constructor
 	auto CompositionExclusions(const char16_t (&name)[N]) -> auto
 	{
@@ -157,7 +146,6 @@ namespace
 	}
 
 	template<size_t N>
-	[[nodiscard]] static
 	// converting constructor
 	auto CompositionExclusions(const char32_t (&name)[N]) -> auto
 	{
@@ -167,7 +155,6 @@ namespace
 
 namespace
 {
-	[[nodiscard]] static
 	auto DerivedCoreProperties(const type::string auto& name) -> std::set<uint32_t>
 	{
 		static auto DerivedCoreProperties // <- cache the file
@@ -222,7 +209,6 @@ namespace
 	}
 
 	template<size_t N>
-	[[nodiscard]] static
 	// converting constructor
 	auto DerivedCoreProperties(const char8_t (&name)[N]) -> auto
 	{
@@ -230,7 +216,6 @@ namespace
 	}
 
 	template<size_t N>
-	[[nodiscard]] static
 	// converting constructor
 	auto DerivedCoreProperties(const char16_t (&name)[N]) -> auto
 	{
@@ -238,7 +223,6 @@ namespace
 	}
 
 	template<size_t N>
-	[[nodiscard]] static
 	// converting constructor
 	auto DerivedCoreProperties(const char32_t (&name)[N]) -> auto
 	{
@@ -248,7 +232,6 @@ namespace
 
 namespace
 {
-	[[nodiscard]] static
 	auto write_stage1(std::vector<uint16_t> stage1, const char* name)
 	{
 		if (std::ofstream ofs {name})
@@ -278,7 +261,6 @@ namespace
 		}
 	}
 
-	[[nodiscard]] static
 	auto write_stage2(std::vector<block> stage2, const char* name)
 	{
 		if (std::ofstream ofs {name})
@@ -311,7 +293,6 @@ namespace
 		}
 	}
 
-	[[nodiscard]] static
 	auto write_stage3(std::vector<props> stage3, const char* name)
 	{
 		if (std::ofstream ofs {name})
@@ -339,13 +320,12 @@ namespace
 
 namespace setup
 {
-	[[nodiscard]] static
 	auto unicode()
 	{
 		/*******************/ std::vector<uint16_t> stage1; /*******************/
 		/**/ std::vector<block> stage2; std::map<block, uint16_t> stage2map; /**/
 		/**/ std::vector<props> stage3; std::map<props, uint16_t> stage3map; /**/
-		/***********************************************************************/
+		/**********************************************************************/
 
 		std::array<props, 0x10FFFF + 1> POOL {};
 
