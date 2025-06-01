@@ -248,7 +248,7 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E(u8"use of unknown sybmol: " + ast.name);
+			return E(u8"use of unknown symbol: " + ast.name);
 		}
 
 		static inline
@@ -604,30 +604,18 @@ class linter
 		static constexpr
 		auto resolve(scope* ctx, utf8& name) -> T
 		{
-			for (auto& pair : ctx->define)
+			typedef std::pair<utf8, T> P;
+
+			for (auto& node : ctx->define)
 			{
-				if (auto ptr
+				if (std::holds_alternative<P>(node))
 				{
-					std::visit([&](auto&& pair) -> T
+					auto [key, value] {std::get<P>(node)};
+
+					if (key == name)
 					{
-						auto& [str, ptr] {pair};
-
-						typedef decltype(str) K;
-						typedef decltype(ptr) V;
-
-						if constexpr (std::same_as<T, V>)
-						{
-							if (name == str)
-							{
-								return ptr;
-							}
-						}
-						return nullptr;
-					},
-					pair)
-				})
-				{
-					return ptr;
+						return value;
+					}
 				}
 			}
 			return nullptr;
