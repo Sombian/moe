@@ -48,12 +48,12 @@ namespace lang
 	/*| assignment |*/        \
 	/*|------------|*/        \
 	macro(ASSIGN, u8"=")      \
-	macro(ASSIGN_ADD, u8"+=") \
-	macro(ASSIGN_SUB, u8"-=") \
-	macro(ASSIGN_MUL, u8"*=") \
-	macro(ASSIGN_DIV, u8"/=") \
-	macro(ASSIGN_MOD, u8"%=") \
-	macro(ASSIGN_POW, u8"^=") \
+	macro(ADD_EQ, u8"+=") \
+	macro(SUB_EQ, u8"-=") \
+	macro(MUL_EQ, u8"*=") \
+	macro(DIV_EQ, u8"/=") \
+	macro(MOD_EQ, u8"%=") \
+	macro(POW_EQ, u8"^=") \
 	/*|------------|*/        \
 	/*| arithmetic |*/        \
 	/*|------------|*/        \

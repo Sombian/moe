@@ -1092,12 +1092,12 @@ private:
 									switch (tkn->type)
 									{
 										case atom::ASSIGN:
-										case atom::ASSIGN_ADD:
-										case atom::ASSIGN_SUB:
-										case atom::ASSIGN_MUL:
-										case atom::ASSIGN_DIV:
-										case atom::ASSIGN_MOD:
-										case atom::ASSIGN_POW:
+										case atom::ADD_EQ:
+										case atom::SUB_EQ:
+										case atom::MUL_EQ:
+										case atom::DIV_EQ:
+										case atom::MOD_EQ:
+										case atom::POW_EQ:
 										{
 											return {1, 2};
 										}

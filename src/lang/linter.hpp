@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deque>
+#include <memory>
 #include <variant>
 #include <cstdint>
 #include <utility>
@@ -223,18 +224,68 @@ class linter
 		static constexpr
 		auto assign_to_this(fs::file<A, B>* src, scope* ctx, $binary& ast) -> report
 		{
+			switch (ast.op)
+			{
+				case op_i::ASSIGN:
+				case op_i::ADD_EQ:
+				case op_i::SUB_EQ:
+				case op_i::MUL_EQ:
+				case op_i::DIV_EQ:
+				case op_i::MOD_EQ:
+				case op_i::POW_EQ:
+				{
+					break;
+				}
+			}
 			return std::nullopt;
 		}
 
 		static constexpr
 		auto assign_to_let$(fs::file<A, B>* src, scope* ctx, $binary& ast) -> report
 		{
+			switch (ast.op)
+			{
+				case op_i::ASSIGN:
+				case op_i::ADD_EQ:
+				case op_i::SUB_EQ:
+				case op_i::MUL_EQ:
+				case op_i::DIV_EQ:
+				case op_i::MOD_EQ:
+				case op_i::POW_EQ:
+				{
+					if (auto ptr {std::get_if<std::unique_ptr<$symbol>>(&ast.lhs)})
+					{
+						for (auto block {ctx}; block; block = block->upper)
+						{
+							auto var {resolve<$var*>(block, (*ptr)->name)};
+
+							if (var != nullptr && *var <= ast && var->is_const)
+							{
+								return E(u8"assign to const var: " + var->name);
+							}
+						}
+					}
+				}
+			}
 			return std::nullopt;
 		}
 
 		static constexpr
 		auto assign_to_temp(fs::file<A, B>* src, scope* ctx, $binary& ast) -> report
 		{
+			switch (ast.op)
+			{
+				case op_i::ASSIGN:
+				case op_i::ADD_EQ:
+				case op_i::SUB_EQ:
+				case op_i::MUL_EQ:
+				case op_i::DIV_EQ:
+				case op_i::MOD_EQ:
+				case op_i::POW_EQ:
+				{
+					break;
+				}
+			}
 			return std::nullopt;
 		}
 
@@ -248,7 +299,7 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E(u8"use of unknown symbol: " + ast.name);
+			return E(u8"unknown symbol: " + ast.name);
 		}
 
 		static inline
@@ -556,7 +607,7 @@ class linter
 				case stage::COLLECT:
 				{
 					// create new node
-					auto* node {new scope {this->ptr}};
+					auto node {new scope {this->ptr}};
 					// insert new node
 					this->ptr->lower.emplace_back(node);
 					// update the ptr
