@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -29,11 +30,11 @@ class lexer
 		// column
 		class proxy_x
 		{
-			std::vector<size_t>& data;
+			std::deque<size_t>& data;
 
 		public:
 
-			proxy_x(decltype(data) data): data {data} {}
+			proxy_x(decltype(data) data) : data {data} {}
 
 			//|-----------------|
 			//| member function |
@@ -60,7 +61,7 @@ class lexer
 		// line
 		class proxy_y
 		{
-			std::vector<size_t>& data;
+			std::deque<size_t>& data;
 
 		public:
 
@@ -88,7 +89,7 @@ class lexer
 			}
 		};
 
-		std::vector<size_t> data
+		std::deque<size_t> data
 		{
 			0 // <- column
 		};
@@ -138,41 +139,34 @@ class lexer
 	}
 	span;
 
-	fs::file<A, B>* file;
-
+	//|-----<file>-----|
+	fs::file<A, B>* src;
+	//|----------------|
 	uint16_t x;
 	uint16_t y;
-	
-	decltype(file->data.begin()) it;
-	decltype(&file->data.begin()) ptr {0};
-	decltype(*file->data.begin()) out {0};
+	decltype(src->data.begin()) it;
+	decltype(&src->data.begin()) ptr {0};
+	decltype(*src->data.begin()) out {0};
 
-	#define T($value) token<A, B> \
-	{                             \
-		.file = *this,            \
-		.type = $value,           \
-		.data                     \
-		{                         \
-			this->ptr,            \
-			&this->it,            \
-		},                        \
-		.span                     \
-		{                         \
-			this->x,              \
-			this->y,              \
-		},                        \
-	}                             \
+	#define T(value) token<A, B> \
+	{                            \
+		this->x,                 \
+		this->y,                 \
+		*this,                   \
+		value,                   \
+		{                        \
+			this->ptr,           \
+			&this->it,           \
+		},                       \
+	}                            \
 
-	#define E($value) error<A, B> \
-	{                             \
-		.file = *this,            \
-		.data = $value,           \
-		.span                     \
-		{                         \
-			this->x,              \
-			this->y,              \
-		},                        \
-	}                             \
+	#define E(value) error<A, B> \
+	{                            \
+		this->x,                 \
+		this->y,                 \
+		*this,                   \
+		value,                   \
+	}                            \
 
 	auto next() -> char32_t
 	{
@@ -224,9 +218,9 @@ public:
 
 	lexer
 	(
-		decltype(file) file
+		decltype(src) file
 	)
-	: file {file}, it {file->data.begin()} {}
+	: src {file}, it {file->data.begin()} {}
 
 	//|-----------------|
 	//| member function |
@@ -234,12 +228,15 @@ public:
 
 	operator fs::file<A, B>*()
 	{
-		return static_cast
-		<fs::file<A, B>*>
-		(this->file);
+		return this->src;
 	}
 
-	auto pull() -> std::variant<token<A, B>, eof, error<A, B>>
+	auto pull() -> std::variant
+	<
+		token<A, B>,
+		error<A, B>,
+		eof /* OK */
+	>
 	{
 		for
 		(

@@ -33,9 +33,9 @@ namespace fs
 	template<type::string T>
 	auto open(const T& path) -> std::optional<std::variant<file<T, utf8>, file<T, utf16>, file<T, utf32>>>
 	{
-		#ifndef NDEBUG //-------------|
-		std::cout << path << std::endl;
-		#endif //---------------------|
+		#ifndef NDEBUG //--------|
+		std::cout << path << '\n';
+		#endif //----------------|
 	
 		auto sys {std::filesystem::path(path.c_str())};
 
@@ -280,21 +280,21 @@ namespace fs
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto open(const char8_t (&path)[N])
 	{
 		return open(utf8 {path});
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto open(const char16_t (&path)[N])
 	{
 		return open(utf16 {path});
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto open(const char32_t (&path)[N])
 	{
 		return open(utf32 {path});

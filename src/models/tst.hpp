@@ -42,7 +42,7 @@ class tst
 			delete this->right;
 		}
 
-		[[nodiscard]] static
+		static constexpr
 		auto repair(node* a) -> node*
 		{
 			auto balance {node::factor(a)};
@@ -82,7 +82,7 @@ class tst
 
 	private:
 
-		[[nodiscard]] static
+		static constexpr
 		auto factor(node* a) -> int8_t
 		{
 			if (a == nullptr) { return 0; }
@@ -91,7 +91,7 @@ class tst
 			return left - right; // delta
 		}
 
-		[[nodiscard]] static
+		static constexpr
 		auto height(node* a) -> int8_t
 		{
 			if (a == nullptr) { return 0; }
@@ -100,7 +100,7 @@ class tst
 			return std::max(left, right) + 1;
 		}
 
-		[[nodiscard]] static
+		static constexpr
 		auto rotate_l(node* a) -> node*
 		{
 			//|--------|-------|-------|-------|
@@ -120,7 +120,7 @@ class tst
 			return b;
 		}
 
-		[[nodiscard]] static
+		static constexpr
 		auto rotate_r(node* a) -> node*
 		{
 			//|--------|-------|-------|-------|
@@ -151,7 +151,7 @@ public:
 	}
 
 	template<type::string S>
-	tst(std::initializer_list<std::pair<const S&, T>> args = {})
+	tst(std::initializer_list<std::pair<S&, T>> args = {})
 	{
 		for (const auto& [first, second] : args)
 		{
@@ -159,30 +159,30 @@ public:
 		}
 	}
 
-	// converting constructor support
-	tst(std::initializer_list<std::pair<const utf8, T>> args = {})
+	// converting constructor
+	tst(std::initializer_list<std::pair<const char8_t*, T>> args = {})
 	{
 		for (const auto& [first, second] : args)
 		{
-			this->operator[](first) = second;
+			this->operator[](utf8{first}) = second;
 		}
 	}
 
-	// converting constructor support
-	tst(std::initializer_list<std::pair<const utf16, T>> args = {})
+	// converting constructor
+	tst(std::initializer_list<std::pair<const char16_t*, T>> args = {})
 	{
 		for (const auto& [first, second] : args)
 		{
-			this->operator[](first) = second;
+			this->operator[](utf16{first}) = second;
 		}
 	}
 
-	// converting constructor support
-	tst(std::initializer_list<std::pair<const utf32, T>> args = {})
+	// converting constructor
+	tst(std::initializer_list<std::pair<const char32_t*, T>> args = {})
 	{
 		for (const auto& [first, second] : args)
 		{
-			this->operator[](first) = second;
+			this->operator[](utf32{first}) = second;
 		}
 	}
 
@@ -254,17 +254,17 @@ private:
 		//| member function |
 		//|-----------------|
 
-		auto reset()
-		{
-			this->ptr = nullptr;
-		}
-
 		auto get() const -> std::optional<T> requires
 		(
 			std::is_class_v<T> ? !std::is_empty_v<T> : true
 		)
 		{
 			return this->ptr ? this->ptr->data : std::nullopt;
+		}
+
+		auto reset()
+		{
+			this->ptr = nullptr;
 		}
 
 		auto is_root() const -> bool
@@ -331,6 +331,11 @@ private:
 public:
 
 	auto view() const -> cursor<decltype(*this)>
+	{
+		return {*this, nullptr};
+	}
+
+	auto view() -> cursor<decltype(*this)>
 	{
 		return {*this, nullptr};
 	}
@@ -473,7 +478,7 @@ private:
 				while (true)
 				{
 					// remember path
-					stack.push_back(ptr);
+					stack.emplace_back(ptr);
 
 					if ((*ptr) == nullptr)
 					{
@@ -525,25 +530,28 @@ public:
 	//|----------|
 
 	template<type::string S>
-	auto operator[](const S& str) const -> proxy<decltype(*this), decltype(str)>
+	auto operator[](const S& str) const -> proxy<decltype(*this), S>
 	{
 		return {*this, str};
 	}
 
-	// converting constructor support
-	auto operator[](const utf8 str) const -> proxy<decltype(*this), utf8>
+	template<size_t N>
+	// converting constructor
+	auto operator[](const char8_t (&str)[N]) const -> proxy<decltype(*this), utf8>
 	{
 		return {*this, str};
 	}
 
-	// converting constructor support
-	auto operator[](const utf16 str) const -> proxy<decltype(*this), utf16>
+	template<size_t N>
+	// converting constructor
+	auto operator[](const char16_t (&str)[N]) const -> proxy<decltype(*this), utf16>
 	{
 		return {*this, str};
 	}
 
-	// converting constructor support
-	auto operator[](const utf32 str) const -> proxy<decltype(*this), utf32>
+	template<size_t N>
+	// converting constructor
+	auto operator[](const char32_t (&str)[N]) const -> proxy<decltype(*this), utf32>
 	{
 		return {*this, str};
 	}
@@ -553,25 +561,28 @@ public:
 	//|----------|
 
 	template<type::string S>
-	auto operator[](const S& str) -> proxy<decltype(*this), decltype(str)>
+	auto operator[](const S& str) -> proxy<decltype(*this), S>
 	{
 		return {*this, str};
 	}
 
-	// converting constructor support
-	auto operator[](const utf8 str) -> proxy<decltype(*this), utf8>
+	template<size_t N>
+	// converting constructor
+	auto operator[](const char8_t (&str)[N]) -> proxy<decltype(*this), utf8>
 	{
 		return {*this, str};
 	}
 
-	// converting constructor support
-	auto operator[](const utf16 str) -> proxy<decltype(*this), utf16>
+	template<size_t N>
+	// converting constructor
+	auto operator[](const char16_t (&str)[N]) -> proxy<decltype(*this), utf16>
 	{
 		return {*this, str};
 	}
 
-	// converting constructor support
-	auto operator[](const utf32 str) -> proxy<decltype(*this), utf32>
+	template<size_t N>
+	// converting constructor
+	auto operator[](const char32_t (&str)[N]) -> proxy<decltype(*this), utf32>
 	{
 		return {*this, str};
 	}

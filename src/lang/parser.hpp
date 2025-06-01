@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <vector>
 #include <memory>
 #include <cassert>
 #include <cstdint>
@@ -31,16 +30,13 @@ class parser
 	decltype(lexer->pull()) buffer;
 	//|--------------------------|
 
-	#define E($value) error<A, B> \
-	{                             \
-		.file = *this,            \
-		.data = $value,           \
-		.span                     \
-		{                         \
-			this->x,              \
-			this->y,              \
-		},                        \
-	}                             \
+	#define E(value) error<A, B> \
+	{                            \
+		this->x,                 \
+		this->y,                 \
+		*this,                   \
+		value,                   \
+	}                            \
 
 	//|---------------<maybe>--------------|
 	typedef std::optional<token<A, B>> maybe;
@@ -77,23 +73,23 @@ class parser
 
 			if constexpr (std::is_same_v<T, token<A, B>>)
 			{
-				this->x = arg.span.x;
-				this->y = arg.span.y;
+				this->x = arg.x;
+				this->y = arg.y;
 
-				#ifndef NDEBUG //------------|
-				std::cout << arg << std::endl;
-				#endif //--------------------|
+				#ifndef NDEBUG //-------|
+				std::cout << arg << '\n';
+				#endif //---------------|
 
 				return /**/ arg /**/;
 			}
 			if constexpr (std::is_same_v<T, error<A, B>>)
 			{
-				this->x = arg.span.x;
-				this->y = arg.span.y;
+				this->x = arg.x;
+				this->y = arg.y;
 
-				#ifndef NDEBUG //------------|
-				std::cout << arg << std::endl;
-				#endif //--------------------|
+				#ifndef NDEBUG //-------|
+				std::cout << arg << '\n';
+				#endif //---------------|
 
 				return std::nullopt;
 			}
@@ -133,23 +129,23 @@ class parser
 
 			if constexpr (std::is_same_v<T, token<A, B>>)
 			{
-				this->x = arg.span.x;
-				this->y = arg.span.y;
+				this->x = arg.x;
+				this->y = arg.y;
 
-				#ifndef NDEBUG //------------|
-				std::cout << arg << std::endl;
-				#endif //--------------------|
+				#ifndef NDEBUG //-------|
+				std::cout << arg << '\n';
+				#endif //---------------|
 
 				return arg == type;
 			}
 			if constexpr (std::is_same_v<T, error<A, B>>)
 			{
-				this->x = arg.span.x;
-				this->y = arg.span.y;
+				this->x = arg.x;
+				this->y = arg.y;
 
-				#ifndef NDEBUG //------------|
-				std::cout << arg << std::endl;
-				#endif //--------------------|
+				#ifndef NDEBUG //-------|
+				std::cout << arg << '\n';
+				#endif //---------------|
 
 				return false;
 			}
@@ -164,9 +160,23 @@ public:
 	(
 		decltype(lexer) lexer
 	)
-	: lexer {lexer}, buffer {eof {}}
+	: lexer {lexer}, buffer {this->lexer->pull()}
 	{
-		this->next(); // 1st token
+		std::visit([&](auto&& arg)
+		{
+			typedef std::decay_t<decltype(arg)> T;
+
+			if constexpr (!std::is_same_v<T, eof>)
+			{
+				this->x = arg.x;
+				this->y = arg.y;
+
+				#ifndef NDEBUG //-------|
+				std::cout << arg << '\n';
+				#endif //---------------|
+			}
+		},
+		this->buffer);
 	}
 
 	//|-----------------|
@@ -175,9 +185,7 @@ public:
 	
 	operator fs::file<A, B>*()
 	{
-		return static_cast
-		<fs::file<A, B>*>
-		(*this->lexer);
+		return *this->lexer;
 	}
 
 	auto pull() -> std::optional<program>
@@ -187,14 +195,14 @@ public:
 		{
 			while (true)
 			{
-				if (auto out {this->stmt_t()})
+				if (auto out {this->decl_t()})
 				{
 					//|-------------<insert>-------------|
 					exe.ast.emplace_back(std::move(*out));
 					//|----------------------------------|
 					continue;
 				}
-				if (auto out {this->decl_t()})
+				if (auto out {this->stmt_t()})
 				{
 					//|-------------<insert>-------------|
 					exe.ast.emplace_back(std::move(*out));
@@ -203,12 +211,17 @@ public:
 				}
 				break;
 			}
+			// if not EOF
+			if (this->peek())
+			{
+				throw E(u8"[parser] unknown token");
+			}
 		}
 		catch (error<A, B>& error)
 		{
-			#ifndef NDEBUG //-------------|
-			std::cout << error << std::endl;
-			#endif //---------------------|
+			#ifndef NDEBUG //---------|
+			std::cout << error << '\n';
+			#endif //-----------------|
 			return std::nullopt;
 		}
 		return exe;
@@ -249,11 +262,10 @@ private:
 
 	auto decl_var(const bool is_const) -> decltype(this->decl_t())
 	{
-		lang::$var node
-		{{
-			this->x,
-			this->y,
-		}};
+		$var node;
+		
+		node.x = this->x;
+		node.y = this->y;
 
 		this->next();
 
@@ -336,11 +348,10 @@ private:
 
 	auto decl_fun(const bool is_pure) -> decltype(this->decl_t())
 	{
-		lang::$fun node
-		{{
-			this->x,
-			this->y,
-		}};
+		$fun node;
+
+		node.x = this->x;
+		node.y = this->y;
 		
 		this->next();
 
@@ -377,7 +388,7 @@ private:
 
 			this->next();
 			
-			lang::$var args;
+			$var args;
 
 			//|----------<update>----------|
 			args.name = std::move(tkn.data);
@@ -547,11 +558,10 @@ private:
 
 	auto stmt_if() -> decltype(this->stmt_t())
 	{
-		lang::$if node
-		{{
-			this->x,
-			this->y,
-		}};
+		$if node;
+
+		node.x = this->x;
+		node.y = this->y;
 		
 		this->next();
 
@@ -641,11 +651,10 @@ private:
 
 	auto stmt_match() -> decltype(this->stmt_t())
 	{
-		lang::$match node
-		{{
-			this->x,
-			this->y,
-		}};
+		$match node;
+
+		node.x = this->x;
+		node.y = this->y;
 		
 		this->next();
 
@@ -768,11 +777,10 @@ private:
 
 	auto stmt_for() -> decltype(this->stmt_t())
 	{
-		lang::$for node
-		{{
-			this->x,
-			this->y,
-		}};
+		$for node;
+
+		node.x = this->x;
+		node.y = this->y;
 		
 		this->next();
 
@@ -863,11 +871,10 @@ private:
 
 	auto stmt_while() -> decltype(this->stmt_t())
 	{
-		lang::$while node
-		{{
-			this->x,
-			this->y,
-		}};
+		$while node;
+
+		node.x = this->x;
+		node.y = this->y;
 		
 		this->next();
 
@@ -934,11 +941,10 @@ private:
 
 	auto stmt_break() -> decltype(this->stmt_t())
 	{
-		lang::$break node
-		{{
-			this->x,
-			this->y,
-		}};
+		$break node;
+
+		node.x = this->x;
+		node.y = this->y;
 		
 		this->next();
 
@@ -961,11 +967,10 @@ private:
 
 	auto stmt_return() -> decltype(this->stmt_t())
 	{
-		lang::$return node
-		{{
-			this->x,
-			this->y,
-		}};
+		$return node;
+
+		node.x = this->x;
+		node.y = this->y;
 
 		this->next();
 
@@ -988,11 +993,10 @@ private:
 
 	auto stmt_continue() -> decltype(this->stmt_t())
 	{
-		lang::$continue node
-		{{
-			this->x,
-			this->y,
-		}};
+		$continue node;
+		
+		node.x = this->x;
+		node.y = this->y;
 		
 		this->next();
 
@@ -1031,14 +1035,13 @@ private:
 						if (auto tkn {this->peek()})
 						{
 							// handle prefix
-							if (opr::is_l(*tkn))
+							if (lang::is_l(*tkn))
 							{
-								lang::$unary node
-								{{
-									this->x,
-									this->y,
-								}};
+								$unary node;
 								
+								node.x = this->x;
+								node.y = this->y;
+
 								this->next();
 
 								//|--------------<catch>--------------|
@@ -1047,7 +1050,7 @@ private:
 								{ throw E(u8"[parser] N/A expr");}) };
 								//|-----------------------------------|
 
-								node.lhs = opr::to_l(*tkn);
+								node.op = lang::to_l(*tkn);
 								node.rhs = std::move(*rhs);
 
 								return std::make_unique /*(wrap)*/
@@ -1080,7 +1083,7 @@ private:
 					while (auto tkn {this->peek()})
 					{
 						// handle infix
-						if (opr::is_i(*tkn))
+						if (lang::is_i(*tkn))
 						{
 							auto [lbp, rbp]
 							{
@@ -1158,11 +1161,10 @@ private:
 								break;
 							}
 
-							lang::$binary node
-							{{
-								this->x,
-								this->y,
-							}};
+							$binary node;
+
+							node.x = this->x;
+							node.y = this->y;
 							
 							this->next();
 
@@ -1172,8 +1174,8 @@ private:
 							{ throw E(u8"[parser] N/A expr"); })};
 							//|-----------------------------------|
 
+							node.op = lang::to_i(*tkn);
 							node.lhs = std::move(*lhs);
-							node.mhs = opr::to_i(*tkn);
 							node.rhs = std::move(*rhs);
 
 							lhs = std::make_unique /*(wrap)*/
@@ -1182,13 +1184,12 @@ private:
 						}
 
 						// handle postfix
-						if (opr::is_r(*tkn))
+						if (lang::is_r(*tkn))
 						{
-							lang::$access node
-							{{
-								this->x,
-								this->y,
-							}};
+							$access node;
+
+							node.x = this->x;
+							node.y = this->y;
 							
 							this->next();
 
@@ -1207,7 +1208,7 @@ private:
 							else throw E(u8"[parser] N/A <sym>");
 
 							node.expr = std::move(*lhs);
-							node.type = opr::to_r(*tkn);
+							node.type = lang::to_r(*tkn);
 							
 							lhs = std::make_unique /*(wrap)*/
 							<decltype(node)>(std::move(node));
@@ -1217,12 +1218,11 @@ private:
 						// handle function
 						if (tkn == atom::L_PAREN)
 						{
-							lang::$call node
-							{{
-								this->x,
-								this->y,
-							}};
-							
+							$call node;
+
+							node.x = this->x;
+							node.y = this->y;
+
 							this->next();
 
 							//|--------<update>--------|
@@ -1271,11 +1271,10 @@ private:
 			{
 				case atom::L_PAREN:
 				{
-					lang::$group node
-					{{
-						this->x,
-						this->y,
-					}};
+					$group node;
+
+					node.x = this->x;
+					node.y = this->y;
 					
 					this->next();
 
@@ -1307,11 +1306,10 @@ private:
 			{
 				case atom::SYMBOL:
 				{
-					lang::$symbol node
-					{{
-						this->x,
-						this->y,
-					}};
+					$symbol node;
+
+					node.x = this->x;
+					node.y = this->y;
 					
 					this->next();
 					
@@ -1336,11 +1334,10 @@ private:
 				case atom::TRUE:
 				case atom::FALSE:
 				{
-					lang::$literal node
-					{{
-						this->x,
-						this->y,
-					}};
+					$literal node;
+
+					node.x = this->x;
+					node.y = this->y;
 					
 					this->next();
 
@@ -1354,11 +1351,10 @@ private:
 				}
 				case atom::CHAR:
 				{
-					lang::$literal node
-					{{
-						this->x,
-						this->y,
-					}};
+					$literal node;
+
+					node.x = this->x;
+					node.y = this->y;
 					
 					this->next();
 
@@ -1372,11 +1368,10 @@ private:
 				}
 				case atom::TEXT:
 				{
-					lang::$literal node
-					{{
-						this->x,
-						this->y,
-					}};
+					$literal node;
+
+					node.x = this->x;
+					node.y = this->y;
 					
 					this->next();
 
@@ -1390,11 +1385,10 @@ private:
 				}
 				case atom::DEC:
 				{
-					lang::$literal node
-					{{
-						this->x,
-						this->y,
-					}};
+					$literal node;
+
+					node.x = this->x;
+					node.y = this->y;
 					
 					this->next();
 
@@ -1411,11 +1405,10 @@ private:
 				case atom::OCT:
 				case atom::HEX:
 				{
-					lang::$literal node
-					{{
-						this->x,
-						this->y,
-					}};
+					$literal node;
+
+					node.x = this->x;
+					node.y = this->y;
 					
 					this->next();
 

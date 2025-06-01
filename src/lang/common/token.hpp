@@ -236,32 +236,42 @@ template
 	type::string A,
 	type::string B
 >
-struct token
+struct token : public span
 {
 	// SFINE: use T::slice if T is a string impl, otherwise use T directly
 	typedef std::conditional_t<type::string_impl<B>, typename B::slice, B> view;
 
-	//|---<safe ptr>---|
-	fs::file<A, B>* file;
+	//|-----<file>-----|
+	fs::file<A, B>* src;
 	//|----------------|
 	atom type;
 	view data;
-	span span;
 
 public:
+
+	token
+	(
+		decltype(x) x,
+		decltype(y) y,
+		decltype(src) src,
+		decltype(type) type,
+		decltype(data) data
+	)
+	:
+	span {x, y}, src {src}, type {type}, data {data} {}
 
 	//|-----------------|
 	//| member function |
 	//|-----------------|
 
-	auto operator==(const atom type) const -> bool
+	friend auto operator==(const token& lhs, const atom rhs) -> bool
 	{
-		return this->type == type;
+		return lhs.type == rhs;
 	}
 
-	auto operator!=(const atom type) const -> bool
+	friend auto operator!=(const token& lhs, const atom rhs) -> bool
 	{
-		return this->type != type;
+		return lhs.type != rhs;
 	}
 
 	//|----------------------|
@@ -276,15 +286,15 @@ public:
 			<<
 			"\033[30m" // set color
 			<<
-			token.file->path
+			token.src->path
 			<<
 			"("
 			<<
-			std::setfill('0') << std::setw(2) << token.span.y + 0
+			std::setfill('0') << std::setw(2) << token.y + 0
 			<<
 			","
 			<<
-			std::setfill('0') << std::setw(2) << token.span.x + 1
+			std::setfill('0') << std::setw(2) << token.x + 1
 			<<
 			")"
 			<<

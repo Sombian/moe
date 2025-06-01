@@ -15,10 +15,13 @@
 ⡝⡵⡕⡀⠑⠳⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠛⢉⡠⡲⡫⡪⡪⡣
 */
 
-let! a: utf8 = (2^1 * 2^2) + 2^3;
-let! b: utf8 = 2^1 * (2^2 + 2^3);
+let! foo: i32 = 1;
+let! bar: i32 = 2;
+let! bar: i32 = 3;
 
 fun! main(): i32
 {
-	return a + c;
+	foo += bar;
+
+	return a + b;
 }

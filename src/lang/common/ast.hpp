@@ -1,7 +1,7 @@
 #pragma once
 
+#include <deque>
 #include <memory>
-#include <vector>
 #include <variant>
 #include <cassert>
 #include <cstdint>
@@ -13,137 +13,6 @@
 #include "traits/printable.hpp"
 #include "traits/rule_of_5.hpp"
 
-namespace lang
-{
-	struct $var;
-	struct $fun;
-	struct $trait;
-	struct $class;
-}
-
-typedef std::variant
-<
-	std::unique_ptr<lang::$var>,
-	std::unique_ptr<lang::$fun>,
-	std::unique_ptr<lang::$trait>,
-	std::unique_ptr<lang::$class>
->
-decl;
-
-namespace lang
-{
-	struct $if;
-	struct $match;
-	struct $for;
-	struct $while;
-	struct $break;
-	struct $return;
-	struct $continue;
-}
-
-typedef std::variant
-<
-	std::unique_ptr<lang::$if>,
-	std::unique_ptr<lang::$match>,
-	std::unique_ptr<lang::$for>,
-	std::unique_ptr<lang::$while>,
-	std::unique_ptr<lang::$break>,
-	std::unique_ptr<lang::$return>,
-	std::unique_ptr<lang::$continue>
->
-stmt;
-
-namespace lang
-{
-	struct $unary;
-	struct $binary;
-	struct $literal;
-	struct $symbol;
-	struct $access;
-	struct $group;
-	struct $call;
-}
-
-typedef std::variant
-<
-	std::unique_ptr<lang::$unary>,
-	std::unique_ptr<lang::$binary>,
-	std::unique_ptr<lang::$literal>,
-	std::unique_ptr<lang::$symbol>,
-	std::unique_ptr<lang::$access>,
-	std::unique_ptr<lang::$group>,
-	std::unique_ptr<lang::$call>
->
-expr;
-
-typedef std::variant
-<
-	decl,
-	stmt,
-	expr
->
-node;
-
-typedef std::vector
-<
-	node
->
-body;
-
-namespace
-{
-	//|----<only>---//---|
-	template        //   |
-	<typename T>    //   |
-	using only = T; //   |
-	//|-------------//---|
-}
-
-namespace
-{
-	//|----<many>---//---|
-	template        //   |
-	<typename T>    //   |
-	using many =    //   |
-	std::vector<T>; //   |
-	//|-------------//---|
-}
-
-enum class data : uint8_t
-{
-	//|----------------|
-	//| signed integer |
-	//|----------------|
-	I8,
-	I16,
-	I32,
-	I64,
-	//|------------------|
-	//| unsigned integer |
-	//|------------------|
-	U8,
-	U16,
-	U32,
-	U64,
-	//|-----------------|
-	//| floating points |
-	//|-----------------|
-	F32,
-	F64,
-	//|------------------|
-	//| other data types |
-	//|------------------|
-	CODE,
-	BOOL,
-	WORD,
-	//|-----------------|
-	//| string storages |
-	//|-----------------|
-	UTF8,
-	UTF16,
-	UTF32,
-};
-
 // lhs(prefix) operator
 enum class op_l : uint8_t
 #define macro(K, V) K,
@@ -154,7 +23,7 @@ enum class op_l : uint8_t
 };
 #undef macro
 
-// mhs(infix) operator
+// infix operator
 enum class op_i : uint8_t
 #define macro(K, V) K,
 {
@@ -170,235 +39,192 @@ enum class op_r : uint8_t
 };
 #undef macro
 
-namespace lang
+enum class data : uint8_t
 {
-	struct visitor
+	//|----------------|
+	//| signed integer |
+	//|----------------|
+	I8,
+	I16,
+	I32,
+	I64,
+	//|-----------------|
+	//| floating points |
+	//|-----------------|
+	F32,
+	F64,
+	//|------------------|
+	//| unsigned integer |
+	//|------------------|
+	U8,
+	U16,
+	U32,
+	U64,
+	//|------------------|
+	//| other data types |
+	//|------------------|
+	CODE,
+	BOOL,
+	WORD,
+	//|-----------------|
+	//| string storages |
+	//|-----------------|
+	UTF8,
+	UTF16,
+	UTF32,
+};
+
+auto operator<<(std::ostream& os, const op_l op) -> std::ostream&
+{
+	switch (op)
 	{
-		virtual void visit(const only<decl>&) = 0;
-		virtual void visit(const many<decl>&) = 0;
+		#define macro(K, V)  \
+		/*|---------------|*/\
+		case op_l::K:        \
+		{                    \
+			return os << #K; \
+		}                    \
+		/*|---------------|*/\
 
-		virtual void visit(const only<stmt>&) = 0;
-		virtual void visit(const many<stmt>&) = 0;
-
-		virtual void visit(const only<expr>&) = 0;
-		virtual void visit(const many<expr>&) = 0;
-
-		virtual void visit(const only<node>&) = 0;
-		virtual void visit(const many<node>&) = 0;
-
-		virtual void visit(const many<body>&) = 0;
-		// decl
-		virtual void visit($var&) = 0;
-		virtual void visit($fun&) = 0;
-		virtual void visit($trait&) = 0;
-		virtual void visit($class&) = 0;
-		// stmt
-		virtual void visit($if&) = 0;
-		virtual void visit($match&) = 0;
-		virtual void visit($for&) = 0;
-		virtual void visit($while&) = 0;
-		virtual void visit($break&) = 0;
-		virtual void visit($return&) = 0;
-		virtual void visit($continue&) = 0;
-		// expr
-		virtual void visit($unary&) = 0;
-		virtual void visit($binary&) = 0;
-		virtual void visit($literal&) = 0;
-		virtual void visit($symbol&) = 0;
-		virtual void visit($access&) = 0;
-		virtual void visit($group&) = 0;
-		virtual void visit($call&) = 0;
-	};
+		case op_l::ADD:
+		{
+			return os << "ADD";
+		}
+		case op_l::SUB:
+		{
+			return os << "SUB";
+		}
+		operator_l(macro)
+		#undef macro
+		default:
+		{
+			assert(!!!"error");
+			std::unreachable();
+		}
+	}
 }
 
-// decl
-namespace lang
+auto operator<<(std::ostream& os, const op_i op) -> std::ostream&
 {
-	struct $var
+	switch (op)
 	{
-		span span;
-		only<utf8> name;
-		only<utf8> type;
-		only<expr> init;
-		//-------------//
-		bool is_const; //
-		//-------------//
+		#define macro(K, V)  \
+		/*|---------------|*/\
+		case op_i::K:        \
+		{                    \
+			return os << #K; \
+		}                    \
+		/*|---------------|*/\
 
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $fun
-	{
-		span span;
-		many<$var> args;
-		only<utf8> name;
-		only<utf8> type;
-		only<body> body;
-		//------------//
-		bool is_pure; //
-		//------------//
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $trait
-	{
-		span span;
-		only<utf8> name;
-		many<$fun> body;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $class
-	{
-		span span;
-		only<utf8> name;
-		many<$var> body;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
+		operator_i(macro)
+		#undef macro
+		default:
+		{
+			assert(!!!"error");
+			std::unreachable();
+		}
+	}
 }
 
-// stmt
-namespace lang
+auto operator<<(std::ostream& os, const op_r op) -> std::ostream&
 {
-	struct $if
+	switch (op)
 	{
-		span span;
-		many<expr> cases;
-		many<body> block;
+		#define macro(K, V)  \
+		/*|---------------|*/\
+		case op_r::K:        \
+		{                    \
+			return os << #K; \
+		}                    \
+		/*|---------------|*/\
 
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $match
-	{
-		span span;
-		only<expr> input;
-		many<expr> cases;
-		many<body> block;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $for
-	{
-		span span;
-		only<expr> setup;
-		only<expr> input;
-		only<expr> after;
-		only<body> block;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $while
-	{
-		span span;
-		only<expr> input;
-		only<body> block;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-	
-	struct $break
-	{
-		span span;
-		only<utf8> label;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $return
-	{
-		span span;
-		only<expr> value;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $continue
-	{
-		span span;
-		only<utf8> label;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
+		operator_r(macro)
+		#undef macro
+		default:
+		{
+			assert(!!!"error");
+			std::unreachable();
+		}
+	}
 }
 
-// expr
-namespace lang
+auto operator<<(std::ostream& os, const data tp) -> std::ostream&
 {
-	struct $unary
+	switch (tp)
 	{
-		span span;
-		only<op_l> lhs;
-		only<expr> rhs;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $binary
-	{
-		span span;
-		only<expr> lhs;
-		only<op_i> mhs;
-		only<expr> rhs;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $literal
-	{
-		span span;
-		only<data> type;
-		only<utf8> data;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $symbol
-	{
-		span span;
-		only<utf8> name;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $access
-	{
-		span span;
-		only<expr> expr;
-		only<op_r> type;
-		only<utf8> name;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $group
-	{
-		span span;
-		only<expr> expr;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
-
-	struct $call
-	{
-		span span;
-		only<expr> call;
-		many<expr> args;
-
-		auto accept(visitor& impl) { impl.visit(*this); }
-	};
+		case data::I8:
+		{
+			return os << "i8";
+		}
+		case data::I16:
+		{
+			return os << "i16";
+		}
+		case data::I32:
+		{
+			return os << "i32";
+		}
+		case data::I64:
+		{
+			return os << "i64";
+		}
+		case data::U8:
+		{
+			return os << "u8";
+		}
+		case data::U16:
+		{
+			return os << "u16";
+		}
+		case data::U32:
+		{
+			return os << "u32";
+		}
+		case data::U64:
+		{
+			return os << "u64";
+		}
+		case data::F32:
+		{
+			return os << "f32";
+		}
+		case data::F64:
+		{
+			return os << "f64";
+		}
+		case data::CODE:
+		{
+			return os << "code";
+		}
+		case data::BOOL:
+		{
+			return os << "bool";
+		}
+		case data::WORD:
+		{
+			return os << "word";
+		}
+		case data::UTF8:
+		{
+			return os << "utf8";
+		}
+		case data::UTF16:
+		{
+			return os << "utf16";
+		}
+		case data::UTF32:
+		{
+			return os << "utf32";
+		}
+		default:
+		{
+			assert(!!!"error");
+			std::unreachable();
+		}
+	}
 }
 
-//|-----------|
-//| operators |
-//|-----------|
-
-namespace opr
+namespace lang
 {
 	template
 	<
@@ -576,155 +402,417 @@ namespace opr
 	}
 }
 
-auto operator<<(std::ostream& os, const data tp) -> std::ostream&
+typedef std::variant
+<
+	std::unique_ptr<struct $var>,
+	std::unique_ptr<struct $fun>,
+	std::unique_ptr<struct $trait>,
+	std::unique_ptr<struct $class>
+>
+decl;
+
+typedef std::variant
+<
+	std::unique_ptr<struct $if>,
+	std::unique_ptr<struct $match>,
+	std::unique_ptr<struct $for>,
+	std::unique_ptr<struct $while>,
+	std::unique_ptr<struct $break>,
+	std::unique_ptr<struct $return>,
+	std::unique_ptr<struct $continue>
+>
+stmt;
+
+typedef std::variant
+<
+	std::unique_ptr<struct $unary>,
+	std::unique_ptr<struct $binary>,
+	std::unique_ptr<struct $literal>,
+	std::unique_ptr<struct $symbol>,
+	std::unique_ptr<struct $access>,
+	std::unique_ptr<struct $group>,
+	std::unique_ptr<struct $call>
+>
+expr;
+
+typedef std::variant
+<
+	decl,
+	stmt,
+	expr
+>
+node;
+
+typedef std::deque
+<
+	node
+>
+body;
+
+#define only(T) T /* sugar */
+#define many(T) std::deque<T>
+
+namespace lang
 {
-	switch (tp)
+	struct visitor
 	{
-		case data::I8:
-		{
-			return os << "i8";
-		}
-		case data::I16:
-		{
-			return os << "i16";
-		}
-		case data::I32:
-		{
-			return os << "i32";
-		}
-		case data::I64:
-		{
-			return os << "i64";
-		}
-		case data::U8:
-		{
-			return os << "u8";
-		}
-		case data::U16:
-		{
-			return os << "u16";
-		}
-		case data::U32:
-		{
-			return os << "u32";
-		}
-		case data::U64:
-		{
-			return os << "u64";
-		}
-		case data::F32:
-		{
-			return os << "f32";
-		}
-		case data::F64:
-		{
-			return os << "f64";
-		}
-		case data::CODE:
-		{
-			return os << "code";
-		}
-		case data::BOOL:
-		{
-			return os << "bool";
-		}
-		case data::WORD:
-		{
-			return os << "word";
-		}
-		case data::UTF8:
-		{
-			return os << "utf8";
-		}
-		case data::UTF16:
-		{
-			return os << "utf16";
-		}
-		case data::UTF32:
-		{
-			return os << "utf32";
-		}
-		default:
-		{
-			assert(!!!"error");
-			std::unreachable();
-		}
-	}
+		virtual void visit(const only(decl)&) = 0;
+		virtual void visit(const many(decl)&) = 0;
+
+		virtual void visit(const only(stmt)&) = 0;
+		virtual void visit(const many(stmt)&) = 0;
+
+		virtual void visit(const only(expr)&) = 0;
+		virtual void visit(const many(expr)&) = 0;
+
+		virtual void visit(const only(node)&) = 0;
+		virtual void visit(const many(node)&) = 0;
+
+		virtual void visit(const many(body)&) = 0;
+
+		//|---------------|
+		//| variant::decl |
+		//|---------------|
+
+		virtual void visit($var&) = 0;
+		virtual void visit($fun&) = 0;
+		virtual void visit($trait&) = 0;
+		virtual void visit($class&) = 0;
+
+		//|---------------|
+		//| variant::stmt |
+		//|---------------|
+
+		virtual void visit($if&) = 0;
+		virtual void visit($match&) = 0;
+		virtual void visit($for&) = 0;
+		virtual void visit($while&) = 0;
+		virtual void visit($break&) = 0;
+		virtual void visit($return&) = 0;
+		virtual void visit($continue&) = 0;
+
+		//|---------------|
+		//| variant::expr |
+		//|---------------|
+
+		virtual void visit($unary&) = 0;
+		virtual void visit($binary&) = 0;
+		virtual void visit($literal&) = 0;
+		virtual void visit($symbol&) = 0;
+		virtual void visit($access&) = 0;
+		virtual void visit($group&) = 0;
+		virtual void visit($call&) = 0;
+	};
 }
 
-auto operator<<(std::ostream& os, const op_l op) -> std::ostream&
+//|---------------|
+//| variant::decl |
+//|---------------|
+
+struct $var : public span
 {
-	switch (op)
-	{
-		#define macro(K, V)  \
-		/*|---------------|*/\
-		case op_l::K:        \
-		{                    \
-			return os << #K; \
-		}                    \
-		/*|---------------|*/\
+	only(utf8) name;
+	only(utf8) type;
+	only(expr) init;
+	//-------------//
+	bool is_const; //
+	//-------------//
 
-		case op_l::ADD:
-		{
-			return os << "ADD";
-		}
-		case op_l::SUB:
-		{
-			return os << "SUB";
-		}
-		operator_l(macro)
-		#undef macro
-		default:
-		{
-			assert(!!!"error");
-			std::unreachable();
-		}
-	}
-}
+	$var() = default;
 
-auto operator<<(std::ostream& os, const op_i op) -> std::ostream&
+	COPY_CONSTRUCTOR($var) = delete;
+	MOVE_CONSTRUCTOR($var) = default;
+
+	COPY_ASSIGNMENT($var) = delete;
+	MOVE_ASSIGNMENT($var) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $fun : public span
 {
-	switch (op)
-	{
-		#define macro(K, V)  \
-		/*|---------------|*/\
-		case op_i::K:        \
-		{                    \
-			return os << #K; \
-		}                    \
-		/*|---------------|*/\
+	only(utf8) name;
+	many($var) args;
+	only(utf8) type;
+	only(body) body;
+	//------------//
+	bool is_pure; //
+	//------------//
 
-		operator_i(macro)
-		#undef macro
-		default:
-		{
-			assert(!!!"error");
-			std::unreachable();
-		}
-	}
-}
+	$fun() = default;
 
-auto operator<<(std::ostream& os, const op_r op) -> std::ostream&
+	COPY_CONSTRUCTOR($fun) = delete;
+	MOVE_CONSTRUCTOR($fun) = default;
+
+	COPY_ASSIGNMENT($fun) = delete;
+	MOVE_ASSIGNMENT($fun) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $trait : public span
 {
-	switch (op)
-	{
-		#define macro(K, V)  \
-		/*|---------------|*/\
-		case op_r::K:        \
-		{                    \
-			return os << #K; \
-		}                    \
-		/*|---------------|*/\
+	only(utf8) name;
+	many($fun) body;
 
-		operator_r(macro)
-		#undef macro
-		default:
-		{
-			assert(!!!"error");
-			std::unreachable();
-		}
-	}
-}
+	$trait() = default;
+
+	COPY_CONSTRUCTOR($trait) = delete;
+	MOVE_CONSTRUCTOR($trait) = default;
+
+	COPY_ASSIGNMENT($trait) = delete;
+	MOVE_ASSIGNMENT($trait) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $class : public span
+{
+	only(utf8) name;
+	many($var) body;
+
+	$class() = default;
+
+	COPY_CONSTRUCTOR($class) = delete;
+	MOVE_CONSTRUCTOR($class) = default;
+
+	COPY_ASSIGNMENT($class) = delete;
+	MOVE_ASSIGNMENT($class) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+//|---------------|
+//| variant::stmt |
+//|---------------|
+
+struct $if : public span
+{
+	many(expr) cases;
+	many(body) block;
+
+	$if() = default;
+
+	COPY_CONSTRUCTOR($if) = delete;
+	MOVE_CONSTRUCTOR($if) = default;
+
+	COPY_ASSIGNMENT($if) = delete;
+	MOVE_ASSIGNMENT($if) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $match : public span
+{
+	only(expr) input;
+	many(expr) cases;
+	many(body) block;
+
+	$match() = default;
+
+	COPY_CONSTRUCTOR($match) = delete;
+	MOVE_CONSTRUCTOR($match) = default;
+
+	COPY_ASSIGNMENT($match) = delete;
+	MOVE_ASSIGNMENT($match) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $for : public span
+{
+	only(expr) setup;
+	only(expr) input;
+	only(expr) after;
+	only(body) block;
+
+	$for() = default;
+
+	COPY_CONSTRUCTOR($for) = delete;
+	MOVE_CONSTRUCTOR($for) = default;
+
+	COPY_ASSIGNMENT($for) = delete;
+	MOVE_ASSIGNMENT($for) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $while : public span
+{
+	only(expr) input;
+	only(body) block;
+
+	$while() = default;
+
+	COPY_CONSTRUCTOR($while) = delete;
+	MOVE_CONSTRUCTOR($while) = default;
+
+	COPY_ASSIGNMENT($while) = delete;
+	MOVE_ASSIGNMENT($while) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $break : public span
+{
+	only(utf8) label;
+
+	$break() = default;
+
+	COPY_CONSTRUCTOR($break) = delete;
+	MOVE_CONSTRUCTOR($break) = default;
+
+	COPY_ASSIGNMENT($break) = delete;
+	MOVE_ASSIGNMENT($break) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $return : public span
+{
+	only(expr) value;
+
+	$return() = default;
+
+	COPY_CONSTRUCTOR($return) = delete;
+	MOVE_CONSTRUCTOR($return) = default;
+
+	COPY_ASSIGNMENT($return) = delete;
+	MOVE_ASSIGNMENT($return) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $continue : public span
+{
+	only(utf8) label;
+
+	$continue() = default;
+
+	COPY_CONSTRUCTOR($continue) = delete;
+	MOVE_CONSTRUCTOR($continue) = default;
+
+	COPY_ASSIGNMENT($continue) = delete;
+	MOVE_ASSIGNMENT($continue) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+//|---------------|
+//| variant::expr |
+//|---------------|
+
+struct $unary : public span
+{
+	only(op_l) op;
+	only(expr) rhs;
+
+	$unary() = default;
+
+	COPY_CONSTRUCTOR($unary) = delete;
+	MOVE_CONSTRUCTOR($unary) = default;
+
+	COPY_ASSIGNMENT($unary) = delete;
+	MOVE_ASSIGNMENT($unary) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $binary : public span
+{
+	only(op_i) op;
+	only(expr) lhs;
+	only(expr) rhs;
+
+	$binary() = default;
+
+	COPY_CONSTRUCTOR($binary) = delete;
+	MOVE_CONSTRUCTOR($binary) = default;
+
+	COPY_ASSIGNMENT($binary) = delete;
+	MOVE_ASSIGNMENT($binary) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $literal : public span
+{
+	only(data) type;
+	only(utf8) data;
+
+	$literal() = default;
+
+	COPY_CONSTRUCTOR($literal) = delete;
+	MOVE_CONSTRUCTOR($literal) = default;
+
+	COPY_ASSIGNMENT($literal) = delete;
+	MOVE_ASSIGNMENT($literal) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $symbol : public span
+{
+	only(utf8) name;
+
+	$symbol() = default;
+
+	COPY_CONSTRUCTOR($symbol) = delete;
+	MOVE_CONSTRUCTOR($symbol) = default;
+
+	COPY_ASSIGNMENT($symbol) = delete;
+	MOVE_ASSIGNMENT($symbol) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $access : public span
+{
+	only(expr) expr;
+	only(op_r) type;
+	only(utf8) name;
+
+	$access() = default;
+
+	COPY_CONSTRUCTOR($access) = delete;
+	MOVE_CONSTRUCTOR($access) = default;
+
+	COPY_ASSIGNMENT($access) = delete;
+	MOVE_ASSIGNMENT($access) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $group : public span
+{
+	only(expr) expr;
+
+	$group() = default;
+
+	COPY_CONSTRUCTOR($group) = delete;
+	MOVE_CONSTRUCTOR($group) = default;
+
+	COPY_ASSIGNMENT($group) = delete;
+	MOVE_ASSIGNMENT($group) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
+
+struct $call : public span
+{
+	only(expr) call;
+	many(expr) args;
+
+	$call() = default;
+
+	COPY_CONSTRUCTOR($call) = delete;
+	MOVE_CONSTRUCTOR($call) = default;
+
+	COPY_ASSIGNMENT($call) = delete;
+	MOVE_ASSIGNMENT($call) = default;
+
+	auto accept(lang::visitor& impl) { impl.visit(*this); }
+};
 
 //|---------------|
 //| "TIRO FINALE" |
@@ -732,7 +820,7 @@ auto operator<<(std::ostream& os, const op_r op) -> std::ostream&
 
 struct program
 {
-	class printer : lang::visitor
+	class core : public lang::visitor
 	{
 		size_t tab {0};
 		std::ostream& out;
@@ -762,37 +850,37 @@ struct program
 
 	public:
 
-		printer(decltype(out) out) : out {out} {}
+		core(decltype(out) out) : out {out} {}
 
 		//|-----------------|
 		//| member function |
 		//|-----------------|
 
-		void visit(traits::printable auto& data)
+		void visit(traits::printable auto& ast)
 		{
-			this->out << data << "\n";
+			this->out << ast << "\n";
 		}
 
-		void visit(const only<decl>& data) override
+		void visit(const only(decl)& ast) override
 		{
 			std::visit([&](auto&& arg)
 			{
 				arg->accept(*this);
 			},
-			data);
+			ast);
 		}
 
-		void visit(const many<decl>& data) override
+		void visit(const many(decl)& ast) override
 		{
-			if (!data.empty())
+			if (!ast.empty())
 			{
 				size_t count {0};
 
-				for (auto&& node : data)
+				for (auto&& node : ast)
 				{
 					this->visit(node);
 
-					if (++count < data.size())
+					if (++count < ast.size())
 					{
 						this->gap();
 						/*-<seperator>-*/
@@ -807,26 +895,26 @@ struct program
 			}
 		}
 
-		void visit(const only<stmt>& data) override
+		void visit(const only(stmt)& ast) override
 		{
 			std::visit([&](auto&& arg)
 			{
 				arg->accept(*this);
 			},
-			data);
+			ast);
 		}
 
-		void visit(const many<stmt>& data) override
+		void visit(const many(stmt)& ast) override
 		{
-			if (!data.empty())
+			if (!ast.empty())
 			{
 				size_t count {0};
 
-				for (auto&& node : data)
+				for (auto&& node : ast)
 				{
 					this->visit(node);
 
-					if (++count < data.size())
+					if (++count < ast.size())
 					{
 						this->gap();
 						/*-<seperator>-*/
@@ -841,26 +929,26 @@ struct program
 			}
 		}
 
-		void visit(const only<expr>& data) override
+		void visit(const only(expr)& ast) override
 		{
 			std::visit([&](auto&& arg)
 			{
 				arg->accept(*this);
 			},
-			data);
+			ast);
 		}
 
-		void visit(const many<expr>& data) override
+		void visit(const many(expr)& ast) override
 		{
-			if (!data.empty())
+			if (!ast.empty())
 			{
 				size_t count {0};
 
-				for (auto&& node : data)
+				for (auto&& node : ast)
 				{
 					this->visit(node);
 
-					if (++count < data.size())
+					if (++count < ast.size())
 					{
 						this->gap();
 						/*-<seperator>-*/
@@ -875,26 +963,26 @@ struct program
 			}
 		}
 
-		void visit(const only<node>& data) override
+		void visit(const only(node)& ast) override
 		{
 			std::visit([&](auto&& arg)
 			{
 				this->visit(arg);
 			},
-			data);
+			ast);
 		}
 
-		void visit(const many<node>& data) override
+		void visit(const many(node)& ast) override
 		{
-			if (!data.empty())
+			if (!ast.empty())
 			{
 				size_t count {0};
 
-				for (auto&& node : data)
+				for (auto&& node : ast)
 				{
 					this->visit(node);
 
-					if (++count < data.size())
+					if (++count < ast.size())
 					{
 						this->gap();
 						/*-<seperator>-*/
@@ -909,17 +997,17 @@ struct program
 			}
 		}
 
-		void visit(const many<body>& data) override
+		void visit(const many(body)& ast) override
 		{
-			if (!data.empty())
+			if (!ast.empty())
 			{
 				size_t count {0};
 
-				for (auto&& node : data)
+				for (auto&& node : ast)
 				{
 					this->visit(node);
 
-					if (++count < data.size())
+					if (++count < ast.size())
 					{
 						this->gap();
 						/*-<seperator>-*/
@@ -933,201 +1021,194 @@ struct program
 				this->out << "[empty]\n";
 			}
 		}
-		
-		#define VISIT($T)                      \
-		                                       \
-		void visit(many<$T>& data)             \
-		{                                      \
-			if (!data.empty())                 \
-			{                                  \
-				size_t count {0};              \
-				                               \
-				for (auto&& node : data)       \
-				{                              \
-					this->visit(node);         \
-					                           \
-					if (++count < data.size()) \
-					{                          \
-						this->gap();           \
-						/*-<seperator>-*/      \
-						this->out << "&";      \
-						/*-------------*/      \
-					}                          \
-				}                              \
-			}                                  \
-			else                               \
-			{                                  \
-				this->out << "[empty]\n";      \
-			}                                  \
-		}                                      \
+
+		template
+		<
+			typename T
+		>
+		requires
+		(
+			std::is_same_v<T, many($var)>
+			||
+			std::is_same_v<T, many($fun)>
+		)
+		void visit(T& _)
+		{
+			if (!_.empty())
+			{
+				size_t count {0};
+
+				for (auto&& node : _)
+				{
+					this->visit(node);
+
+					if (++count < _.size())
+					{
+						this->gap();
+						/*-<seperator>-*/
+						this->out << "&";
+						/*-------------*/
+					}
+				}
+			}
+			else
+			{
+				this->out << "[empty]\n";
+			}
+		}
 
 		//|---------------|
 		//| variant::decl |
 		//|---------------|
 
-		void visit(lang::$var& data) override
+		void visit($var& ast) override
 		{
 			START
 			this->gap(); this->out << "[var]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(data.name);
-			this->gap(); this->out << "type" << ": "; this->visit(data.type);
-			this->gap(); this->out << "init" << ": "; this->visit(data.init);
+			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
+			this->gap(); this->out << "type" << ": "; this->visit(ast.type);
+			this->gap(); this->out << "init" << ": "; this->visit(ast.init);
 			CLOSE
 		}
-		VISIT(lang::$var) // vector ver. codegen
 
-		void visit(lang::$fun& data) override
+		void visit($fun& ast) override
 		{
 
 			START
 			this->gap(); this->out << "[fun]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(data.name);
-			this->gap(); this->out << "type" << ": "; this->visit(data.type);
-			this->gap(); this->out << "body" << ": "; this->visit(data.body);
+			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
+			this->gap(); this->out << "type" << ": "; this->visit(ast.type);
+			this->gap(); this->out << "body" << ": "; this->visit(ast.body);
 			CLOSE
 		}
-		VISIT(lang::$fun) // vector ver. codegen
 
-		void visit(lang::$trait& data) override
+		void visit($trait& ast) override
 		{
 			START
 			this->gap(); this->out << "[trait]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(data.name);
-			this->gap(); this->out << "body" << ": "; this->visit(data.body);
+			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
+			this->gap(); this->out << "body" << ": "; this->visit(ast.body);
 			CLOSE
 		}
-		VISIT(lang::$trait) // vector ver. codegen
 
-		void visit(lang::$class& data) override
+		void visit($class& ast) override
 		{
 			START
 			this->gap(); this->out << "[class]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(data.name);
-			this->gap(); this->out << "body" << ": "; this->visit(data.body);
+			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
+			this->gap(); this->out << "body" << ": "; this->visit(ast.body);
 			CLOSE
 		}
-		VISIT(lang::$class) // vector ver. codegen
 
 		//|---------------|
 		//| variant::stmt |
 		//|---------------|
 
-		void visit(lang::$if& data) override
+		void visit($if& ast) override
 		{
 			START
 			this->gap(); this->out << "[if]" << "\n";
-			this->gap(); this->out << "block" << ": "; this->visit(data.block);
-			this->gap(); this->out << "cases" << ": "; this->visit(data.cases);
+			this->gap(); this->out << "block" << ": "; this->visit(ast.block);
+			this->gap(); this->out << "cases" << ": "; this->visit(ast.cases);
 			CLOSE
 		}
-		VISIT(lang::$if) // vector ver. codegen
 
-		void visit(lang::$match& data) override
+		void visit($match& ast) override
 		{
 			START
 			this->gap(); this->out << "[match]" << "\n";
-			this->gap(); this->out << "input" << ": "; this->visit(data.input);
-			this->gap(); this->out << "block" << ": "; this->visit(data.block);
-			this->gap(); this->out << "cases" << ": "; this->visit(data.cases);
+			this->gap(); this->out << "input" << ": "; this->visit(ast.input);
+			this->gap(); this->out << "block" << ": "; this->visit(ast.block);
+			this->gap(); this->out << "cases" << ": "; this->visit(ast.cases);
 			CLOSE
 		}
-		VISIT(lang::$match) // vector ver. codegen
 
-		void visit(lang::$for& data) override
+		void visit($for& ast) override
 		{
 			START
 			this->gap(); this->out << "[for]" << "\n";
-			this->gap(); this->out << "setup" << ": "; this->visit(data.setup);
-			this->gap(); this->out << "input" << ": "; this->visit(data.input);
-			this->gap(); this->out << "after" << ": "; this->visit(data.after);
-			this->gap(); this->out << "block" << ": "; this->visit(data.block);
+			this->gap(); this->out << "setup" << ": "; this->visit(ast.setup);
+			this->gap(); this->out << "input" << ": "; this->visit(ast.input);
+			this->gap(); this->out << "after" << ": "; this->visit(ast.after);
+			this->gap(); this->out << "block" << ": "; this->visit(ast.block);
 			CLOSE
 		}
-		VISIT(lang::$for) // vector ver. codegen
 
-		void visit(lang::$while& data) override
+		void visit($while& ast) override
 		{
 			START
 			this->gap(); this->out << "[while]" << "\n";
-			this->gap(); this->out << "input" << ": "; this->visit(data.input);
-			this->gap(); this->out << "block" << ": "; this->visit(data.block);
+			this->gap(); this->out << "input" << ": "; this->visit(ast.input);
+			this->gap(); this->out << "block" << ": "; this->visit(ast.block);
 			CLOSE
 		}
-		VISIT(lang::$while) // vector ver. codegen
 
-		void visit(lang::$break& data) override
+		void visit($break& ast) override
 		{
 			START
 			this->gap(); this->out << "[break]" << "\n";
-			this->gap(); this->out << "label" << ": "; this->visit(data.label);
+			this->gap(); this->out << "label" << ": "; this->visit(ast.label);
 			CLOSE
 		}
-		VISIT(lang::$break) // vector ver. codegen
 
-		void visit(lang::$return& data) override
+		void visit($return& ast) override
 		{
 			START
 			this->gap(); this->out << "[return]" << "\n";
-			this->gap(); this->out << "value" << ": "; this->visit(data.value);
+			this->gap(); this->out << "value" << ": "; this->visit(ast.value);
 			CLOSE
 		}
-		VISIT(lang::$return) // vector ver. codegen
 
-		void visit(lang::$continue& data) override
+		void visit($continue& ast) override
 		{
 			START
 			this->gap(); this->out << "[continue]" << "\n";
-			this->gap(); this->out << "label" << ": "; this->visit(data.label);
+			this->gap(); this->out << "label" << ": "; this->visit(ast.label);
 			CLOSE
 		}
-		VISIT(lang::$continue) // vector ver. codegen
 
 		//|---------------|
 		//| variant::expr |
 		//|---------------|
 
-		void visit(lang::$unary& data) override
+		void visit($unary& ast) override
 		{
 			START
 			this->gap(); this->out << "[unary]" << "\n";
-			this->gap(); this->out << "lhs" << ": "; this->visit(data.lhs);
-			this->gap(); this->out << "rhs" << ": "; this->visit(data.rhs);
+			this->gap(); this->out << "op"  << ": "; this->visit(ast.op);
+			this->gap(); this->out << "rhs" << ": "; this->visit(ast.rhs);
 			CLOSE
 		}
-		VISIT(lang::$unary) // vector ver. codegen
 
-		void visit(lang::$binary& data) override
+		void visit($binary& ast) override
 		{
 			START
 			this->gap(); this->out << "[binary]" << "\n";
-			this->gap(); this->out << "lhs" << ": "; this->visit(data.lhs);
-			this->gap(); this->out << "mhs" << ": "; this->visit(data.mhs);
-			this->gap(); this->out << "rhs" << ": "; this->visit(data.rhs);
+			this->gap(); this->out << "op"  << ": "; this->visit(ast.op);
+			this->gap(); this->out << "lhs" << ": "; this->visit(ast.lhs);
+			this->gap(); this->out << "rhs" << ": "; this->visit(ast.rhs);
 			CLOSE
 		}
-		VISIT(lang::$binary) // vector ver. codegen
 
-		void visit(lang::$literal& data) override
+		void visit($literal& ast) override
 		{
 			START
 			this->gap(); this->out << "[literal]" << "\n";
-			this->gap(); this->out << "type" << ": "; this->visit(data.type);
-			this->gap(); this->out << "data" << ": "; this->visit(data.data);
+			this->gap(); this->out << "type" << ": "; this->visit(ast.type);
+			this->gap(); this->out << "data" << ": "; this->visit(ast.data);
 			CLOSE
 		}
-		VISIT(lang::$literal) // vector ver. codegen
 
-		void visit(lang::$symbol& data) override
+		void visit($symbol& ast) override
 		{
 
 			START
 			this->gap(); this->out << "[symbol]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(data.name);
+			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
 			CLOSE
 		}
-		VISIT(lang::$symbol) // vector ver. codegen
 
-		void visit(lang::$access& data) override
+		void visit($access& data) override
 		{
 			START
 			this->gap(); this->out << "[access]" << "\n";
@@ -1136,18 +1217,16 @@ struct program
 			this->gap(); this->out << "name" << ": "; this->visit(data.name);
 			CLOSE
 		}
-		VISIT(lang::$access) // vector ver. codegen
 
-		void visit(lang::$group& data) override
+		void visit($group& data) override
 		{
 			START
 			this->gap(); this->out << "[group]" << "\n";
 			this->gap(); this->out << "expr" << ": "; this->visit(data.expr);
 			CLOSE
 		}
-		VISIT(lang::$group) // vector ver. codegen
 
-		void visit(lang::$call& data) override
+		void visit($call& data) override
 		{
 			START
 			this->gap(); this->out << "[call]" << "\n";
@@ -1155,16 +1234,14 @@ struct program
 			this->gap(); this->out << "args" << ": "; this->visit(data.args);
 			CLOSE
 		}
-		VISIT(lang::$call) // vector ver. codegen
 
 		#undef START
 		#undef CLOSE
-		#undef VISIT
 	};
 
 public:
 
-	many<node> ast;
+	many(node) ast;
 
 	program() = default;
 
@@ -1180,7 +1257,7 @@ public:
 
 	auto print() const
 	{
-		printer impl {std::cout};
+		core impl {std::cout};
 
 		for (auto&& node : this->ast)
 		{
@@ -1192,3 +1269,6 @@ public:
 		}
 	}
 };
+
+#undef only
+#undef many

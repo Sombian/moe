@@ -41,21 +41,21 @@ namespace utils
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto number(const char8_t (&str)[N], uint8_t base = 10) -> auto
 	{
 		return number(utf8 {str}, base);
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto number(const char16_t (&str)[N], uint8_t base = 10) -> auto
 	{
 		return number(utf16 {str}, base);
 	}
 
 	template<size_t N>
-	// converting constructor support
+	// converting constructor
 	auto number(const char32_t (&str)[N], uint8_t base = 10) -> auto
 	{
 		return number(utf32 {str}, base);

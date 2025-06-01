@@ -2,7 +2,7 @@
 
 #include "lang/lexer.hpp"
 #include "lang/parser.hpp"
-#include "lang/sentry.hpp"
+#include "lang/linter.hpp"
 
 auto main() -> int
 {
@@ -34,16 +34,16 @@ auto main() -> int
 			>
 			parser {&lexer};
 
-			sentry
+			linter
 			<
 				decltype(file.path),
 				decltype(file.data)
 			>
-			sentry {&parser};
+			linter {&parser};
 
-			if (auto&& exe {sentry.pull()})
+			if (auto&& exe {linter.pull()})
 			{
-				exe->print();
+				// exe->print();
 			}
 		},
 		io.value());

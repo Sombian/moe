@@ -14,22 +14,31 @@ template
 	type::string A,
 	type::string B
 >
-struct error
+struct error : public span
 {
-	//|---<safe ptr>---|
-	fs::file<A, B>* file;
+	//|-----<file>-----|
+	fs::file<A, B>* src;
 	//|----------------|
 	utf8 data;
-	span span;
 
 public:
+
+	error
+	(
+		decltype(x) x,
+		decltype(y) y,
+		decltype(src) src,
+		decltype(data) data
+	)
+	:
+	span {x, y}, src {src}, data {data} {}
 
 	//|-----------------|
 	//| member function |
 	//|-----------------|
 
-	auto operator==(const error& type) const -> bool = default;
-	auto operator!=(const error& type) const -> bool = default;
+	friend auto operator==(const error& lhs, const error& rhs) -> bool = default;
+	friend auto operator!=(const error& lhs, const error& rhs) -> bool = default;
 
 	//|----------------------|
 	//| traits::printable<T> |
@@ -43,15 +52,15 @@ public:
 			<<
 			"\033[31m" // set color
 			<<
-			error.file->path
+			error.src->path
 			<<
 			"("
 			<<
-			std::setfill('0') << std::setw(2) << error.span.y + 0
+			std::setfill('0') << std::setw(2) << error.y + 0
 			<<
 			","
 			<<
-			std::setfill('0') << std::setw(2) << error.span.x + 1
+			std::setfill('0') << std::setw(2) << error.x + 1
 			<<
 			")"
 			<<
