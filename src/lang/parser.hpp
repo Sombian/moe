@@ -527,13 +527,13 @@ private:
 				{
 					return this->stmt_if();
 				}
-				case atom::MATCH:
-				{
-					return this->stmt_match();
-				}
 				case atom::FOR:
 				{
 					return this->stmt_for();
+				}
+				case atom::MATCH:
+				{
+					return this->stmt_match();
 				}
 				case atom::WHILE:
 				{
@@ -644,6 +644,100 @@ private:
 			}
 			goto if_block;
 		}
+
+		return std::make_unique /*(wrap)*/
+		<decltype(node)>(std::move(node));
+	}
+
+	auto stmt_for() -> decltype(this->stmt_t())
+	{
+		$for node;
+
+		node.x = this->x;
+		node.y = this->y;
+		
+		this->next();
+
+		if (this->peek(atom::L_PAREN))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '('");
+
+		//|--------------<catch>--------------|
+		node.setup = *this->expr_t().or_else([&]
+			-> decltype(this->expr_t())
+		{ throw E(u8"[parser] N/A expr"); });
+		//|-----------------------------------|
+
+		if (this->peek(atom::S_COLON))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A ';'");
+
+		//|--------------<catch>--------------|
+		node.input = *this->expr_t().or_else([&]
+			-> decltype(this->expr_t())
+		{ throw E(u8"[parser] N/A expr"); });
+		//|-----------------------------------|
+
+		if (this->peek(atom::S_COLON))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A ';'");
+
+		//|--------------<catch>--------------|
+		node.after = *this->expr_t().or_else([&]
+			-> decltype(this->expr_t())
+		{ throw E(u8"[parser] N/A expr"); });
+		//|-----------------------------------|
+
+		if (this->peek(atom::R_PAREN))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A ')'");
+
+		if (this->peek(atom::L_BRACE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '{'");
+
+		// <block>
+		while (true)
+		{
+			if (auto out {this->stmt_t()})
+			{
+				//|--------------<insert>--------------|
+				node.block.emplace_back(std::move(*out));
+				//|------------------------------------|
+				continue;
+			}
+			if (auto out {this->expr_t()})
+			{
+				//|--------------<insert>--------------|
+				node.block.emplace_back(std::move(*out));
+				//|------------------------------------|
+
+				if (this->peek(atom::S_COLON))
+				{
+					this->next();
+				}
+				else throw E(u8"[parser] N/A ';'");
+				// again..!
+				continue;
+			}
+			break;
+		}
+
+		if (this->peek(atom::R_BRACE))
+		{
+			this->next();
+		}
+		else throw E(u8"[parser] N/A '}'");
 
 		return std::make_unique /*(wrap)*/
 		<decltype(node)>(std::move(node));
@@ -763,100 +857,6 @@ private:
 		{
 			this->next();
 			goto else_block;
-		}
-
-		if (this->peek(atom::R_BRACE))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] N/A '}'");
-
-		return std::make_unique /*(wrap)*/
-		<decltype(node)>(std::move(node));
-	}
-
-	auto stmt_for() -> decltype(this->stmt_t())
-	{
-		$for node;
-
-		node.x = this->x;
-		node.y = this->y;
-		
-		this->next();
-
-		if (this->peek(atom::L_PAREN))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] N/A '('");
-
-		//|--------------<catch>--------------|
-		node.setup = *this->expr_t().or_else([&]
-			-> decltype(this->expr_t())
-		{ throw E(u8"[parser] N/A expr"); });
-		//|-----------------------------------|
-
-		if (this->peek(atom::S_COLON))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] N/A ';'");
-
-		//|--------------<catch>--------------|
-		node.input = *this->expr_t().or_else([&]
-			-> decltype(this->expr_t())
-		{ throw E(u8"[parser] N/A expr"); });
-		//|-----------------------------------|
-
-		if (this->peek(atom::S_COLON))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] N/A ';'");
-
-		//|--------------<catch>--------------|
-		node.after = *this->expr_t().or_else([&]
-			-> decltype(this->expr_t())
-		{ throw E(u8"[parser] N/A expr"); });
-		//|-----------------------------------|
-
-		if (this->peek(atom::R_PAREN))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] N/A ')'");
-
-		if (this->peek(atom::L_BRACE))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] N/A '{'");
-
-		// <block>
-		while (true)
-		{
-			if (auto out {this->stmt_t()})
-			{
-				//|--------------<insert>--------------|
-				node.block.emplace_back(std::move(*out));
-				//|------------------------------------|
-				continue;
-			}
-			if (auto out {this->expr_t()})
-			{
-				//|--------------<insert>--------------|
-				node.block.emplace_back(std::move(*out));
-				//|------------------------------------|
-
-				if (this->peek(atom::S_COLON))
-				{
-					this->next();
-				}
-				else throw E(u8"[parser] N/A ';'");
-				// again..!
-				continue;
-			}
-			break;
 		}
 
 		if (this->peek(atom::R_BRACE))

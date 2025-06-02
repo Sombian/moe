@@ -170,7 +170,12 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E(u8"variable '%s' is redefined in the same scope" | ast.name);
+			return E
+			(
+				u8"variable '%s' is redefined in the same scope"
+				|
+				ast.name // YES WE CAN! string interpolation
+			);
 		}
 
 		static constexpr
@@ -185,7 +190,12 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E(u8"function '%s' is redefined in the same scope" | ast.name);
+			return E
+			(
+				u8"function '%s' is redefined in the same scope"
+				|
+				ast.name // YES WE CAN! string interpolation
+			);
 		}
 
 		static constexpr
@@ -200,7 +210,12 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E(u8"trait '%s' is redefined in the same scope" | ast.name);
+			return E
+			(
+				u8"trait '%s' is redefined in the same scope"
+				|
+				ast.name // YES WE CAN! string interpolation
+			);
 		}
 
 		static constexpr
@@ -215,7 +230,12 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E(u8"class '%s' is redefined in the same scope" | ast.name);
+			return E
+			(
+				u8"class '%s' is redefined in the same scope"
+				|
+				ast.name // YES WE CAN! string interpolation
+			);
 		}
 
 		static constexpr
@@ -250,16 +270,21 @@ class linter
 				case op_i::MOD_EQ:
 				case op_i::POW_EQ:
 				{
-					if (auto ptr {std::get_if<std::unique_ptr<$symbol>>(&ast.lhs)})
+					if (auto ptr {std::get_if<symbol_t>(&ast.lhs)})
 					{
-						for (auto block {ctx}; block; block = block->upper)
+						for (auto _ctx {ctx}; _ctx; _ctx = _ctx->upper)
 						{
-							auto var {resolve<$var*>(block, (*ptr)->name)};
+							auto var {resolve<$var*>(_ctx, (*ptr)->name)};
 
 							// checking '<=' since src position does matter
 							if (var != nullptr && var->is_const && *var <= ast)
 							{
-								return E(u8"cannot assign to constant variable '%s'" | var->name);
+								return E
+								(
+									u8"cannot set constant variable '%s'"
+									|
+									var->name // YES WE CAN! string interpolation
+								);
 							}
 						}
 					}
@@ -290,14 +315,31 @@ class linter
 		static constexpr
 		auto unknown_symbol(fs::file<A, B>* src, scope* ctx, $symbol& ast) -> report
 		{
-			for (auto block {ctx}; block; block = block->upper)
+			for (auto _ctx {ctx}; _ctx; _ctx = _ctx->upper)
 			{
-				if (auto ptr {resolve<$var*>(block, ast.name)})
+				if (auto ptr {resolve<$var*>(_ctx, ast.name)})
+				{
+					return std::nullopt;
+				}
+				if (auto ptr {resolve<$fun*>(_ctx, ast.name)})
+				{
+					return std::nullopt;
+				}
+				if (auto ptr {resolve<$trait*>(_ctx, ast.name)})
+				{
+					return std::nullopt;
+				}
+				if (auto ptr {resolve<$class*>(_ctx, ast.name)})
 				{
 					return std::nullopt;
 				}
 			}
-			return E(u8"symbol '%s' is N/A in the current scope" | ast.name);
+			return E
+			(
+				u8"cannot find definition for symbol '%s'"
+				|
+				ast.name // YES WE CAN! string interpolation
+			);
 		}
 
 		static inline

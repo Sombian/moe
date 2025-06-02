@@ -183,14 +183,14 @@ namespace
 							{
 								case 1:
 								{
-									foo = utils::number(range[0], 16);
-									bar = utils::number(range[0], 16);
+									foo = utils::atoi(range[0], 16);
+									bar = utils::atoi(range[0], 16);
 									break;
 								}
 								case 2:
 								{
-									foo = utils::number(range[0], 16);
-									bar = utils::number(range[1], 16);
+									foo = utils::atoi(range[0], 16);
+									bar = utils::atoi(range[1], 16);
 									break;
 								}
 							}

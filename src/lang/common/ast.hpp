@@ -411,17 +411,30 @@ typedef std::variant
 >
 decl;
 
+typedef std::unique_ptr<struct $var> var_t;
+typedef std::unique_ptr<struct $fun> fun_t;
+typedef std::unique_ptr<struct $trait> trait_t;
+typedef std::unique_ptr<struct $class> class_t;
+
 typedef std::variant
 <
 	std::unique_ptr<struct $if>,
-	std::unique_ptr<struct $match>,
 	std::unique_ptr<struct $for>,
+	std::unique_ptr<struct $match>,
 	std::unique_ptr<struct $while>,
 	std::unique_ptr<struct $break>,
 	std::unique_ptr<struct $return>,
 	std::unique_ptr<struct $continue>
 >
 stmt;
+
+typedef std::unique_ptr<$if> if_t;
+typedef std::unique_ptr<$for> for_t;
+typedef std::unique_ptr<$match> match_t;
+typedef std::unique_ptr<$while> while_t;
+typedef std::unique_ptr<$break> break_t;
+typedef std::unique_ptr<$return> return_t;
+typedef std::unique_ptr<$continue> continue_t;
 
 typedef std::variant
 <
@@ -434,6 +447,14 @@ typedef std::variant
 	std::unique_ptr<struct $call>
 >
 expr;
+
+typedef std::unique_ptr<$unary> unary_t;
+typedef std::unique_ptr<$binary> binary_t;
+typedef std::unique_ptr<$literal> literal_t;
+typedef std::unique_ptr<$symbol> symbol_t;
+typedef std::unique_ptr<$access> access_t;
+typedef std::unique_ptr<$group> group_t;
+typedef std::unique_ptr<$call> call_t;
 
 typedef std::variant
 <

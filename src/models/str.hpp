@@ -11,10 +11,11 @@
 #include <utility>
 #include <type_traits>
 
+// #include "utils/convert.hpp"
+#include "utils/ordering.hpp"
+
 #include "traits/printable.hpp"
 #include "traits/rule_of_5.hpp"
-
-#include "utils/ordering.hpp"
 
 //|----------------------------------------------------------------------------------------|
 //| special thanks to facebook's folly::FBString.                                          |
@@ -2223,7 +2224,7 @@ public:
 		//| member function |
 		//|-----------------|
 
-		operator text<T>()
+		operator text<T>()&&
 		{
 			while (this->args.size() < this->frag.size() - 1)
 			{
@@ -2250,7 +2251,11 @@ public:
 			return result;
 		}
 
-		auto operator|(const text<T>& rhs) -> builder&
+		//|-----------|
+		//| lhs | rhs |
+		//|-----------|
+
+		auto operator|(const text<T>& rhs)&& -> builder&
 		{
 			if (this->args.size() < this->frag.size() - 1)
 			{
@@ -2259,7 +2264,7 @@ public:
 			return *this;
 		}
 
-		auto operator|(const slice& rhs) -> builder&
+		auto operator|(const slice& rhs)&& -> builder&
 		{
 			if (this->args.size() < this->frag.size() - 1)
 			{
@@ -2269,7 +2274,7 @@ public:
 		}
 
 		template<size_t N>
-		auto operator|(const T (&rhs)[N]) -> builder&
+		auto operator|(const T (&rhs)[N])&& -> builder&
 		{
 			if (this->args.size() < this->frag.size() - 1)
 			{
@@ -2277,6 +2282,25 @@ public:
 			}
 			return *this;
 		}
+
+		//|-------------------|
+		//| fundamental types |
+		//|-------------------|
+
+		auto operator|(const bool rhs)&& -> builder&
+		{
+			return *this | (rhs ? u8"true" : u8"false");
+		}
+
+		// auto operator|(const int64_t rhs) && -> builder&
+		// {
+		// 	return *this | utils::itoa(rhs);
+		// }
+	
+		// auto operator|(const uint64_t rhs) && -> builder&
+		// {
+		// 	return *this | utils::utoa(rhs);
+		// }
 	};
 
 	//|-----------|
