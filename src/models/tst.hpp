@@ -234,7 +234,7 @@ private:
 	(
 		std::is_same_v<S, tst<T>&>
 		||
-		std::is_same_v<S, tst<T> const&>
+		std::is_same_v<S, const tst<T>&>
 	)
 	class cursor
 	{
@@ -345,18 +345,18 @@ private:
 	template
 	<
 		typename S,
-		type::string U
+		type::string X
 	>
 	requires
 	(
 		std::is_same_v<S, tst<T>&>
 		||
-		std::is_same_v<S, tst<T> const&>
+		std::is_same_v<S, const tst<T>&>
 	)
 	class proxy
 	{
 		S src;
-		const U str;
+		X str;
 
 	public:
 

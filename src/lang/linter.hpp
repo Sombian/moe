@@ -105,15 +105,12 @@ class linter
 		>
 		plugin; // scalable..?
 		
-		#define PLUGIN                             \
-		                                           \
-		switch (this->stage)                       \
-		{                                          \
-			case stage::ANALYZE:                   \
-			{                                      \
-				inject(this->src, this->ptr, ast); \
-			}                                      \
-		}                                          \
+		#define PLUGIN                         \
+		                                       \
+		if (this->stage == stage::ANALYZE)     \
+		{                                      \
+			inject(this->src, this->ptr, ast); \
+		}                                      \
 
 		template
 		<
@@ -173,7 +170,7 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E(u8"redefinition of var: " + ast.name);
+			return E(u8"variable '%s' is redefined in the same scope" | ast.name);
 		}
 
 		static constexpr
@@ -188,7 +185,7 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E(u8"redefinition of fun: " + ast.name);
+			return E(u8"function '%s' is redefined in the same scope" | ast.name);
 		}
 
 		static constexpr
@@ -203,7 +200,7 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E(u8"redefinition of trait: " + ast.name);
+			return E(u8"trait '%s' is redefined in the same scope" | ast.name);
 		}
 
 		static constexpr
@@ -218,7 +215,7 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E(u8"redefinition of class: " + ast.name);
+			return E(u8"class '%s' is redefined in the same scope" | ast.name);
 		}
 
 		static constexpr
@@ -259,9 +256,10 @@ class linter
 						{
 							auto var {resolve<$var*>(block, (*ptr)->name)};
 
-							if (var != nullptr && *var <= ast && var->is_const)
+							// checking '<=' since src position does matter
+							if (var != nullptr && var->is_const && *var <= ast)
 							{
-								return E(u8"assign to const var: " + var->name);
+								return E(u8"cannot assign to constant variable '%s'" | var->name);
 							}
 						}
 					}
@@ -299,7 +297,7 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E(u8"unknown symbol: " + ast.name);
+			return E(u8"symbol '%s' is N/A in the current scope" | ast.name);
 		}
 
 		static inline

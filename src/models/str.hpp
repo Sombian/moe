@@ -3,7 +3,6 @@
 #include <bit>
 #include <vector>
 #include <string>
-#include <vector>
 #include <cassert>
 #include <cstdint>
 #include <cstddef>
@@ -360,17 +359,17 @@ private:
 
 	template
 	<
-		typename P
+		typename S
 	>
 	requires
 	(
-		std::is_same_v<P, text<T>&>
+		std::is_same_v<S, text<T>&>
 		||
-		std::is_same_v<P, text<T> const&>
+		std::is_same_v<S, const text<T>&>
 	)
 	class proxy
 	{
-		P src;
+		S src;
 		size_t nth;
 
 	public:
@@ -429,7 +428,7 @@ private:
 
 		auto operator=(const char32_t code)&& -> proxy& requires
 		(
-			!std::is_const_v<std::remove_reference_t<P>>
+			!std::is_const_v<std::remove_reference_t<S>>
 		)
 		{
 			auto ptr {this->src.c_str()};
@@ -739,6 +738,31 @@ public:
 		return *this;
 	}
 
+	class codec
+	{
+		typedef int8_t width_t;
+
+	public:
+
+		static inline
+		// where : 0 < result
+		auto next(const T* ptr) -> width_t;
+
+		static inline
+		// where : result < 0
+		auto back(const T* ptr) -> width_t;
+
+		static inline
+		// where : 0 < result
+		auto width(const char32_t code) -> width_t;
+
+		static inline
+		void encode(const char32_t in, T* out, width_t width);
+
+		static inline
+		void decode(const T* in, char32_t& out, width_t width);
+	};
+
 	//|-----------------|
 	//| member function |
 	//|-----------------|
@@ -775,33 +799,34 @@ public:
 		assert(false && "-Wreturn-type");
 	}
 
-	class codec
+	//|--------------|
+	//| lhs.length() |
+	//|--------------|
+
+	auto length() const -> size_t
 	{
-		typedef int8_t width_t;
+		// UTF-32
+		if constexpr (std::is_same_v<T, char32_t>)
+		{
+			return this->size();
+		}
+		// UTF-8/16
+		const auto ptr {this->c_str()};
 
-	public:
+		size_t i {0};
+		size_t j {0};
 
-		static inline
-		// where : 0 < result
-		auto next(const T* ptr) -> width_t;
-
-		static inline
-		// where : result < 0
-		auto back(const T* ptr) -> width_t;
-
-		static inline
-		// where : 0 < result
-		auto width(const char32_t code) -> width_t;
-
-		static inline
-		void encode(const char32_t in, T* out, width_t width);
-
-		static inline
-		void decode(const T* in, char32_t& out, width_t width);
-	};
+		for (; ptr[i]; ++j)
+		{
+			i += codec::next(ptr + i);
+		}
+		return j; // <- O(N)
+	}
 
 	class slice
 	{
+		friend text;
+
 		const T* head;
 		const T* tail;
 
@@ -821,6 +846,31 @@ public:
 		//|-----------------|
 		//| member function |
 		//|-----------------|
+
+		auto size() const -> size_t
+		{
+			return this->tail - this->head;
+		}
+
+		auto length() const -> size_t
+		{
+			// UTF-32
+			if constexpr (std::is_same_v<T, char32_t>)
+			{
+				return this->tail - this->head;
+			}
+			// UTF-8/16
+			const auto ptr {this->head};
+
+			size_t i {0};
+			size_t j {0};
+
+			for (; ptr[i]; ++j)
+			{
+				i += codec::next(ptr + i);
+			}
+			return j; // <- O(N)
+		}
 
 		auto to_utf8() const -> text<char8_t>
 		{
@@ -876,33 +926,163 @@ public:
 			return rvalue;
 		}
 
-		//|--------------|
-		//| lhs.substr() |
-		//|--------------|
+		//|------------|
+		//| lhs.find() |
+		//|------------|
 
-		auto substr(const size_t start, const size_t count) const -> slice
+		template<typename U>
+		auto find(const text<U>& str, const size_t offset = 0) const -> size_t
 		{
-			const auto ptr {this->head};
-			// UTF-32
-			if constexpr (std::is_same_v<T, char32_t>)
+			const T* ptr {this->head};
+
+			size_t nth {0};
+			char32_t out {0};
+
+			for (; nth < offset; ++nth)
 			{
-				return {ptr + start, ptr + start + count};
+				ptr += codec::next(ptr);
 			}
-			// UTF-8/16
-			size_t a {0};
-	
-			for (size_t i {0}; ptr[a] && i < start; ++i)
+
+			while (ptr < this->tail)
 			{
-				a += codec::next(ptr + a);
+				auto width {codec::next(ptr)};
+				codec::decode(ptr, out, width);
+
+				if (out == str[0]) // match!
+				{
+					const T* temp {ptr};
+
+					size_t i {0};
+
+					// check match
+					for (const auto code : str)
+					{
+						if (this->tail <= temp)
+						{
+							break;
+						}
+						// hopefully no segfault
+						auto width {codec::next(temp)};
+						codec::decode(temp, out, width);
+
+						if (out != code)
+						{
+							break;
+						}
+						// increase both temp & i
+						temp += width; ++i;
+					}
+					// full match
+					if (i == str.length())
+					{
+						return nth - offset;
+					}
+				}
+				// increase both ptr & nth
+				ptr += width; ++nth;
 			}
-			// continue
-			size_t b {a};
-	
-			for (size_t i {0}; ptr[b] && i < count; ++i)
+			return SIZE_MAX;
+		}
+
+		template<size_t N>
+		auto find(const T (&str)[N], const size_t offset = 0) const -> size_t
+		{
+			const T* ptr {this->head};
+
+			size_t nth {0};
+			char32_t out {0};
+
+			for (; nth < offset; ++nth)
 			{
-				b += codec::next(ptr + b);
+				ptr += codec::next(ptr);
 			}
-			return {ptr + a, ptr + b};
+
+			while (ptr < this->tail)
+			{
+				auto width {codec::next(ptr)};
+				codec::decode(ptr, out, width);
+
+				if (out == str[0]) // match!
+				{
+					const T* temp {ptr};
+
+					size_t i {0};
+
+					// check match
+					for (const auto code : str)
+					{
+						if (this->tail <= temp)
+						{
+							break;
+						}
+						// hopefully no segfault
+						auto width {codec::next(temp)};
+						codec::decode(temp, out, width);
+
+						if (out != code)
+						{
+							break;
+						}
+						// increase both temp & i
+						temp += width; ++i;
+					}
+					// full match
+					if (i == N - 1)
+					{
+						return nth - offset;
+					}
+				}
+				// increase both ptr & nth
+				ptr += width; ++nth;
+			}
+			return SIZE_MAX;
+		}
+
+		auto find(const char32_t code, const size_t offset = 0) const -> size_t
+		{
+			const T* ptr {this->head};
+
+			size_t nth {0};
+			char32_t out {0};
+
+			for (; nth < offset; ++nth)
+			{
+				ptr += codec::next(ptr);
+			}
+
+			while (ptr < this->tail)
+			{
+				auto width {codec::next(ptr)};
+				codec::decode(ptr, out, width);
+
+				if (out == code) // match!
+				{
+					return nth - offset;
+				}
+				ptr += width; ++nth;
+			}
+			return SIZE_MAX;
+		}
+
+		template<size_t N>
+		// converting constructor
+		auto find(const char8_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char8_t>)
+		{
+			return this->find(text<char8_t>{str}, offset);
+		}
+
+		template<size_t N>
+		// converting constructor
+		auto find(const char16_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char16_t>)
+		{
+			return this->find(text<char16_t>{str}, offset);
+		}
+
+		template<size_t N>
+		// converting constructor
+		auto find(const char32_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char32_t>)
+		{
+			return this->find(text<char32_t>{str}, offset);
 		}
 
 		//|-------------|
@@ -1112,196 +1292,57 @@ public:
 			return this->split(text<char32_t>{str});
 		}
 
-		//|------------|
-		//| lhs.find() |
-		//|------------|
-
-		template<typename U>
-		auto find(const text<U>& str, const size_t offset = 0) const -> size_t
-		{
-			const T* ptr {this->head};
-
-			size_t nth {0};
-			char32_t out {0};
-
-			for (; nth < offset; ++nth)
-			{
-				ptr += codec::next(ptr);
-			}
-
-			while (ptr < this->tail)
-			{
-				auto width {codec::next(ptr)};
-				codec::decode(ptr, out, width);
-
-				if (out == str[0]) // match!
-				{
-					const T* temp {ptr};
-
-					size_t i {0};
-
-					// check match
-					for (const auto code : str)
-					{
-						if (this->tail <= temp)
-						{
-							break;
-						}
-						// hopefully no segfault
-						auto width {codec::next(temp)};
-						codec::decode(temp, out, width);
-
-						if (out != code)
-						{
-							break;
-						}
-						// increase both temp & i
-						temp += width; ++i;
-					}
-					// full match
-					if (i == str.length())
-					{
-						return nth - offset;
-					}
-				}
-				// increase both ptr & nth
-				ptr += width; ++nth;
-			}
-			return SIZE_MAX;
-		}
-
-		template<size_t N>
-		auto find(const T (&str)[N], const size_t offset = 0) const -> size_t
-		{
-			const T* ptr {this->head};
-
-			size_t nth {0};
-			char32_t out {0};
-
-			for (; nth < offset; ++nth)
-			{
-				ptr += codec::next(ptr);
-			}
-
-			while (ptr < this->tail)
-			{
-				auto width {codec::next(ptr)};
-				codec::decode(ptr, out, width);
-
-				if (out == str[0]) // match!
-				{
-					const T* temp {ptr};
-
-					size_t i {0};
-
-					// check match
-					for (const auto code : str)
-					{
-						if (this->tail <= temp)
-						{
-							break;
-						}
-						// hopefully no segfault
-						auto width {codec::next(temp)};
-						codec::decode(temp, out, width);
-
-						if (out != code)
-						{
-							break;
-						}
-						// increase both temp & i
-						temp += width; ++i;
-					}
-					// full match
-					if (i == N - 1)
-					{
-						return nth - offset;
-					}
-				}
-				// increase both ptr & nth
-				ptr += width; ++nth;
-			}
-			return SIZE_MAX;
-		}
-
-		auto find(const char32_t code, const size_t offset = 0) const -> size_t
-		{
-			const T* ptr {this->head};
-
-			size_t nth {0};
-			char32_t out {0};
-
-			for (; nth < offset; ++nth)
-			{
-				ptr += codec::next(ptr);
-			}
-
-			while (ptr < this->tail)
-			{
-				auto width {codec::next(ptr)};
-				codec::decode(ptr, out, width);
-
-				if (out == code) // match!
-				{
-					return nth - offset;
-				}
-				ptr += width; ++nth;
-			}
-			return SIZE_MAX;
-		}
-
-		template<size_t N>
-		// converting constructor
-		auto find(const char8_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char8_t>)
-		{
-			return this->find(text<char8_t>{str}, offset);
-		}
-
-		template<size_t N>
-		// converting constructor
-		auto find(const char16_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char16_t>)
-		{
-			return this->find(text<char16_t>{str}, offset);
-		}
-
-		template<size_t N>
-		// converting constructor
-		auto find(const char32_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char32_t>)
-		{
-			return this->find(text<char32_t>{str}, offset);
-		}
-
-		//|------------|
-		//| lhs.size() |
-		//|------------|
-
-		auto size() const -> size_t
-		{
-			return this->tail - this->head;
-		}
-
 		//|--------------|
-		//| lhs.length() |
+		//| lhs.substr() |
 		//|--------------|
 
-		auto length() const -> size_t
+		auto substr(const size_t start, const size_t count) const -> slice
 		{
+			const auto ptr {this->head};
 			// UTF-32
 			if constexpr (std::is_same_v<T, char32_t>)
 			{
-				return this->tail - this->head;
+				return {ptr + start, ptr + start + count};
 			}
 			// UTF-8/16
-			const auto ptr {this->head};
+			size_t a {0};
+	
+			for (size_t i {0}; ptr[a] && i < start; ++i)
+			{
+				a += codec::next(ptr + a);
+			}
+			// continue
+			size_t b {a};
+	
+			for (size_t i {0}; ptr[b] && i < count; ++i)
+			{
+				b += codec::next(ptr + b);
+			}
+			return {ptr + a, ptr + b};
+		}
+
+		//|-----------|
+		//| lhs < rhs |
+		//|-----------|
+
+		friend auto operator<(const slice& lhs, const slice& rhs) -> bool
+		{
+			const auto len {std::min
+			(lhs.size(), rhs.size())};
 
 			size_t i {0};
-			size_t j {0};
 
-			for (; ptr[i]; ++j)
+			const auto foo {lhs.head};
+			const auto bar {rhs.head};
+
+			for (; i < len; ++i)
 			{
-				i += codec::next(ptr + i);
+				if (foo[i] != bar[i])
+				{
+					return foo[i] < bar[i];
+				}
 			}
-			return j; // <- O(N)
+			return lhs.size() < rhs.size();
 		}
 
 		//|--------|
@@ -1345,30 +1386,6 @@ public:
 			return U'\0';
 		}
 
-		//|-----------|
-		//| lhs < rhs |
-		//|-----------|
-
-		friend auto operator<(const slice& lhs, const slice& rhs) -> bool
-		{
-			const auto len {std::min
-			(lhs.size(), rhs.size())};
-
-			size_t i {0};
-
-			const auto foo {lhs.head};
-			const auto bar {rhs.head};
-
-			for (; i < len; ++i)
-			{
-				if (foo[i] != bar[i])
-				{
-					return foo[i] < bar[i];
-				}
-			}
-			return lhs.size() < rhs.size();
-		}
-
 		//|------------|
 		//| lhs == rhs |
 		//|------------|
@@ -1398,11 +1415,8 @@ public:
 			}
 			else // if (!std::is_same_v<T, U>)
 			{
-				auto l_b {lhs.begin()};
-				auto l_e {lhs.end()};
-
-				auto r_b {rhs.begin()};
-				auto r_e {rhs.end()};
+				auto l_b {lhs.begin()}; auto l_e {lhs.end()};
+				auto r_b {rhs.begin()}; auto r_e {rhs.end()};
 
 				for (;l_b != l_e || r_b != r_e;)
 				{
@@ -1738,33 +1752,172 @@ public:
 		return rvalue;
 	}
 
-	//|--------------|
-	//| lhs.substr() |
-	//|--------------|
+	//|------------|
+	//| lhs.find() |
+	//|------------|
 
-	auto substr(const size_t start, const size_t count) const -> slice
+	template<typename U>
+	auto find(const text<U>& str, const size_t offset = 0) const -> size_t
 	{
-		const auto ptr {this->c_str()};
-		// UTF-32
-		if constexpr (std::is_same_v<T, char32_t>)
-		{
-			return {ptr + start, ptr + start + count};
-		}
-		// UTF-8/16
-		size_t a {0};
+		//----------------------------------------------//
+		const auto LAST {this->c_str() + this->size()}; //
+		//----------------------------------------------//
+		const T* ptr {this->c_str()};
 
-		for (size_t i {0}; ptr[a] && i < start; ++i)
-		{
-			a += codec::next(ptr + a);
-		}
-		// continue
-		size_t b {a};
+		size_t nth {0};
+		char32_t out {0};
 
-		for (size_t i {0}; ptr[b] && i < count; ++i)
+		for (; nth < offset; ++nth)
 		{
-			b += codec::next(ptr + b);
+			ptr += codec::next(ptr);
 		}
-		return {ptr + a, ptr + b};
+
+		while (ptr < LAST)
+		{
+			auto width {codec::next(ptr)};
+			codec::decode(ptr, out, width);
+
+			if (out == str[0]) // match!
+			{
+				const T* temp {ptr};
+
+				size_t i {0};
+
+				// check match
+				for (const auto code : str)
+				{
+					if (LAST <= temp)
+					{
+						break;
+					}
+					// hopefully no segfault
+					auto width {codec::next(temp)};
+					codec::decode(temp, out, width);
+
+					if (out != code)
+					{
+						break;
+					}
+					// increase both temp & i
+					temp += width; ++i;
+				}
+				// full match
+				if (i == str.length())
+				{
+					return nth - offset;
+				}
+			}
+			// increase both ptr & nth
+			ptr += width; ++nth;
+		}
+		return SIZE_MAX;
+	}
+
+	template<size_t N>
+	auto find(const T (&str)[N], const size_t offset = 0) const -> size_t
+	{
+		//----------------------------------------------//
+		const auto LAST {this->c_str() + this->size()}; //
+		//----------------------------------------------//
+		const T* ptr {this->c_str()};
+
+		size_t nth {0};
+		char32_t out {0};
+
+		for (; nth < offset; ++nth)
+		{
+			ptr += codec::next(ptr);
+		}
+
+		while (ptr < LAST)
+		{
+			auto width {codec::next(ptr)};
+			codec::decode(ptr, out, width);
+
+			if (out == str[0]) // match!
+			{
+				const T* temp {ptr};
+
+				size_t i {0};
+
+				// check match
+				for (const auto code : str)
+				{
+					if (LAST <= temp)
+					{
+						break;
+					}
+					// hopefully no segfault
+					auto width {codec::next(temp)};
+					codec::decode(temp, out, width);
+
+					if (out != code)
+					{
+						break;
+					}
+					// increase both temp & i
+					temp += width; ++i;
+				}
+				// full match
+				if (i == str.length())
+				{
+					return nth - offset;
+				}
+			}
+			// increase both ptr & nth
+			ptr += width; ++nth;
+		}
+		return SIZE_MAX;
+	}
+
+	auto find(const char32_t code, const size_t offset = 0) const -> size_t
+	{
+		//----------------------------------------------//
+		const auto LAST {this->c_str() + this->size()}; //
+		//----------------------------------------------//
+		const T* ptr {this->c_str()};
+
+		size_t nth {0};
+		char32_t out {0};
+
+		for (; nth < offset; ++nth)
+		{
+			ptr += codec::next(ptr);
+		}
+
+		while (ptr < LAST)
+		{
+			auto width {codec::next(ptr)};
+			codec::decode(ptr, out, width);
+
+			if (out == code) // match!
+			{
+				return nth - offset;
+			}
+			ptr += width; ++nth;
+		}
+		return SIZE_MAX;
+	}
+
+	template<size_t N>
+	// converting constructor
+	auto find(const char8_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char8_t>)
+	{
+		return this->find(text<char8_t>{str}, offset);
+	}
+
+	template<size_t N>
+	// converting constructor
+	auto find(const char16_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char16_t>)
+	{
+		return this->find(text<char16_t>{str}, offset);
+	}
+
+	template<size_t N>
+	// converting constructor
+	auto find(const char32_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char32_t>)
+	{
+		return this->find(text<char32_t>{str}, offset);
 	}
 
 	//|-------------|
@@ -1987,196 +2140,33 @@ public:
 		return this->split(text<char32_t>{str});
 	}
 
-	//|------------|
-	//| lhs.find() |
-	//|------------|
-
-	template<typename U>
-	auto find(const text<U>& str, const size_t offset = 0) const -> size_t
-	{
-		//----------------------------------------------//
-		const auto LAST {this->c_str() + this->size()}; //
-		//----------------------------------------------//
-		const T* ptr {this->c_str()};
-
-		size_t nth {0};
-		char32_t out {0};
-
-		for (; nth < offset; ++nth)
-		{
-			ptr += codec::next(ptr);
-		}
-
-		while (ptr < LAST)
-		{
-			auto width {codec::next(ptr)};
-			codec::decode(ptr, out, width);
-
-			if (out == str[0]) // match!
-			{
-				const T* temp {ptr};
-
-				size_t i {0};
-
-				// check match
-				for (const auto code : str)
-				{
-					if (LAST <= temp)
-					{
-						break;
-					}
-					// hopefully no segfault
-					auto width {codec::next(temp)};
-					codec::decode(temp, out, width);
-
-					if (out != code)
-					{
-						break;
-					}
-					// increase both temp & i
-					temp += width; ++i;
-				}
-				// full match
-				if (i == str.length())
-				{
-					return nth - offset;
-				}
-			}
-			// increase both ptr & nth
-			ptr += width; ++nth;
-		}
-		return SIZE_MAX;
-	}
-
-	template<size_t N>
-	auto find(const T (&str)[N], const size_t offset = 0) const -> size_t
-	{
-		//----------------------------------------------//
-		const auto LAST {this->c_str() + this->size()}; //
-		//----------------------------------------------//
-		const T* ptr {this->c_str()};
-
-		size_t nth {0};
-		char32_t out {0};
-
-		for (; nth < offset; ++nth)
-		{
-			ptr += codec::next(ptr);
-		}
-
-		while (ptr < LAST)
-		{
-			auto width {codec::next(ptr)};
-			codec::decode(ptr, out, width);
-
-			if (out == str[0]) // match!
-			{
-				const T* temp {ptr};
-
-				size_t i {0};
-
-				// check match
-				for (const auto code : str)
-				{
-					if (LAST <= temp)
-					{
-						break;
-					}
-					// hopefully no segfault
-					auto width {codec::next(temp)};
-					codec::decode(temp, out, width);
-
-					if (out != code)
-					{
-						break;
-					}
-					// increase both temp & i
-					temp += width; ++i;
-				}
-				// full match
-				if (i == str.length())
-				{
-					return nth - offset;
-				}
-			}
-			// increase both ptr & nth
-			ptr += width; ++nth;
-		}
-		return SIZE_MAX;
-	}
-
-	auto find(const char32_t code, const size_t offset = 0) const -> size_t
-	{
-		//----------------------------------------------//
-		const auto LAST {this->c_str() + this->size()}; //
-		//----------------------------------------------//
-		const T* ptr {this->c_str()};
-
-		size_t nth {0};
-		char32_t out {0};
-
-		for (; nth < offset; ++nth)
-		{
-			ptr += codec::next(ptr);
-		}
-
-		while (ptr < LAST)
-		{
-			auto width {codec::next(ptr)};
-			codec::decode(ptr, out, width);
-
-			if (out == code) // match!
-			{
-				return nth - offset;
-			}
-			ptr += width; ++nth;
-		}
-		return SIZE_MAX;
-	}
-
-	template<size_t N>
-	// converting constructor
-	auto find(const char8_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char8_t>)
-	{
-		return this->find(text<char8_t>{str}, offset);
-	}
-
-	template<size_t N>
-	// converting constructor
-	auto find(const char16_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char16_t>)
-	{
-		return this->find(text<char16_t>{str}, offset);
-	}
-
-	template<size_t N>
-	// converting constructor
-	auto find(const char32_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char32_t>)
-	{
-		return this->find(text<char32_t>{str}, offset);
-	}
-
 	//|--------------|
-	//| lhs.length() |
+	//| lhs.substr() |
 	//|--------------|
 
-	auto length() const -> size_t
+	auto substr(const size_t start, const size_t count) const -> slice
 	{
+		const auto ptr {this->c_str()};
 		// UTF-32
 		if constexpr (std::is_same_v<T, char32_t>)
 		{
-			return this->size();
+			return {ptr + start, ptr + start + count};
 		}
 		// UTF-8/16
-		const auto ptr {this->c_str()};
+		size_t a {0};
 
-		size_t i {0};
-		size_t j {0};
-
-		for (; ptr[i]; ++j)
+		for (size_t i {0}; ptr[a] && i < start; ++i)
 		{
-			i += codec::next(ptr + i);
+			a += codec::next(ptr + a);
 		}
-		return j; // <- O(N)
+		// continue
+		size_t b {a};
+
+		for (size_t i {0}; ptr[b] && i < count; ++i)
+		{
+			b += codec::next(ptr + b);
+		}
+		return {ptr + a, ptr + b};
 	}
 
 	//|--------|
@@ -2193,6 +2183,136 @@ public:
 		return {*this, nth};
 	}
 
+	//|-----------|
+	//| lhs < rhs |
+	//|-----------|
+
+	friend auto operator<(const text<T>& lhs, const text<T>& rhs) -> bool
+	{
+		const auto len {std::min
+		(lhs.size(), rhs.size())};
+
+		size_t i {0};
+
+		const auto foo {lhs.c_str()};
+		const auto bar {rhs.c_str()};
+
+		for (; i < len; ++i)
+		{
+			if (foo[i] != bar[i])
+			{
+				return foo[i] < bar[i];
+			}
+		}
+		return lhs.size() < rhs.size();
+	}
+
+	class builder
+	{
+		// fragments of source
+		std::vector<slice> frag;
+		// arguments to concat
+		std::vector<text<T>> args;
+
+	public:
+
+		builder(const slice& str) : frag {str.split(u8"%s")} {}
+		builder(const text<T>& str) : frag {str.split(u8"%s")} {}
+
+		//|-----------------|
+		//| member function |
+		//|-----------------|
+
+		operator text<T>()
+		{
+			while (this->args.size() < this->frag.size() - 1)
+			{
+				this->args.emplace_back(u8"%s");
+			}
+
+			size_t total {0};
+			// calculate size
+			for (auto& _ : this->frag) { total += _.size(); }
+			for (auto& _ : this->args) { total += _.size(); }
+
+			// allocate str
+			text<T> result {total};
+
+			// mix and join
+			for (size_t i {0}; i < args.size(); ++i)
+			{
+				result += this->frag[i]; // write
+				result += this->args[i]; // write
+			}
+			// last fragment
+			result += this->frag.back();
+
+			return result;
+		}
+
+		auto operator|(const text<T>& rhs) -> builder&
+		{
+			if (this->args.size() < this->frag.size() - 1)
+			{
+				this->args.emplace_back(rhs);
+			}
+			return *this;
+		}
+
+		auto operator|(const slice& rhs) -> builder&
+		{
+			if (this->args.size() < this->frag.size() - 1)
+			{
+				this->args.emplace_back(rhs);
+			}
+			return *this;
+		}
+
+		template<size_t N>
+		auto operator|(const T (&rhs)[N]) -> builder&
+		{
+			if (this->args.size() < this->frag.size() - 1)
+			{
+				this->args.emplace_back(rhs);
+			}
+			return *this;
+		}
+	};
+
+	//|-----------|
+	//| lhs | rhs |
+	//|-----------|
+
+	template<typename U>
+	friend auto operator|(const text<T> lhs, const text<U>& rhs) -> builder
+	{
+		return builder {lhs} | rhs;
+	}
+
+	template<size_t N>
+	friend auto operator|(const text<T>& lhs, const slice& rhs) -> builder
+	{
+		return builder {lhs} | rhs;
+	}
+
+	template<size_t N>
+	friend auto operator|(const slice& lhs, const text<T>& rhs) -> builder
+	{
+		return builder {lhs} | rhs;
+	}
+
+	template<size_t N>
+	friend auto operator|(const text<T>& lhs, const T (&rhs)[N]) -> builder
+	{
+		return builder {lhs} | rhs;
+	}
+
+	template<size_t N>
+	friend auto operator|(const T (&lhs)[N], const text<T>& rhs) -> builder
+	{
+		return builder {lhs} | rhs;
+	}
+
 	//|------------|
 	//| lhs += rhs |
 	//|------------|
@@ -2202,7 +2322,7 @@ public:
 	{
 		if constexpr (std::is_same_v<T, U>)
 		{
-			const auto total {this->size() + rhs.size()}; // <- equal in unit size
+			const auto total {this->size() + rhs.size()};
 
 			if (this->capacity() < total)
 			{
@@ -2224,13 +2344,27 @@ public:
 		}
 		else // if (!std::is_same_v<T, U>)
 		{
-			const auto total {this->size() + (rhs.size() * (sizeof(T) / sizeof(U)))};
+			const auto total
+			{
+				this->size()
+				+
+				(
+					rhs.size()
+					*
+					(
+						sizeof(T)
+						/
+						sizeof(U)
+					)
+				)
+			};
 
 			if (this->capacity() < total)
 			{
 				this->capacity(total);
 			}
-			const T* ptr {this->c_str() + this->size()}; // <- we're gonna write here
+			// write to ptr with offset of 'size()'
+			const T* ptr {this->c_str() + this->size()};
 
 			for (const auto code : rhs)
 			{
@@ -2359,30 +2493,6 @@ public:
 		return rvalue;
 	}
 
-	//|-----------|
-	//| lhs < rhs |
-	//|-----------|
-
-	friend auto operator<(const text<T>& lhs, const text<T>& rhs) -> bool
-	{
-		const auto len {std::min
-		(lhs.size(), rhs.size())};
-
-		size_t i {0};
-
-		const auto foo {lhs.c_str()};
-		const auto bar {rhs.c_str()};
-
-		for (; i < len; ++i)
-		{
-			if (foo[i] != bar[i])
-			{
-				return foo[i] < bar[i];
-			}
-		}
-		return lhs.size() < rhs.size();
-	}
-
 	//|------------|
 	//| lhs == rhs |
 	//|------------|
@@ -2402,11 +2512,8 @@ public:
 		}
 		else // if (!std::is_same_v<T, U>)
 		{
-			auto l_b {lhs.begin()};
-			auto l_e {lhs.end()};
-
-			auto r_b {rhs.begin()};
-			auto r_e {rhs.end()};
+			auto l_b {lhs.begin()}; auto l_e {lhs.end()};
+			auto r_b {rhs.begin()}; auto r_e {rhs.end()};
 
 			for (;l_b != l_e || r_b != r_e;)
 			{
