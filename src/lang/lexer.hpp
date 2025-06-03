@@ -646,7 +646,7 @@ private:
 			}
 			case utils::ordering::GREATER:
 			{
-				return T(view.get().value()); // <- always deref
+				return T(*view.get()); // <- always deref
 			}
 		}
 		assert(false && "-Wreturn-type");

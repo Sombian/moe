@@ -1,12 +1,13 @@
 {
 	"files.exclude":
 	{
-		// c/c++
+		// IDE files
+		".vs": true,
+		"out": true,
 		"build": true,
 		".cache": true,
-		// OS system files
+		// other files
 		".*.gitignore": true,
-		// 3rd party sub folders
 		"3rd-party/*/*": true,
 	},
 }

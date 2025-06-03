@@ -2,7 +2,6 @@
 
 #include <bit>
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <variant>
 #include <fstream>
@@ -33,17 +32,13 @@ namespace fs
 	template<type::string T>
 	auto open(const T& path) -> std::optional<std::variant<file<T, utf8>, file<T, utf16>, file<T, utf32>>>
 	{
-		#ifndef NDEBUG //--------|
-		std::cout << path << '\n';
-		#endif //----------------|
-	
 		auto sys {std::filesystem::path(path.c_str())};
 
 		if (std::ifstream ifs {sys, std::ios::binary})
 		{
-			//|-------------------------|
-			//| step 1. detect encoding |
-			//|-------------------------|
+			#ifndef NDEBUG //------------------------|
+			std::cout << (u8"OK '%s'" | path) << '\n';
+			#endif //--------------------------------|
 
 			enum encoding : uint8_t
 			{
@@ -53,8 +48,13 @@ namespace fs
 				UTF16_LE = (3 << 4) | 2,
 				UTF32_BE = (4 << 4) | 4,
 				UTF32_LE = (5 << 4) | 4,
-			}
-			const BOM
+			};
+
+			//|-------------------------|
+			//| step 1. detect encoding |
+			//|-------------------------|
+
+			const auto BOM
 			{
 				[&] -> encoding
 				{
@@ -197,6 +197,13 @@ namespace fs
 				}
 			};
 
+			#define IS_BIG          \
+			(                       \
+				std::endian::native \
+				         !=         \
+				std::endian::little \
+			)                       \
+
 			switch (BOM)
 			{
 				case UTF8_STD:
@@ -204,9 +211,14 @@ namespace fs
 				{
 					typedef char8_t unit;
 					
-					text<unit> data (size / sizeof(unit));
+					text<unit> data
+					(
+						(size / sizeof(unit))
+						+
+						1 /*null-terminator*/
+					);
 
-					write_native(data); // no need to swap
+					write_native(data);
 
 					return file<T, decltype(data)>{std::move(path), std::move(data)};
 				}
@@ -214,15 +226,20 @@ namespace fs
 				{
 					typedef char16_t unit;
 
-					text<unit> data (size / sizeof(unit));
+					text<unit> data
+					(
+						(size / sizeof(unit))
+						+
+						1 /*null-terminator*/
+					);
 
-					if (std::endian::native == std::endian::big)
+					if constexpr (IS_BIG)
 					{
-						write_native(data); // write as it is
+						write_native(data);
 					}
 					else
 					{
-						write_foreign(data); // write as flips
+						write_foreign(data);
 					}
 					return file<T, decltype(data)>{std::move(path), std::move(data)};
 				}
@@ -230,15 +247,20 @@ namespace fs
 				{
 					typedef char16_t unit;
 
-					text<unit> data (size / sizeof(unit));
+					text<unit> data
+					(
+						(size / sizeof(unit))
+						+
+						1 /*null-terminator*/
+					);
 
-					if (std::endian::native == std::endian::little)
+					if constexpr (!IS_BIG)
 					{
-						write_native(data); // write as it is
+						write_native(data);
 					}
 					else
 					{
-						write_foreign(data); // write as flips
+						write_foreign(data);
 					}
 					return file<T, decltype(data)>{std::move(path), std::move(data)};
 				}
@@ -246,15 +268,20 @@ namespace fs
 				{
 					typedef char32_t unit;
 
-					text<unit> data (size / sizeof(unit));
+					text<unit> data
+					(
+						(size / sizeof(unit))
+						+
+						1 /*null-terminator*/
+					);
 
-					if (std::endian::native == std::endian::big)
+					if constexpr (IS_BIG)
 					{
-						write_native(data); // write as it is
+						write_native(data);
 					}
 					else
 					{
-						write_foreign(data); // write as flips
+						write_foreign(data);
 					}
 					return file<T, decltype(data)>{std::move(path), std::move(data)};
 				}
@@ -262,19 +289,27 @@ namespace fs
 				{
 					typedef char32_t unit;
 
-					text<unit> data (size / sizeof(unit));
+					// null-terminator
+					text<unit> data ((size / sizeof(unit)) + 1);
 					
-					if (std::endian::native == std::endian::little)
+					if constexpr (!IS_BIG)
 					{
-						write_native(data); // write as it is
+						write_native(data);
 					}
 					else
 					{
-						write_foreign(data); // write as flips
+						write_foreign(data);
 					}
 					return file<T, decltype(data)>{std::move(path), std::move(data)};
 				}
 			}
+			#undef IS_BIG
+		}
+		else
+		{
+			#ifndef NDEBUG //-------------------------|
+			std::cout << (u8"BAD '%s'" | path) << '\n';
+			#endif //---------------------------------|
 		}
 		return std::nullopt;
 	}

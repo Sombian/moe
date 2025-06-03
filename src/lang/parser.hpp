@@ -214,7 +214,7 @@ public:
 			// if not EOF
 			if (this->peek())
 			{
-				throw E(u8"[parser] unknown token");
+				throw E(u8"[parser] unknown decl/stmt");
 			}
 		}
 		catch (error<A, B>& error)

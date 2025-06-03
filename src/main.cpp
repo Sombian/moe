@@ -48,4 +48,6 @@ auto main() -> int
 		},
 		io.value());
 	}
+
+	return 0;
 }

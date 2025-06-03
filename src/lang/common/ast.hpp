@@ -1085,10 +1085,10 @@ struct program
 		void visit($var& ast) override
 		{
 			START
-			this->gap(); this->out << "[var]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
-			this->gap(); this->out << "type" << ": "; this->visit(ast.type);
-			this->gap(); this->out << "init" << ": "; this->visit(ast.init);
+			this->gap(); this->out << "[var]\n";
+			this->gap(); this->out << "name: "; this->visit(ast.name);
+			this->gap(); this->out << "type: "; this->visit(ast.type);
+			this->gap(); this->out << "init: "; this->visit(ast.init);
 			CLOSE
 		}
 
@@ -1096,28 +1096,28 @@ struct program
 		{
 
 			START
-			this->gap(); this->out << "[fun]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
-			this->gap(); this->out << "type" << ": "; this->visit(ast.type);
-			this->gap(); this->out << "body" << ": "; this->visit(ast.body);
+			this->gap(); this->out << "[fun]\n";
+			this->gap(); this->out << "name: "; this->visit(ast.name);
+			this->gap(); this->out << "type: "; this->visit(ast.type);
+			this->gap(); this->out << "body: "; this->visit(ast.body);
 			CLOSE
 		}
 
 		void visit($trait& ast) override
 		{
 			START
-			this->gap(); this->out << "[trait]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
-			this->gap(); this->out << "body" << ": "; this->visit(ast.body);
+			this->gap(); this->out << "[trait]\n";
+			this->gap(); this->out << "name: "; this->visit(ast.name);
+			this->gap(); this->out << "body: "; this->visit(ast.body);
 			CLOSE
 		}
 
 		void visit($class& ast) override
 		{
 			START
-			this->gap(); this->out << "[class]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
-			this->gap(); this->out << "body" << ": "; this->visit(ast.body);
+			this->gap(); this->out << "[class]\n";
+			this->gap(); this->out << "name: "; this->visit(ast.name);
+			this->gap(); this->out << "body: "; this->visit(ast.body);
 			CLOSE
 		}
 
@@ -1128,63 +1128,63 @@ struct program
 		void visit($if& ast) override
 		{
 			START
-			this->gap(); this->out << "[if]" << "\n";
-			this->gap(); this->out << "block" << ": "; this->visit(ast.block);
-			this->gap(); this->out << "cases" << ": "; this->visit(ast.cases);
-			CLOSE
-		}
-
-		void visit($match& ast) override
-		{
-			START
-			this->gap(); this->out << "[match]" << "\n";
-			this->gap(); this->out << "input" << ": "; this->visit(ast.input);
-			this->gap(); this->out << "block" << ": "; this->visit(ast.block);
-			this->gap(); this->out << "cases" << ": "; this->visit(ast.cases);
+			this->gap(); this->out << "[if]\n";
+			this->gap(); this->out << "block: "; this->visit(ast.block);
+			this->gap(); this->out << "cases: "; this->visit(ast.cases);
 			CLOSE
 		}
 
 		void visit($for& ast) override
 		{
 			START
-			this->gap(); this->out << "[for]" << "\n";
-			this->gap(); this->out << "setup" << ": "; this->visit(ast.setup);
-			this->gap(); this->out << "input" << ": "; this->visit(ast.input);
-			this->gap(); this->out << "after" << ": "; this->visit(ast.after);
-			this->gap(); this->out << "block" << ": "; this->visit(ast.block);
+			this->gap(); this->out << "[for]\n";
+			this->gap(); this->out << "setup: "; this->visit(ast.setup);
+			this->gap(); this->out << "input: "; this->visit(ast.input);
+			this->gap(); this->out << "after: "; this->visit(ast.after);
+			this->gap(); this->out << "block: "; this->visit(ast.block);
+			CLOSE
+		}
+
+		void visit($match& ast) override
+		{
+			START
+			this->gap(); this->out << "[match]\n";
+			this->gap(); this->out << "input: "; this->visit(ast.input);
+			this->gap(); this->out << "block: "; this->visit(ast.block);
+			this->gap(); this->out << "cases: "; this->visit(ast.cases);
 			CLOSE
 		}
 
 		void visit($while& ast) override
 		{
 			START
-			this->gap(); this->out << "[while]" << "\n";
-			this->gap(); this->out << "input" << ": "; this->visit(ast.input);
-			this->gap(); this->out << "block" << ": "; this->visit(ast.block);
+			this->gap(); this->out << "[while]\n";
+			this->gap(); this->out << "input: "; this->visit(ast.input);
+			this->gap(); this->out << "block: "; this->visit(ast.block);
 			CLOSE
 		}
 
 		void visit($break& ast) override
 		{
 			START
-			this->gap(); this->out << "[break]" << "\n";
-			this->gap(); this->out << "label" << ": "; this->visit(ast.label);
+			this->gap(); this->out << "[break]\n";
+			this->gap(); this->out << "label: "; this->visit(ast.label);
 			CLOSE
 		}
 
 		void visit($return& ast) override
 		{
 			START
-			this->gap(); this->out << "[return]" << "\n";
-			this->gap(); this->out << "value" << ": "; this->visit(ast.value);
+			this->gap(); this->out << "[return]\n";
+			this->gap(); this->out << "value: "; this->visit(ast.value);
 			CLOSE
 		}
 
 		void visit($continue& ast) override
 		{
 			START
-			this->gap(); this->out << "[continue]" << "\n";
-			this->gap(); this->out << "label" << ": "; this->visit(ast.label);
+			this->gap(); this->out << "[continue]\n";
+			this->gap(); this->out << "label: "; this->visit(ast.label);
 			CLOSE
 		}
 
@@ -1195,28 +1195,28 @@ struct program
 		void visit($unary& ast) override
 		{
 			START
-			this->gap(); this->out << "[unary]" << "\n";
-			this->gap(); this->out << "op"  << ": "; this->visit(ast.op);
-			this->gap(); this->out << "rhs" << ": "; this->visit(ast.rhs);
+			this->gap(); this->out << "[unary]\n";
+			this->gap(); this->out << "op : "; this->visit(ast.op);
+			this->gap(); this->out << "rhs: "; this->visit(ast.rhs);
 			CLOSE
 		}
 
 		void visit($binary& ast) override
 		{
 			START
-			this->gap(); this->out << "[binary]" << "\n";
-			this->gap(); this->out << "op"  << ": "; this->visit(ast.op);
-			this->gap(); this->out << "lhs" << ": "; this->visit(ast.lhs);
-			this->gap(); this->out << "rhs" << ": "; this->visit(ast.rhs);
+			this->gap(); this->out << "[binary]\n";
+			this->gap(); this->out << "op : "; this->visit(ast.op);
+			this->gap(); this->out << "lhs: "; this->visit(ast.lhs);
+			this->gap(); this->out << "rhs: "; this->visit(ast.rhs);
 			CLOSE
 		}
 
 		void visit($literal& ast) override
 		{
 			START
-			this->gap(); this->out << "[literal]" << "\n";
-			this->gap(); this->out << "type" << ": "; this->visit(ast.type);
-			this->gap(); this->out << "data" << ": "; this->visit(ast.data);
+			this->gap(); this->out << "[literal]\n";
+			this->gap(); this->out << "type: "; this->visit(ast.type);
+			this->gap(); this->out << "data: "; this->visit(ast.data);
 			CLOSE
 		}
 
@@ -1224,35 +1224,35 @@ struct program
 		{
 
 			START
-			this->gap(); this->out << "[symbol]" << "\n";
-			this->gap(); this->out << "name" << ": "; this->visit(ast.name);
+			this->gap(); this->out << "[symbol]\n";
+			this->gap(); this->out << "name: "; this->visit(ast.name);
 			CLOSE
 		}
 
 		void visit($access& data) override
 		{
 			START
-			this->gap(); this->out << "[access]" << "\n";
-			this->gap(); this->out << "expr" << ": "; this->visit(data.expr);
-			this->gap(); this->out << "type" << ": "; this->visit(data.type);
-			this->gap(); this->out << "name" << ": "; this->visit(data.name);
+			this->gap(); this->out << "[access]\n";
+			this->gap(); this->out << "expr: "; this->visit(data.expr);
+			this->gap(); this->out << "type: "; this->visit(data.type);
+			this->gap(); this->out << "name: "; this->visit(data.name);
 			CLOSE
 		}
 
 		void visit($group& data) override
 		{
 			START
-			this->gap(); this->out << "[group]" << "\n";
-			this->gap(); this->out << "expr" << ": "; this->visit(data.expr);
+			this->gap(); this->out << "[group]\n";
+			this->gap(); this->out << "expr: "; this->visit(data.expr);
 			CLOSE
 		}
 
 		void visit($call& data) override
 		{
 			START
-			this->gap(); this->out << "[call]" << "\n";
-			this->gap(); this->out << "call" << ": "; this->visit(data.call);
-			this->gap(); this->out << "args" << ": "; this->visit(data.args);
+			this->gap(); this->out << "[call]\n";
+			this->gap(); this->out << "call: "; this->visit(data.call);
+			this->gap(); this->out << "args: "; this->visit(data.args);
 			CLOSE
 		}
 

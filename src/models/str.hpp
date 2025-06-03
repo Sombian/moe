@@ -11,7 +11,6 @@
 #include <utility>
 #include <type_traits>
 
-// #include "utils/convert.hpp"
 #include "utils/ordering.hpp"
 
 #include "traits/printable.hpp"
@@ -85,8 +84,8 @@ class text
 
 	enum tag : uint8_t
 	{
-		SMALL = IS_BIG ? 0b0000000'0 : 0b0'0000000, // always 0
-		LARGE = IS_BIG ? 0b0000000'1 : 0b1'0000000, // always 1
+		SMALL = IS_BIG ? 0b0000000'0 : 0b0'0000000,
+		LARGE = IS_BIG ? 0b0000000'1 : 0b1'0000000,
 	};
 
 	class buffer
@@ -266,6 +265,8 @@ public:
 				// S -> S
 				case tag::SMALL:
 				{
+					assert(value <= RMB);
+
 					auto slot {MAX - value};
 					// terminate
 					this->small[value] = '\0';
@@ -283,8 +284,7 @@ public:
 				}
 			}
 		}
-		assert(this->mode() == tag::SMALL ? this->size() == value : true);
-		assert(this->mode() == tag::LARGE ? this->size() == value : true);
+		assert(this->size() <= this->capacity());
 	}
 
 	// getter
@@ -352,8 +352,7 @@ public:
 				}
 			}
 		}
-		assert(this->mode() == tag::SMALL ? this->capacity() == MAX : true);
-		assert(this->mode() == tag::LARGE ? this->capacity() == value : true);
+		assert(this->size() <= this->capacity());
 	}
 
 private:
@@ -584,8 +583,7 @@ private:
 			auto temp {*this};
 			operator--();
 			return temp;
-		}
-
+		} 
 		//|------------|
 		//| lhs == rhs |
 		//|------------|
@@ -624,7 +622,7 @@ public:
 			// destination
 			dest.c_str() + 0
 		);
-		// update size
+		// copy size
 		dest.size(N);
 	}
 
@@ -657,16 +655,9 @@ public:
 		assert(this->mode() == tag::SMALL);
 	}
 
-	text(const T* ptr) : text()
+	text(const size_t size) : text()
 	{
-		if (ptr != nullptr)
-		{
-			auto len {std::char_traits<T>::length(ptr)};
-			// update size
-			this->size(len);
-			// write data
-			std::copy(ptr, ptr + len + 1, this->c_str());
-		}
+		this->capacity(size);
 	}
 
 	template<size_t N>
@@ -691,9 +682,16 @@ public:
 		std::copy(str, str + N, this->large.data);
 	}
 
-	text(const size_t size) : text()
+	text(const T* ptr) : text()
 	{
-		this->capacity(size);
+		if (ptr != nullptr)
+		{
+			auto N {std::char_traits<T>::length(ptr)};
+			// copy meta
+			this->size(N);
+			// copy data
+			std::copy(ptr, ptr + N + 1, this->c_str());
+		}
 	}
 
 	COPY_CONSTRUCTOR(text) : text()
@@ -2215,6 +2213,16 @@ public:
 		// arguments to concat
 		std::vector<text<T>> args;
 
+		auto full() const -> bool
+		{
+			return // until N = N' + 1
+			(
+				this->frag.size() + 0
+				==
+				this->args.size() + 1
+			);
+		}
+
 	public:
 
 		builder(const slice& str) : frag {str.split(u8"%s")} {}
@@ -2226,19 +2234,24 @@ public:
 
 		operator text<T>()&&
 		{
-			while (this->args.size() < this->frag.size() - 1)
+			while (!this->full())
 			{
 				this->args.emplace_back(u8"%s");
 			}
-
-			size_t total {0};
-			// calculate size
-			for (auto& _ : this->frag) { total += _.size(); }
-			for (auto& _ : this->args) { total += _.size(); }
-
 			// allocate str
-			text<T> result {total};
+			text<T> result
+			{
+				[&]
+				{
+					size_t impl {0};
 
+					for (auto& _ : this->frag) { impl += _.size(); }
+					for (auto& _ : this->args) { impl += _.size(); }
+
+					return impl + 1;
+				}
+				()
+			};
 			// mix and join
 			for (size_t i {0}; i < args.size(); ++i)
 			{
@@ -2257,7 +2270,7 @@ public:
 
 		auto operator|(const text<T>& rhs)&& -> builder&
 		{
-			if (this->args.size() < this->frag.size() - 1)
+			if (!this->full())
 			{
 				this->args.emplace_back(rhs);
 			}
@@ -2266,7 +2279,7 @@ public:
 
 		auto operator|(const slice& rhs)&& -> builder&
 		{
-			if (this->args.size() < this->frag.size() - 1)
+			if (!this->full())
 			{
 				this->args.emplace_back(rhs);
 			}
@@ -2276,7 +2289,7 @@ public:
 		template<size_t N>
 		auto operator|(const T (&rhs)[N])&& -> builder&
 		{
-			if (this->args.size() < this->frag.size() - 1)
+			if (!this->full())
 			{
 				this->args.emplace_back(rhs);
 			}
@@ -2411,7 +2424,7 @@ public:
 		{
 			this->capacity(total);
 		}
-		// copy data
+
 		std::copy
 		(
 			rhs.head + 0,
@@ -2419,7 +2432,7 @@ public:
 			// destination
 			this->c_str() + this->size()
 		);
-		// update size
+
 		this->size(total);
 
 		return *this;
@@ -2434,7 +2447,7 @@ public:
 		{
 			this->capacity(total);
 		}
-		// copy data
+
 		std::copy
 		(
 			rhs + 0,
@@ -2442,7 +2455,7 @@ public:
 			// destination
 			this->c_str() + this->size()
 		);
-		// update size
+
 		this->size(total);
 
 		return *this;
@@ -2455,7 +2468,7 @@ public:
 	template<typename U>
 	friend auto operator+(const text<T> lhs, const text<U>& rhs) -> text<T>
 	{
-		text<T> rvalue {lhs->size() + rhs.size()};
+		text<T> rvalue {lhs.size() + rhs.size()};
 
 		// copy lhs
 		rvalue += lhs;
@@ -2566,7 +2579,7 @@ public:
 	template<size_t N>
 	friend auto operator==(const text<T>& lhs, const T (&rhs)[N]) -> bool
 	{
-		if (lhs.size() != N)
+		if (lhs.size() != N - 1)
 		{
 			return false;
 		}

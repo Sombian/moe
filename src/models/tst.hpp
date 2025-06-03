@@ -164,7 +164,10 @@ public:
 	{
 		for (const auto& [first, second] : args)
 		{
-			this->operator[](utf8{first}) = second;
+			if (first != nullptr) // short-circuit
+			{
+				this->operator[](utf8 {first}) = second;
+			}
 		}
 	}
 
@@ -173,7 +176,10 @@ public:
 	{
 		for (const auto& [first, second] : args)
 		{
-			this->operator[](utf16{first}) = second;
+			if (first != nullptr) // short-circuit
+			{
+				this->operator[](utf16 {first}) = second;
+			}
 		}
 	}
 
@@ -182,7 +188,10 @@ public:
 	{
 		for (const auto& [first, second] : args)
 		{
-			this->operator[](utf32{first}) = second;
+			if (first != nullptr) // short-circuit
+			{
+				this->operator[](utf32 {first}) = second;
+			}
 		}
 	}
 

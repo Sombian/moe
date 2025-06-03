@@ -172,7 +172,7 @@ class linter
 			}
 			return E
 			(
-				u8"variable '%s' is redefined in the same scope"
+				u8"variable definition '%s' already exists"
 				|
 				ast.name // YES WE CAN! string interpolation
 			);
@@ -192,7 +192,7 @@ class linter
 			}
 			return E
 			(
-				u8"function '%s' is redefined in the same scope"
+				u8"function definition '%s' already exists"
 				|
 				ast.name // YES WE CAN! string interpolation
 			);
@@ -212,7 +212,7 @@ class linter
 			}
 			return E
 			(
-				u8"trait '%s' is redefined in the same scope"
+				u8"trait definition '%s' already exists"
 				|
 				ast.name // YES WE CAN! string interpolation
 			);
@@ -232,7 +232,7 @@ class linter
 			}
 			return E
 			(
-				u8"class '%s' is redefined in the same scope"
+				u8"class definition '%s' already exists"
 				|
 				ast.name // YES WE CAN! string interpolation
 			);
@@ -281,7 +281,7 @@ class linter
 							{
 								return E
 								(
-									u8"cannot set constant variable '%s'"
+									u8"cannot assign to constant variable '%s'"
 									|
 									var->name // YES WE CAN! string interpolation
 								);

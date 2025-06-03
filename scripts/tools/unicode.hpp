@@ -3,6 +3,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <memory>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -327,7 +328,7 @@ namespace setup
 		/**/ std::vector<props> stage3; std::map<props, uint16_t> stage3map; /**/
 		/***********************************************************************/
 
-		std::array<props, 0x10FFFF + 1> POOL {};
+		auto POOL {std::make_unique<props[]>(0x10FFFF + 1)};
 
 		//|-----------------------|
 		//| step 1. populate pool |
