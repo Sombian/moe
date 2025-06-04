@@ -170,12 +170,7 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E
-			(
-				u8"variable definition '%s' already exists"
-				|
-				ast.name // YES WE CAN! string interpolation
-			);
+			return E(u8"variable definition '%s' already exists" | ast.name);
 		}
 
 		static constexpr
@@ -190,12 +185,7 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E
-			(
-				u8"function definition '%s' already exists"
-				|
-				ast.name // YES WE CAN! string interpolation
-			);
+			return E(u8"function definition '%s' already exists" | ast.name);
 		}
 
 		static constexpr
@@ -210,12 +200,7 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E
-			(
-				u8"trait definition '%s' already exists"
-				|
-				ast.name // YES WE CAN! string interpolation
-			);
+			return E(u8"trait definition '%s' already exists" | ast.name);
 		}
 
 		static constexpr
@@ -230,12 +215,7 @@ class linter
 					return std::nullopt;
 				}
 			}
-			return E
-			(
-				u8"class definition '%s' already exists"
-				|
-				ast.name // YES WE CAN! string interpolation
-			);
+			return E(u8"class definition '%s' already exists" | ast.name);
 		}
 
 		static constexpr
@@ -276,20 +256,16 @@ class linter
 						{
 							if (auto var {resolve<$var*>(_ctx, (*ptr)->name)})
 							{
-								if (!(*var <= ast))
+								// check span
+								if (*var < ast)
 								{
-									continue;
+									// check meta
+									if (!var->is_const)
+									{
+										return std::nullopt;
+									}
+									return E(u8"cannot assign to constant variable '%s'" | var->name);
 								}
-								if (!var->is_const)
-								{
-									break;
-								}
-								return E
-								(
-									u8"cannot assign to constant variable '%s'"
-									|
-									var->name // YES WE CAN! string interpolation
-								);
 							}
 						}
 					}
@@ -324,27 +300,26 @@ class linter
 			{
 				if (auto ptr {resolve<$var*>(_ctx, ast.name)})
 				{
-					return std::nullopt;
+					// check span
+					if (*ptr < ast) { return std::nullopt; }
 				}
 				if (auto ptr {resolve<$fun*>(_ctx, ast.name)})
 				{
-					return std::nullopt;
+					// check span
+					if (*ptr < ast) { return std::nullopt; }
 				}
 				if (auto ptr {resolve<$trait*>(_ctx, ast.name)})
 				{
-					return std::nullopt;
+					// check span
+					if (*ptr < ast) { return std::nullopt; }
 				}
 				if (auto ptr {resolve<$class*>(_ctx, ast.name)})
 				{
-					return std::nullopt;
+					// check span
+					if (*ptr < ast) { return std::nullopt; }
 				}
 			}
-			return E
-			(
-				u8"cannot find definition for symbol '%s'"
-				|
-				ast.name // YES WE CAN! string interpolation
-			);
+			return E(u8"cannot find definition for symbol '%s'" | ast.name);
 		}
 
 		static inline

@@ -8,6 +8,18 @@ struct span
 	uint16_t x;
 	uint16_t y;
 
-	bool operator==(const span&) const = default;
-	auto operator<=>(const span&) const = default;
+	constexpr friend
+	auto operator<=>
+	(
+		const span& lhs,
+		const span& rhs
+	)
+	{
+		const auto cmp {lhs.y <=> rhs.y};
+		// 'Y' has higher prioity over 'X'
+		return cmp != 0 ? cmp : lhs.x <=> rhs.x;
+	}
 };
+
+static_assert(span { .x {1}, .y {0} } < span { .x {0}, .y {1} });
+static_assert(span { .x {0}, .y {2} } < span { .x {1}, .y {2} });
