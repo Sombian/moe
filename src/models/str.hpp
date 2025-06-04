@@ -82,7 +82,12 @@ requires
 )
 class text
 {
-	#define IS_BIG (std::endian::native == std::endian::big)
+	#define IS_BIG          \
+	(                       \
+		std::endian::native \
+		         !=         \
+		std::endian::little \
+	)                       \
 
 	enum tag : uint8_t
 	{
@@ -251,7 +256,7 @@ public:
 				}
 			}
 			// post update...
-			this->large.data = data;
+			this->large.data = data; // :3
 			this->large.metadata = tag::LARGE;
 		}
 		else if (value < this->capacity())
@@ -653,7 +658,7 @@ public:
 
 	text(const size_t size) : text()
 	{
-		this->capacity(size); // reserve
+		this->capacity(size);
 	}
 
 	template<size_t N>
@@ -2873,13 +2878,11 @@ void utf8::codec::decode(const char8_t* in, char32_t& out, width_t width)
 {
 	switch (width)
 	{
-		case -1:
 		case +1:
 		{
 			out = in[0];
 			break;
 		}
-		case -2:
 		case +2:
 		{
 			out = 0;
@@ -2887,7 +2890,6 @@ void utf8::codec::decode(const char8_t* in, char32_t& out, width_t width)
 			out |= (in[1] & 0x3F) << 00;
 			break;
 		}
-		case -3:
 		case +3:
 		{
 			out = 0;
@@ -2896,7 +2898,6 @@ void utf8::codec::decode(const char8_t* in, char32_t& out, width_t width)
 			out |= (in[2] & 0x3F) << 00;
 			break;
 		}
-		case -4:
 		case +4:
 		{
 			out = 0;
@@ -2951,13 +2952,11 @@ void utf16::codec::encode(const char32_t in, char16_t* out, width_t width)
 {
 	switch (width)
 	{
-		case -1:
 		case +1:
 		{
 			out[0] = in;
 			break;
 		}
-		case -2:
 		case +2:
 		{
 			const auto code {in - 0x10000};
@@ -2978,13 +2977,11 @@ void utf16::codec::decode(const char16_t* in, char32_t& out, width_t width)
 {
 	switch (width)
 	{
-		case -1:
 		case +1:
 		{
 			out = in[0];
 			break;
 		}
-		case -2:
 		case +2:
 		{
 			out = 0x10000; // no plus op

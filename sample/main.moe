@@ -17,11 +17,14 @@
 
 let! foo: i32 = 1;
 let! bar: i32 = 2;
-let! bar: i32 = 3;
 
 fun! main(): i32
 {
+	let foo: i32 = 1;
+	let bar: i32 = 3;
+
 	foo += bar;
+	bar += foo;
 
 	return a + b;
 }

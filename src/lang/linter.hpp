@@ -274,11 +274,16 @@ class linter
 					{
 						for (auto _ctx {ctx}; _ctx; _ctx = _ctx->upper)
 						{
-							auto var {resolve<$var*>(_ctx, (*ptr)->name)};
-
-							// checking '<=' since src position does matter
-							if (var != nullptr && var->is_const && *var <= ast)
+							if (auto var {resolve<$var*>(_ctx, (*ptr)->name)})
 							{
+								if (!(*var <= ast))
+								{
+									continue;
+								}
+								if (!var->is_const)
+								{
+									break;
+								}
 								return E
 								(
 									u8"cannot assign to constant variable '%s'"

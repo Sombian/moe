@@ -9,19 +9,19 @@
 auto main() -> int
 {
 	#ifdef _WIN32
-	// see [launch.json]
-	if (std::getenv("MSVC"))
-	{
-		//|-----<change code page>-----|
-		std::system("chcp 65001 > NUL");
-		//|----------------------------|
-	}
-	#endif
+	//|-----<change code page>-----|
+	std::system("chcp 65001 > NUL");
+	//|----------------------------|
+	#endif//WIN32
 
 	if (auto io {fs::open(u8"sample/main.moe")})
 	{
 		std::visit([&](auto&& file)
 		{
+			//|-----------------------|
+			//| [source] → [frontend] |
+			//|-----------------------|
+
 			lexer
 			<
 				decltype(file.path),
@@ -43,9 +43,13 @@ auto main() -> int
 			>
 			linter {&parser};
 
-			if (auto&& exe {linter.pull()})
+			//|------------------------|
+			//| [frontend] → [backend] |
+			//|------------------------|
+
+			if (auto& exe {linter.pull()})
 			{
-				// exe->print();
+				
 			}
 		},
 		io.value());
