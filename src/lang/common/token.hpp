@@ -225,7 +225,7 @@ auto operator<<(std::ostream& os, const atom data) -> std::ostream&
 		#undef macro
 		default:
 		{
-			assert(!!!"error");
+			assert(!"[ERROR]");
 			std::unreachable();
 		}
 	}

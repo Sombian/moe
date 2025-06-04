@@ -388,7 +388,12 @@ namespace setup
 		//|-----------------------|
 
 		write_stage1(stage1, "src/data/stage1.txt");
+		std::cout << "[✓] 'stage1.txt'" << '\n';
+
 		write_stage2(stage2, "src/data/stage2.txt");
+		std::cout << "[✓] 'stage2.txt'" << '\n';
+
 		write_stage3(stage3, "src/data/stage3.txt");
+		std::cout << "[✓] 'stage3.txt'" << '\n';
 	}
 }

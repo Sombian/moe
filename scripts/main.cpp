@@ -3,6 +3,4 @@
 auto main() -> int
 {
 	setup::unicode();
-
-	return 0;
 }

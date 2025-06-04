@@ -34,11 +34,13 @@ namespace fs
 	{
 		auto sys {std::filesystem::path(path.c_str())};
 
+		std::cout << std::filesystem::current_path() << '\n';
+
 		if (std::ifstream ifs {sys, std::ios::binary})
 		{
-			#ifndef NDEBUG //------------------------|
-			std::cout << (u8"OK '%s'" | path) << '\n';
-			#endif //--------------------------------|
+			#ifndef NDEBUG //-------------------------|
+			std::cout << (u8"[✓] '%s'" | path) << '\n';
+			#endif //---------------------------------|
 
 			enum encoding : uint8_t
 			{
@@ -162,7 +164,7 @@ namespace fs
 						{
 							if (ifs.read(reinterpret_cast<char*>(&code), sizeof(unit)); code != '\n')
 							{
-								assert(!!!"error");
+								assert(!"[ERROR]");
 								std::unreachable();
 							}
 						}
@@ -186,7 +188,7 @@ namespace fs
 						{
 							if (ifs.read(reinterpret_cast<char*>(&code), sizeof(unit)); (code = std::byteswap(code)) != '\n')
 							{
-								assert(!!!"error");
+								assert(!"[ERROR]");
 								std::unreachable();
 							}
 						}
@@ -308,7 +310,7 @@ namespace fs
 		else
 		{
 			#ifndef NDEBUG //-------------------------|
-			std::cout << (u8"BAD '%s'" | path) << '\n';
+			std::cout << (u8"[✗] '%s'" | path) << '\n';
 			#endif //---------------------------------|
 		}
 		return std::nullopt;

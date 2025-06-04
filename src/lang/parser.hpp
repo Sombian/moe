@@ -24,8 +24,8 @@ class parser
 {
 	lexer<A, B>* lexer;
 	
-	uint16_t x;
-	uint16_t y;
+	uint16_t x {0};
+	uint16_t y {0};
 	//|---------<buffer>---------|
 	decltype(lexer->pull()) buffer;
 	//|--------------------------|
@@ -71,29 +71,15 @@ class parser
 		{
 			typedef std::decay_t<decltype(arg)> T;
 
-			if constexpr (std::is_same_v<T, token<A, B>>)
+			if constexpr (!std::is_same_v<T, eof>)
 			{
-				this->x = arg.x;
-				this->y = arg.y;
-
 				#ifndef NDEBUG //-------|
 				std::cout << arg << '\n';
 				#endif //---------------|
-
-				return /**/ arg /**/;
-			}
-			if constexpr (std::is_same_v<T, error<A, B>>)
-			{
 				this->x = arg.x;
 				this->y = arg.y;
-
-				#ifndef NDEBUG //-------|
-				std::cout << arg << '\n';
-				#endif //---------------|
-
-				return std::nullopt;
 			}
-			return std::nullopt;
+			return this->peek();
 		},
 		this->buffer);
 	}
@@ -127,29 +113,15 @@ class parser
 		{
 			typedef std::decay_t<decltype(arg)> T;
 
-			if constexpr (std::is_same_v<T, token<A, B>>)
+			if constexpr (!std::is_same_v<T, eof>)
 			{
-				this->x = arg.x;
-				this->y = arg.y;
-
 				#ifndef NDEBUG //-------|
 				std::cout << arg << '\n';
 				#endif //---------------|
-
-				return arg == type;
-			}
-			if constexpr (std::is_same_v<T, error<A, B>>)
-			{
 				this->x = arg.x;
 				this->y = arg.y;
-
-				#ifndef NDEBUG //-------|
-				std::cout << arg << '\n';
-				#endif //---------------|
-
-				return false;
 			}
-			return false;
+			return this->peek(type);
 		},
 		this->buffer);
 	}
@@ -168,12 +140,11 @@ public:
 
 			if constexpr (!std::is_same_v<T, eof>)
 			{
-				this->x = arg.x;
-				this->y = arg.y;
-
 				#ifndef NDEBUG //-------|
 				std::cout << arg << '\n';
 				#endif //---------------|
+				this->x = arg.x;
+				this->y = arg.y;
 			}
 		},
 		this->buffer);
@@ -1149,7 +1120,7 @@ private:
 										}
 										default:
 										{
-											assert(!!!"error");
+											assert(!"[ERROR]");
 											std::unreachable();
 										}
 									}

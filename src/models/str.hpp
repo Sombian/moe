@@ -4,11 +4,13 @@
 #include <vector>
 #include <string>
 #include <cassert>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
-#include <ostream>
 #include <utility>
+#include <ostream>
+#include <concepts>
+#include <algorithm>
 #include <type_traits>
 
 #include "utils/ordering.hpp"
@@ -199,13 +201,13 @@ public:
 		{
 			case tag::SMALL:
 			{
-				//|------------|    |---[big endian]---|
-				//| 0bXXXXXXX0 | -> | skip right 1 bit |
-				//|------------|    |------------------|
-
 				//|------------|    |-[little endian]-|
 				//| 0b0XXXXXXX | -> | no need to skip |
 				//|------------|    |-----------------|
+
+				//|------------|    |---[big endian]---|
+				//| 0bXXXXXXX0 | -> | skip right 1 bit |
+				//|------------|    |------------------|
 
 				return MAX - (this->bytes[RMB] >> SFT);
 			}
@@ -222,44 +224,46 @@ public:
 	// setter
 	auto size(const size_t value)
 	{
-		if (this->capacity() < value)
+		if (this->capacity() < value + 1)
 		{
 			allocate:
-			auto data {new T[value]};
+			auto data {new T[value + 1]};
+
+			// pre update...
+			this->large.size = value + 0;
+			this->large.capacity = value + 1;
 
 			switch (this->mode())
 			{
 				// S -> L
 				case tag::SMALL:
 				{
-					std::copy(std::begin(this->small), std::end(this->small), data);
+					std::ranges::copy(this->small, data);
 					// delete[] this->small;
 					break;
 				}
 				// L -> L
 				case tag::LARGE:
 				{
-					std::copy(std::begin(this->large), std::end(this->large), data);
+					std::ranges::copy(this->large, data);
 					delete[] this->large.data;
 					break;
 				}
 			}
+			// post update...
 			this->large.data = data;
-			this->large.size = value;
-			this->large.capacity = value;
 			this->large.metadata = tag::LARGE;
 		}
-		else // no need for extra capacity
+		else if (value < this->capacity())
 		{
 			switch (this->mode())
 			{
 				// L -> L
 				case tag::LARGE:
 				{
+					this->large.size = value;
 					// terminate
 					this->large[value] = '\0';
-					// write size
-					this->large.size = value;
 					break;
 				}
 				// S -> S
@@ -268,23 +272,23 @@ public:
 					assert(value <= RMB);
 
 					auto slot {MAX - value};
-					// terminate
-					this->small[value] = '\0';
-
-					//|------------|    |---[big endian]---|
-					//| 0bXXXXXXX0 | -> | skip right 1 bit |
-					//|------------|    |------------------|
 
 					//|------------|    |-[little endian]-|
 					//| 0b0XXXXXXX | -> | no need to skip |
 					//|------------|    |-----------------|
 
+					//|------------|    |---[big endian]---|
+					//| 0bXXXXXXX0 | -> | skip right 1 bit |
+					//|------------|    |------------------|
+
 					this->bytes[RMB] = slot << SFT;
+					// terminate
+					this->small[value] = '\0';
 					break;
 				}
 			}
 		}
-		assert(this->size() <= this->capacity());
+		assert(this->size() < this->capacity());
 	}
 
 	// getter
@@ -318,24 +322,25 @@ public:
 				// S -> L
 				case tag::SMALL:
 				{
-					std::copy(std::begin(this->small), std::end(this->small), data);
+					std::ranges::copy(this->small, data);
 					// delete[] this->small;
 					break;
 				}
 				// L -> L
 				case tag::LARGE:
 				{
-					std::copy(std::begin(this->large), std::end(this->large), data);
+					std::ranges::copy(this->large, data);
 					delete[] this->large.data;
 					break;
 				}
 			}
+			// post update...
 			this->large.data = data;
 			this->large.size = size;
 			this->large.capacity = value;
 			this->large.metadata = tag::LARGE;
 		}
-		else // no need for extra capacity
+		else if (value < this->capacity())
 		{
 			switch (this->mode())
 			{
@@ -352,7 +357,7 @@ public:
 				}
 			}
 		}
-		assert(this->size() <= this->capacity());
+		assert(this->size() < this->capacity());
 	}
 
 private:
@@ -469,27 +474,18 @@ private:
 							const size_t old_l {this->src.size()};
 							const size_t new_l {old_l + (b - a)};
 
-							if (this->src.capacity() < new_l)
+							if (this->src.capacity() < new_l + 1)
 							{
 								this->src.capacity(new_l * 2);
 							}
 							// copy right->left
-							std::copy_backward
+							std::ranges::copy_backward
 							(
 								ptr + i + b,
 								ptr + old_l,
 								ptr + i + a
 							);
 							this->src.size(new_l);
-							break;
-						}
-						//|---|--------------|
-						//| a | source range |
-						//|---|--------------|
-						//| b | source range |
-						//|---|--------------|
-						case utils::ordering::EQUAL:
-						{
 							break;
 						}
 						//|-------|--------------|
@@ -503,7 +499,7 @@ private:
 							const size_t new_l {old_l - (a - b)};
 
 							// copy left->right
-							std::copy
+							std::ranges::copy
 							(
 								ptr + i + b,
 								ptr + old_l,
@@ -610,12 +606,12 @@ public:
 	{
 		const auto N {from.size()};
 
-		if (dest.capacity() < N)
+		if (dest.capacity() < N + 1)
 		{
-			dest.capacity(N);
+			dest.capacity(N + 1);
 		}
 		// copy data
-		std::copy
+		std::ranges::copy
 		(
 			from.c_str() + 0,
 			from.c_str() + N,
@@ -657,7 +653,7 @@ public:
 
 	text(const size_t size) : text()
 	{
-		this->capacity(size);
+		this->capacity(size); // reserve
 	}
 
 	template<size_t N>
@@ -668,7 +664,7 @@ public:
 		// check mode
 		assert(this->mode() == tag::SMALL);
 		// write data
-		std::copy(str, str + N, this->small);
+		std::ranges::copy(str, str + N, this->small);
 	}
 
 	template<size_t N>
@@ -679,18 +675,18 @@ public:
 		// check mode
 		assert(this->mode() == tag::LARGE);
 		// write data
-		std::copy(str, str + N, this->large.data);
+		std::ranges::copy(str, str + N, this->large.data);
 	}
 
 	text(const T* ptr) : text()
 	{
 		if (ptr != nullptr)
 		{
-			auto N {std::char_traits<T>::length(ptr)};
+			const auto N {std::char_traits<T>::length(ptr)};
 			// copy meta
 			this->size(N);
 			// copy data
-			std::copy(ptr, ptr + N + 1, this->c_str());
+			std::ranges::copy(ptr, ptr + N + 1, this->c_str());
 		}
 	}
 
@@ -873,7 +869,7 @@ public:
 
 		auto to_utf8() const -> text<char8_t>
 		{
-			text<char8_t> rvalue {this->size()};
+			text<char8_t> rvalue {this->size() + 1};
 
 			char8_t* ptr {rvalue.c_str()};
 
@@ -891,7 +887,7 @@ public:
 
 		auto to_utf16() const -> text<char16_t>
 		{
-			text<char16_t> rvalue {this->size()};
+			text<char16_t> rvalue {this->size() + 1};
 
 			char16_t* ptr {rvalue.c_str()};
 
@@ -909,7 +905,7 @@ public:
 
 		auto to_utf32() const -> text<char32_t>
 		{
-			text<char32_t> rvalue {this->size()};
+			text<char32_t> rvalue {this->size() + 1};
 
 			char32_t* ptr {rvalue.c_str()};
 
@@ -1130,7 +1126,7 @@ public:
 					}
 				}
 				// rest of the slice
-				if (head < this->tail)
+				if (head <= this->tail)
 				{
 					result.emplace_back(head, this->tail);
 				}
@@ -1187,7 +1183,7 @@ public:
 					tail += width;
 				}
 				// rest of the slice
-				if (head < this->tail)
+				if (head <= this->tail)
 				{
 					result.emplace_back(head, this->tail);
 				}
@@ -1232,7 +1228,7 @@ public:
 				}
 			}
 			// rest of the slice
-			if (head < this->tail)
+			if (head <= this->tail)
 			{
 				result.emplace_back(head, this->tail);
 			}
@@ -1263,7 +1259,7 @@ public:
 				tail += width;
 			}
 			// rest of the slice
-			if (head < this->tail)
+			if (head <= this->tail)
 			{
 				result.emplace_back(head, this->tail);
 			}
@@ -1969,7 +1965,7 @@ public:
 				}
 			}
 			// rest of the slice
-			if (head < LAST)
+			if (head <= LAST)
 			{
 				result.emplace_back(head, LAST);
 			}
@@ -2029,7 +2025,7 @@ public:
 				tail += width;
 			}
 			// rest of the slice
-			if (head < LAST)
+			if (head <= LAST)
 			{
 				result.emplace_back(head, LAST);
 			}
@@ -2077,7 +2073,7 @@ public:
 			}
 		}
 		// rest of the slice
-		if (head < LAST)
+		if (head <= LAST)
 		{
 			result.emplace_back(head, LAST);
 		}
@@ -2111,7 +2107,7 @@ public:
 			tail += width;
 		}
 		// rest of the slice
-		if (head < LAST)
+		if (head <= LAST)
 		{
 			result.emplace_back(head, LAST);
 		}
@@ -2209,7 +2205,7 @@ public:
 	class builder
 	{
 		// fragments of source
-		std::vector<slice> frag;
+		std::vector<text<T>> atom;
 		// arguments to concat
 		std::vector<text<T>> args;
 
@@ -2217,7 +2213,7 @@ public:
 		{
 			return // until N = N' + 1
 			(
-				this->frag.size() + 0
+				this->atom.size() + 0
 				==
 				this->args.size() + 1
 			);
@@ -2225,8 +2221,43 @@ public:
 
 	public:
 
-		builder(const slice& str) : frag {str.split(u8"%s")} {}
-		builder(const text<T>& str) : frag {str.split(u8"%s")} {}
+		builder(const slice& str)
+		{
+			for (auto& _ : str.split(u8"%s"))
+			{
+				if constexpr (std::same_as<T, char8_t>)
+				{
+					this->atom.emplace_back(_.to_utf8());
+				}
+				if constexpr (std::same_as<T, char16_t>)
+				{
+					this->atom.emplace_back(_.to_utf16());
+				}
+				if constexpr (std::same_as<T, char32_t>)
+				{
+					this->atom.emplace_back(_.to_utf32());
+				}
+			}
+		}
+
+		builder(const text<T>& str)
+		{
+			for (auto& _ : str.split(u8"%s"))
+			{
+				if constexpr (std::same_as<T, char8_t>)
+				{
+					this->atom.emplace_back(_.to_utf8());
+				}
+				if constexpr (std::same_as<T, char16_t>)
+				{
+					this->atom.emplace_back(_.to_utf16());
+				}
+				if constexpr (std::same_as<T, char32_t>)
+				{
+					this->atom.emplace_back(_.to_utf32());
+				}
+			}
+		}
 
 		//|-----------------|
 		//| member function |
@@ -2245,7 +2276,7 @@ public:
 				{
 					size_t impl {0};
 
-					for (auto& _ : this->frag) { impl += _.size(); }
+					for (auto& _ : this->atom) { impl += _.size(); }
 					for (auto& _ : this->args) { impl += _.size(); }
 
 					return impl + 1;
@@ -2255,11 +2286,11 @@ public:
 			// mix and join
 			for (size_t i {0}; i < args.size(); ++i)
 			{
-				result += this->frag[i]; // write
+				result += this->atom[i]; // write
 				result += this->args[i]; // write
 			}
 			// last fragment
-			result += this->frag.back();
+			result += this->atom.back();
 
 			return result;
 		}
@@ -2354,65 +2385,51 @@ public:
 	//| lhs += rhs |
 	//|------------|
 
+	/*************<ptr & offset>**************/
+	#define BUFFER this->c_str() + this->size()
+	/*****************************************/
+
 	template<typename U>
 	auto operator+=(const text<U>& rhs) -> text<T>
 	{
+		const auto total {this->size() + rhs.size()};
+
 		if constexpr (std::is_same_v<T, U>)
 		{
-			const auto total {this->size() + rhs.size()};
-
-			if (this->capacity() < total)
+			if (this->capacity() < total + 1)
 			{
-				this->capacity(total);
+				this->capacity(total + 1);
 			}
+			assert(BUFFER != nullptr);
+
 			auto const N {rhs.size()};
-			// copy data
-			std::copy
+
+			std::ranges::copy
 			(
 				rhs.c_str() + 0,
 				rhs.c_str() + N,
-				// destination
-				this->c_str() + this->size()
+				// dest
+				BUFFER
 			);
-			// update size
+
 			this->size(total);
 
 			return *this;
 		}
 		else // if (!std::is_same_v<T, U>)
 		{
-			const auto total
+			if constexpr (std::is_same_v<T, char8_t>)
 			{
-				this->size()
-				+
-				(
-					rhs.size()
-					*
-					(
-						sizeof(T)
-						/
-						sizeof(U)
-					)
-				)
-			};
-
-			if (this->capacity() < total)
-			{
-				this->capacity(total);
+				return *this += rhs.to_utf8();
 			}
-			// write to ptr with offset of 'size()'
-			const T* ptr {this->c_str() + this->size()};
-
-			for (const auto code : rhs)
+			if constexpr (std::is_same_v<T, char16_t>)
 			{
-				auto width {text<T>::codec::width(code)};
-				text<T>::codec::encode(code, ptr, width);
-				ptr += width;
+				return *this += rhs.to_utf16();
 			}
-			// update size
-			this->size(this->size() + (ptr - this->c_str()));
-
-			return *this;
+			if constexpr (std::is_same_v<T, char32_t>)
+			{
+				return *this += rhs.to_utf32();
+			}
 		}
 	}
 
@@ -2420,17 +2437,18 @@ public:
 	{
 		const auto total {this->size() + rhs.size()};
 
-		if (this->capacity() < total)
+		if (this->capacity() < total + 1)
 		{
-			this->capacity(total);
+			this->capacity(total + 1);
 		}
+		assert(BUFFER != nullptr);
 
-		std::copy
+		std::ranges::copy
 		(
 			rhs.head + 0,
 			rhs.tail + 0,
-			// destination
-			this->c_str() + this->size()
+			// dest
+			BUFFER
 		);
 
 		this->size(total);
@@ -2443,23 +2461,26 @@ public:
 	{
 		const auto total {this->size() + N - 1};
 
-		if (this->capacity() < total)
+		if (this->capacity() < total + 1)
 		{
-			this->capacity(total);
+			this->capacity(total + 1);
 		}
+		assert(BUFFER != nullptr);
 
-		std::copy
+		std::ranges::copy
 		(
 			rhs + 0,
 			rhs + N,
-			// destination
-			this->c_str() + this->size()
+			// dest
+			BUFFER
 		);
 
 		this->size(total);
 
 		return *this;
 	}
+
+	#undef BUFFER
 
 	//|-----------|
 	//| lhs + rhs |
@@ -2841,7 +2862,7 @@ void utf8::codec::encode(const char32_t in, char8_t* out, width_t width)
 		}
 		default:
 		{
-			assert(!!!"error");
+			assert(!"[ERROR]");
 			std::unreachable();
 		}
 	}
@@ -2887,7 +2908,7 @@ void utf8::codec::decode(const char8_t* in, char32_t& out, width_t width)
 		}
 		default:
 		{
-			assert(!!!"error");
+			assert(!"[ERROR]");
 			std::unreachable();
 		}
 	}
@@ -2946,7 +2967,7 @@ void utf16::codec::encode(const char32_t in, char16_t* out, width_t width)
 		}
 		default:
 		{
-			assert(!!!"error");
+			assert(!"[ERROR]");
 			std::unreachable();
 		}
 	}
@@ -2973,7 +2994,7 @@ void utf16::codec::decode(const char16_t* in, char32_t& out, width_t width)
 		}
 		default:
 		{
-			assert(!!!"error");
+			assert(!"[ERROR]");
 			std::unreachable();
 		}
 	}

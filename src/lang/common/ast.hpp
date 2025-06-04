@@ -98,7 +98,7 @@ auto operator<<(std::ostream& os, const op_l op) -> std::ostream&
 		#undef macro
 		default:
 		{
-			assert(!!!"error");
+			assert(!"[ERROR]");
 			std::unreachable();
 		}
 	}
@@ -120,7 +120,7 @@ auto operator<<(std::ostream& os, const op_i op) -> std::ostream&
 		#undef macro
 		default:
 		{
-			assert(!!!"error");
+			assert(!"[ERROR]");
 			std::unreachable();
 		}
 	}
@@ -142,7 +142,7 @@ auto operator<<(std::ostream& os, const op_r op) -> std::ostream&
 		#undef macro
 		default:
 		{
-			assert(!!!"error");
+			assert(!"[ERROR]");
 			std::unreachable();
 		}
 	}
@@ -218,7 +218,7 @@ auto operator<<(std::ostream& os, const data tp) -> std::ostream&
 		}
 		default:
 		{
-			assert(!!!"error");
+			assert(!"[ERROR]");
 			std::unreachable();
 		}
 	}
@@ -289,7 +289,7 @@ namespace lang
 			#undef macro
 			default:
 			{
-				assert(!!!"error");
+				assert(!"[ERROR]");
 				std::unreachable();
 			}
 		}
@@ -342,7 +342,7 @@ namespace lang
 			#undef macro
 			default:
 			{
-				assert(!!!"error");
+				assert(!"[ERROR]");
 				std::unreachable();
 			}
 		}
@@ -395,7 +395,7 @@ namespace lang
 			#undef macro
 			default:
 			{
-				assert(!!!"error");
+				assert(!"[ERROR]");
 				std::unreachable();
 			}
 		}

@@ -1,19 +1,21 @@
+#include <cstdlib>
+
 #include "core/fs.hpp"
 
 #include "lang/lexer.hpp"
-#include "lang/parser.hpp"
 #include "lang/linter.hpp"
+#include "lang/parser.hpp"
 
 auto main() -> int
 {
 	#ifdef _WIN32
-		// see [launch.json]
-		if (std::getenv("MSVC"))
-		{
-			//-----<change code page>-----//
-			std::system("chcp 65001 > NUL");
-			//----------------------------//
-		}
+	// see [launch.json]
+	if (std::getenv("MSVC"))
+	{
+		//|-----<change code page>-----|
+		std::system("chcp 65001 > NUL");
+		//|----------------------------|
+	}
 	#endif
 
 	if (auto io {fs::open(u8"sample/main.moe")})
@@ -48,6 +50,5 @@ auto main() -> int
 		},
 		io.value());
 	}
-
 	return 0;
 }

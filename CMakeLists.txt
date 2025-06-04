@@ -18,31 +18,34 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-	add_link_options(-w -fsanitize=address -g)
-	add_compile_options(-w -fsanitize=address -g)
+if (MSVC)
+	add_link_options(/fsanitize=undefined /fsanitize=address /utf-8)
+	add_compile_options(/fsanitize=undefined /fsanitize=address /utf-8)
+else()
+#	add_link_options(-fsanitize=undefined -fsanitize=address -utf-8)
+#	add_compile_options(-fsanitize=undefined -fsanitize=address -utf-8)
 endif()
 
 #------------#
 # executable #
 #------------#
 
+add_executable(tools
+	scripts/main.cpp
+)
+
 add_executable(${PROJECT_NAME}
 	src/main.cpp
 )
 
-add_executable(codegen_auto
-	scripts/main.cpp
-)
-
-target_include_directories(${PROJECT_NAME}
+target_include_directories(tools
 	PUBLIC
 		${CMAKE_SOURCE_DIR}/src
 	PRIVATE
 		${CMAKE_SOURCE_DIR}/3rd-party
 )
 
-target_include_directories(codegen_auto
+target_include_directories(${PROJECT_NAME}
 	PUBLIC
 		${CMAKE_SOURCE_DIR}/src
 	PRIVATE
@@ -72,22 +75,22 @@ target_include_directories(codegen_auto
 
 add_custom_command(WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 	DEPENDS
-		codegen_auto
+		tools
 	COMMAND
-		codegen_auto
+		tools
 	OUTPUT
 		${CMAKE_SOURCE_DIR}/src/data/stage1.txt
 		${CMAKE_SOURCE_DIR}/src/data/stage2.txt
 		${CMAKE_SOURCE_DIR}/src/data/stage3.txt
 )
 
-add_custom_target(codegen_files ALL COMMENT "[codegen]"
+add_custom_target(autogen ALL COMMENT "<-----<BUILT>---->"
 	DEPENDS
 		${CMAKE_SOURCE_DIR}/src/data/stage1.txt
 		${CMAKE_SOURCE_DIR}/src/data/stage2.txt
 		${CMAKE_SOURCE_DIR}/src/data/stage3.txt
 )
 
-#------------------<IMPORTANT>------------------#
-add_dependencies(${PROJECT_NAME} codegen_files) #
-#-----------------------------------------------#
+#---------------<IMPORTANT>---------------#
+add_dependencies(${PROJECT_NAME} autogen) #
+#-----------------------------------------#
