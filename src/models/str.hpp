@@ -234,10 +234,6 @@ public:
 			allocate:
 			auto data {new T[value + 1]};
 
-			// pre update...
-			this->large.size = value + 0;
-			this->large.capacity = value + 1;
-
 			switch (this->mode())
 			{
 				// S -> L
@@ -255,8 +251,9 @@ public:
 					break;
 				}
 			}
-			// post update...
-			this->large.data = data; // :3
+			this->large.data = data;
+			this->large.size = value + 0;
+			this->large.capacity = value + 1;
 			this->large.metadata = tag::LARGE;
 		}
 		else if (value < this->capacity())
@@ -339,7 +336,6 @@ public:
 					break;
 				}
 			}
-			// post update...
 			this->large.data = data;
 			this->large.size = size;
 			this->large.capacity = value;

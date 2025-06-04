@@ -15,9 +15,14 @@ struct span
 		const span& rhs
 	)
 	{
-		const auto cmp {lhs.y <=> rhs.y};
-		// 'Y' has higher prioity over 'X'
-		return cmp != 0 ? cmp : lhs.x <=> rhs.x;
+		return
+		(
+			lhs.y != rhs.y
+			?
+			lhs.y <=> rhs.y
+			:
+			lhs.x <=> rhs.x
+		);
 	}
 };
 

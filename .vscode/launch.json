@@ -10,7 +10,7 @@
 			"cwd": "${workspaceFolder}",
 			// full path to the executable
 			"program": "${command:cmake.launchTargetPath}",
-			"environment": [{ "name": "GCC", "value": "ok" }],
+			"environment": [{ "name": "GCC", "value": "on" }],
 		},
 		{
 			"name": "MSVC",
@@ -21,7 +21,7 @@
 			"cwd": "${workspaceFolder}",
 			// full path to the executable
 			"program": "${command:cmake.launchTargetPath}",
-			"environment": [{ "name": "MSVC", "value": "ok" }],
+			"environment": [{ "name": "MSVC", "value": "on" }],
 		},
 	],
 	"version": "0.2.0",

@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 # set project #
 #-------------#
 
-project(moe LANGUAGES CXX)
+project(moe LANGUAGES C CXX)
 
 #--------------#
 # C++ settings #
@@ -14,6 +14,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# find_package(LLVM REQUIRED CONFIG)
+# add_definitions(${LLVM_DEFINITIONS})
+# include_directories(${LLVM_INCLUDE_DIRS})
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
@@ -22,8 +26,8 @@ if (MSVC)
 	add_link_options(/fsanitize=undefined /fsanitize=address /utf-8)
 	add_compile_options(/fsanitize=undefined /fsanitize=address /utf-8)
 else()
-#	add_link_options(-fsanitize=undefined -fsanitize=address -utf-8)
-#	add_compile_options(-fsanitize=undefined -fsanitize=address -utf-8)
+	# add_link_options(-fsanitize=undefined -fsanitize=address -utf-8)
+	# add_compile_options(-fsanitize=undefined -fsanitize=address -utf-8)
 endif()
 
 #------------#

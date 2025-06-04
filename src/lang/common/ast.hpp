@@ -10,6 +10,7 @@
 #include "./token.hpp"
 
 #include "models/str.hpp"
+
 #include "traits/printable.hpp"
 #include "traits/rule_of_5.hpp"
 

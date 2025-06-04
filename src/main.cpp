@@ -8,11 +8,15 @@
 
 auto main() -> int
 {
-	#ifdef _WIN32
-	//|-----<change code page>-----|
-	std::system("chcp 65001 > NUL");
-	//|----------------------------|
-	#endif//WIN32
+	// see [launch.json]
+	if (std::getenv("MSVC"))
+	{
+		#ifdef _WIN32
+		//|-----<change code page>-----|
+		std::system("chcp 65001 > NUL");
+		//|----------------------------|
+		#endif//WIN32
+	}
 
 	if (auto io {fs::open(u8"sample/main.moe")})
 	{
