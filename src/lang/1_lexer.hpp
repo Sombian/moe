@@ -1,10 +1,8 @@
 #pragma once
 
-#include <deque>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <numeric>
 #include <variant>
 
 #include "core/fs.hpp"
@@ -14,6 +12,7 @@
 #include "./common/eof.hpp"
 #include "./common/token.hpp"
 #include "./common/error.hpp"
+#include "./common/trail.hpp"
 
 #include "utils/unicode.hpp"
 #include "utils/ordering.hpp"
@@ -25,123 +24,10 @@ template
 >
 class lexer
 {
-	class trail
-	{
-		// column
-		class proxy_x
-		{
-			std::deque<size_t>& data;
-
-		public:
-
-			proxy_x(decltype(data) data) : data {data} {}
-
-			//|-----------------|
-			//| member function |
-			//|-----------------|
-			
-			operator size_t() const
-			{
-				return this->data.back();
-			}
-
-			auto operator++() -> size_t
-			{
-				++this->data.back();
-				return this->data.back();
-			}
-
-			auto operator--() -> size_t
-			{
-				--this->data.back();
-				return this->data.back();
-			}
-		};
-
-		// line
-		class proxy_y
-		{
-			std::deque<size_t>& data;
-
-		public:
-
-			proxy_y(decltype(data) data) : data {data} {}
-
-			//|-----------------|
-			//| member function |
-			//|-----------------|
-
-			operator size_t() const
-			{
-				return this->data.size();
-			}
-
-			auto operator++() -> size_t
-			{
-				this->data.push_back(0);
-				return this->data.size();
-			}
-
-			auto operator--() -> size_t
-			{
-				this->data.pop_back();
-				return this->data.size();
-			}
-		};
-
-		std::deque<size_t> data
-		{
-			0 // <- column
-		};
-
-	public:
-
-		trail() = default;
-
-		//|-----------------|
-		//| member function |
-		//|-----------------|
-
-		// offset
-		operator size_t() const
-		{
-			return std::reduce
-			(
-				this->data.begin(),
-				// begin ~ end
-				this->data.end()
-			);
-		}
-
-		// x = column
-		auto x() const -> size_t
-		{
-			return this->data.back();
-		}
-
-		// x = column
-		auto x() -> proxy_x
-		{
-			return {this->data};
-		}
-
-		// y = line
-		auto y() const -> size_t
-		{
-			return this->data.size();
-		}
-
-		// y = line
-		auto y() -> proxy_y
-		{
-			return {this->data};
-		}
-	}
-	span;
-
 	//|-----<file>-----|
 	fs::file<A, B>* src;
 	//|----------------|
+	trail jar;
 	uint16_t x;
 	uint16_t y;
 	decltype(src->data.begin()) it;
@@ -170,21 +56,21 @@ class lexer
 
 	auto next() -> char32_t
 	{
-		//---------------------//
-		this->out = *this->it; //
-		//---------------------//
+		//|------------------|
+		this->out = *this->it;
+		//|------------------|
 		++this->it;
 
 		switch (this->out)
 		{
 			case '\n':
 			{
-				++this->span.y();
+				++this->jar.y();
 				break;
 			}
 			default:
 			{
-				++this->span.x();
+				++this->jar.x();
 				break;
 			}
 		}
@@ -194,20 +80,20 @@ class lexer
 	auto back() -> char32_t
 	{
 		--this->it;
-		//---------------------//
-		this->out = *this->it; //
-		//---------------------//
+		//|------------------|
+		this->out = *this->it;
+		//|------------------|
 
 		switch (this->out)
 		{
 			case '\n':
 			{
-				--this->span.y();
+				--this->jar.y();
 				break;
 			}
 			default:
 			{
-				--this->span.x();
+				--this->jar.x();
 				break;
 			}
 		}
@@ -231,24 +117,15 @@ public:
 		return this->src;
 	}
 
-	auto pull() -> std::variant
-	<
-		token<A, B>,
-		error<A, B>,
-		eof /* OK */
-	>
+	auto pull() -> std::variant<token<A, B>, error<A, B>, eof>
 	{
 		for
 		(
-			this->ptr = &this->it,
-			this->x = this->span.x(),
-			this->y = this->span.y()
+			this->ptr = &this->it, this->x = this->jar.x(), this->y = this->jar.y()
 			;
 			this->next()
 			;
-			this->ptr = &this->it,
-			this->x = this->span.x(),
-			this->y = this->span.y()
+			this->ptr = &this->it, this->x = this->jar.x(), this->y = this->jar.y()
 		)
 		{
 			switch (this->out)
@@ -609,7 +486,7 @@ private:
 		}
 
 		// skip unnecessary iteration
-		if (!(!s_len == 0 && view.is_leaf()))
+		if (!(s_len != 0 && view.is_leaf()))
 		{
 			for (size_t i {1}; this->next(); ++i)
 			{
@@ -646,7 +523,7 @@ private:
 			}
 			case utils::ordering::GREATER:
 			{
-				return T(*view.get()); // <- always deref
+				return T(view.get().value_or(atom::SYMBOL));
 			}
 		}
 		assert(false && "-Wreturn-type");

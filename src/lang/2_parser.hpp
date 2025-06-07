@@ -7,11 +7,14 @@
 #include <utility>
 #include <variant>
 #include <optional>
+#include <iostream>
 #include <functional>
+#include <type_traits>
 
-#include "lang/lexer.hpp"
+#include "lang/1_lexer.hpp"
 
 #include "./common/ast.hpp"
+#include "./common/eof.hpp"
 #include "./common/error.hpp"
 #include "./common/token.hpp"
 
@@ -50,11 +53,11 @@ class parser
 
 			if constexpr (std::is_same_v<T, token<A, B>>)
 			{
-				return /**/ arg /**/;
+				return arg;
 			}
 			if constexpr (std::is_same_v<T, error<A, B>>)
 			{
-				return std::nullopt;
+				throw arg;
 			}
 			return std::nullopt;
 		},
@@ -96,7 +99,7 @@ class parser
 			}
 			if constexpr (std::is_same_v<T, error<A, B>>)
 			{
-				return false;
+				throw /*|*/arg;/*|*/
 			}
 			return false;
 		},
@@ -159,43 +162,55 @@ public:
 		return *this->lexer;
 	}
 
-	auto pull() -> std::optional<program>
+	auto pull() -> program<A, B>
 	{
-		program exe;
-		try
+		program<A, B> exe;
+
+		while (this->peek())
 		{
-			while (true)
+			try
 			{
 				if (auto out {this->decl_t()})
 				{
 					//|-------------<insert>-------------|
-					exe.ast.emplace_back(std::move(*out));
+					exe.body.emplace_back(std::move(*out));
 					//|----------------------------------|
 					continue;
 				}
 				if (auto out {this->stmt_t()})
 				{
 					//|-------------<insert>-------------|
-					exe.ast.emplace_back(std::move(*out));
+					exe.body.emplace_back(std::move(*out));
 					//|----------------------------------|
 					continue;
 				}
-				break;
-			}
-			// if not EOF
-			if (this->peek())
-			{
 				throw E(u8"[parser] unknown decl/stmt");
 			}
+			catch (error<A, B>& out)
+			{
+				//|-------------<insert>-------------|
+				exe.fault.emplace_back(std::move(out));
+				//|----------------------------------|
+				
+				// TODO: better error recovery
+				while (auto tkn {this->next()})
+				{
+					switch (tkn->type)
+					{
+						case atom::S_COLON:
+						case atom::R_BRACE:
+						case atom::R_BRACK:
+						case atom::R_PAREN:
+						{
+							this->next();
+							goto exit;
+						}
+					}
+				}
+				exit:
+			}
 		}
-		catch (error<A, B>& error)
-		{
-			#ifndef NDEBUG //---------|
-			std::cout << error << '\n';
-			#endif //-----------------|
-			return std::nullopt;
-		}
-		return exe;
+		return std::move(exe);
 	}
 
 private:
@@ -206,7 +221,7 @@ private:
 
 	auto decl_t() -> std::optional<decl>
 	{
-		if (const auto tkn {this->peek()})
+		if (auto tkn {this->peek()})
 		{
 			switch (tkn->type)
 			{
@@ -490,7 +505,7 @@ private:
 
 	auto stmt_t() -> std::optional<stmt>
 	{
-		if (const auto tkn {this->peek()})
+		if (auto tkn {this->peek()})
 		{
 			switch (tkn->type)
 			{
@@ -1201,10 +1216,10 @@ private:
 							//|------------------------|
 
 							start:
-							if (auto ast {this->expr_t()})
+							if (auto out {this->expr_t()})
 							{
 								//|--------------<insert>--------------|
-								node.args.emplace_back(std::move(*ast));
+								node.args.emplace_back(std::move(*out));
 								//|------------------------------------|
 
 								if (this->peek(atom::COMMA))

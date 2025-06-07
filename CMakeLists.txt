@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
 
-#-------------#
-# set project #
-#-------------#
-
 project(moe LANGUAGES C CXX)
 
 #--------------#
@@ -14,13 +10,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# find_package(LLVM REQUIRED CONFIG)
-# add_definitions(${LLVM_DEFINITIONS})
-# include_directories(${LLVM_INCLUDE_DIRS})
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
+
 
 if (MSVC)
 	add_link_options(/fsanitize=undefined /fsanitize=address /utf-8)
@@ -30,30 +23,54 @@ else()
 	# add_compile_options(-fsanitize=undefined -fsanitize=address -utf-8)
 endif()
 
-#------------#
-# executable #
-#------------#
+#----------------#
+# configure LLVM #
+#----------------#
+
+find_package(LLVM REQUIRED CONFIG)
+add_definitions(${LLVM_DEFINITIONS})
+include_directories(${LLVM_INCLUDE_DIRS})
+
+#------------------#
+# configure: tools #
+#------------------#
 
 add_executable(tools
-	scripts/main.cpp
+	codegen/main.cpp
 )
 
-add_executable(${PROJECT_NAME}
-	src/main.cpp
+target_link_libraries(tools
+	LLVMCore
+	LLVMSupport
+	LLVMIRReader
 )
 
 target_include_directories(tools
 	PUBLIC
 		${CMAKE_SOURCE_DIR}/src
 	PRIVATE
-		${CMAKE_SOURCE_DIR}/3rd-party
+		${CMAKE_SOURCE_DIR}/externs
+)
+
+#--------------------#
+# configure: project #
+#--------------------#
+
+add_executable(${PROJECT_NAME}
+	src/main.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}
+	LLVMCore
+	LLVMSupport
+	LLVMIRReader
 )
 
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
 		${CMAKE_SOURCE_DIR}/src
 	PRIVATE
-		${CMAKE_SOURCE_DIR}/3rd-party
+		${CMAKE_SOURCE_DIR}/externs
 )
 
 #----------------#

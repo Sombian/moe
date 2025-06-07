@@ -32,7 +32,7 @@ namespace
 	auto UnicodeData(const type::string auto& name) -> std::set<uint32_t>
 	{
 		static auto UnicodeData // <- cache the file
-		{fs::open(u8"scripts/auto/UnicodeData.txt")};
+		{fs::open(u8"codegen/auto/UnicodeData.txt")};
 
 		std::set<uint32_t> result;
 
@@ -74,7 +74,7 @@ namespace detail
 	auto CaseFolding(const type::string auto& name) -> std::set<uint32_t>
 	{
 		static auto CaseFolding // <- cache the file
-		{fs::open(u8"scripts/auto/CaseFolding.txt")};
+		{fs::open(u8"codegen/auto/CaseFolding.txt")};
 
 		std::set<uint32_t> result;
 
@@ -116,7 +116,7 @@ namespace detail
 	auto CompositionExclusions(const type::string auto& name) -> std::set<uint32_t>
 	{
 		static auto CompositionExclusions // <- cache the file
-		{fs::open(u8"scripts/auto/CompositionExclusions.txt")};
+		{fs::open(u8"codegen/auto/CompositionExclusions.txt")};
 
 		std::set<uint32_t> result;
 
@@ -159,7 +159,7 @@ namespace
 	auto DerivedCoreProperties(const type::string auto& name) -> std::set<uint32_t>
 	{
 		static auto DerivedCoreProperties // <- cache the file
-		{fs::open(u8"scripts/auto/DerivedCoreProperties.txt")};
+		{fs::open(u8"codegen/auto/DerivedCoreProperties.txt")};
 
 		std::set<uint32_t> result;
 

@@ -1,17 +1,17 @@
 #pragma once
 
 #include <deque>
+#include <vector>
 #include <memory>
 #include <variant>
 #include <cassert>
 #include <cstdint>
-#include <cstddef>
 
 #include "./token.hpp"
+#include "./error.hpp"
 
 #include "models/str.hpp"
 
-#include "traits/printable.hpp"
 #include "traits/rule_of_5.hpp"
 
 // lhs(prefix) operator
@@ -407,8 +407,8 @@ typedef std::variant
 <
 	std::unique_ptr<struct $var>,
 	std::unique_ptr<struct $fun>,
-	std::unique_ptr<struct $trait>,
-	std::unique_ptr<struct $class>
+	std::unique_ptr<struct $class>,
+	std::unique_ptr<struct $trait>
 >
 decl;
 
@@ -478,52 +478,52 @@ namespace lang
 {
 	struct visitor
 	{
-		virtual void visit(const only(decl)&) = 0;
-		virtual void visit(const many(decl)&) = 0;
+		virtual void visit(const only(decl)&) const = 0;
+		virtual void visit(const many(decl)&) const = 0;
 
-		virtual void visit(const only(stmt)&) = 0;
-		virtual void visit(const many(stmt)&) = 0;
+		virtual void visit(const only(stmt)&) const = 0;
+		virtual void visit(const many(stmt)&) const = 0;
 
-		virtual void visit(const only(expr)&) = 0;
-		virtual void visit(const many(expr)&) = 0;
+		virtual void visit(const only(expr)&) const = 0;
+		virtual void visit(const many(expr)&) const = 0;
 
-		virtual void visit(const only(node)&) = 0;
-		virtual void visit(const many(node)&) = 0;
+		virtual void visit(const only(node)&) const = 0;
+		virtual void visit(const many(node)&) const = 0;
 
-		virtual void visit(const many(body)&) = 0;
+		virtual void visit(const many(body)&) const = 0;
 
 		//|---------------|
 		//| variant::decl |
 		//|---------------|
 
-		virtual void visit($var&) = 0;
-		virtual void visit($fun&) = 0;
-		virtual void visit($trait&) = 0;
-		virtual void visit($class&) = 0;
+		virtual void visit(const $var&) const = 0;
+		virtual void visit(const $fun&) const = 0;
+		virtual void visit(const $trait&) const = 0;
+		virtual void visit(const $class&) const = 0;
 
 		//|---------------|
 		//| variant::stmt |
 		//|---------------|
 
-		virtual void visit($if&) = 0;
-		virtual void visit($match&) = 0;
-		virtual void visit($for&) = 0;
-		virtual void visit($while&) = 0;
-		virtual void visit($break&) = 0;
-		virtual void visit($return&) = 0;
-		virtual void visit($continue&) = 0;
+		virtual void visit(const $if&) const = 0;
+		virtual void visit(const $for&) const = 0;
+		virtual void visit(const $match&) const = 0;
+		virtual void visit(const $while&) const = 0;
+		virtual void visit(const $break&) const = 0;
+		virtual void visit(const $return&) const = 0;
+		virtual void visit(const $continue&) const = 0;
 
 		//|---------------|
 		//| variant::expr |
 		//|---------------|
 
-		virtual void visit($unary&) = 0;
-		virtual void visit($binary&) = 0;
-		virtual void visit($literal&) = 0;
-		virtual void visit($symbol&) = 0;
-		virtual void visit($access&) = 0;
-		virtual void visit($group&) = 0;
-		virtual void visit($call&) = 0;
+		virtual void visit(const $unary&) const = 0;
+		virtual void visit(const $binary&) const = 0;
+		virtual void visit(const $literal&) const = 0;
+		virtual void visit(const $symbol&) const = 0;
+		virtual void visit(const $access&) const = 0;
+		virtual void visit(const $group&) const = 0;
+		virtual void visit(const $call&) const = 0;
 	};
 }
 
@@ -548,7 +548,7 @@ struct $var : public span
 	COPY_ASSIGNMENT($var) = delete;
 	MOVE_ASSIGNMENT($var) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $fun : public span
@@ -569,7 +569,7 @@ struct $fun : public span
 	COPY_ASSIGNMENT($fun) = delete;
 	MOVE_ASSIGNMENT($fun) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $trait : public span
@@ -585,7 +585,7 @@ struct $trait : public span
 	COPY_ASSIGNMENT($trait) = delete;
 	MOVE_ASSIGNMENT($trait) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $class : public span
@@ -601,7 +601,7 @@ struct $class : public span
 	COPY_ASSIGNMENT($class) = delete;
 	MOVE_ASSIGNMENT($class) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 //|---------------|
@@ -621,7 +621,7 @@ struct $if : public span
 	COPY_ASSIGNMENT($if) = delete;
 	MOVE_ASSIGNMENT($if) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $match : public span
@@ -638,7 +638,7 @@ struct $match : public span
 	COPY_ASSIGNMENT($match) = delete;
 	MOVE_ASSIGNMENT($match) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $for : public span
@@ -656,7 +656,7 @@ struct $for : public span
 	COPY_ASSIGNMENT($for) = delete;
 	MOVE_ASSIGNMENT($for) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $while : public span
@@ -672,7 +672,7 @@ struct $while : public span
 	COPY_ASSIGNMENT($while) = delete;
 	MOVE_ASSIGNMENT($while) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $break : public span
@@ -687,7 +687,7 @@ struct $break : public span
 	COPY_ASSIGNMENT($break) = delete;
 	MOVE_ASSIGNMENT($break) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $return : public span
@@ -702,7 +702,7 @@ struct $return : public span
 	COPY_ASSIGNMENT($return) = delete;
 	MOVE_ASSIGNMENT($return) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $continue : public span
@@ -717,7 +717,7 @@ struct $continue : public span
 	COPY_ASSIGNMENT($continue) = delete;
 	MOVE_ASSIGNMENT($continue) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 //|---------------|
@@ -737,7 +737,7 @@ struct $unary : public span
 	COPY_ASSIGNMENT($unary) = delete;
 	MOVE_ASSIGNMENT($unary) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $binary : public span
@@ -754,7 +754,7 @@ struct $binary : public span
 	COPY_ASSIGNMENT($binary) = delete;
 	MOVE_ASSIGNMENT($binary) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $literal : public span
@@ -770,7 +770,7 @@ struct $literal : public span
 	COPY_ASSIGNMENT($literal) = delete;
 	MOVE_ASSIGNMENT($literal) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $symbol : public span
@@ -785,7 +785,7 @@ struct $symbol : public span
 	COPY_ASSIGNMENT($symbol) = delete;
 	MOVE_ASSIGNMENT($symbol) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $access : public span
@@ -802,7 +802,7 @@ struct $access : public span
 	COPY_ASSIGNMENT($access) = delete;
 	MOVE_ASSIGNMENT($access) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $group : public span
@@ -817,7 +817,7 @@ struct $group : public span
 	COPY_ASSIGNMENT($group) = delete;
 	MOVE_ASSIGNMENT($group) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
 struct $call : public span
@@ -833,19 +833,224 @@ struct $call : public span
 	COPY_ASSIGNMENT($call) = delete;
 	MOVE_ASSIGNMENT($call) = default;
 
-	auto accept(lang::visitor& impl) { impl.visit(*this); }
+	auto accept(const lang::visitor& impl) const { impl.visit(*this); }
 };
 
-//|---------------|
-//| "TIRO FINALE" |
-//|---------------|
-
-struct program
+namespace lang
 {
-	class core : public lang::visitor
+	struct reflect : public lang::visitor
 	{
-		size_t tab {0};
+		void visit(const only(decl)& ast) const override
+		{
+			std::visit([&](auto&& arg)
+			{
+				arg->accept(*this);
+			},
+			ast);
+		}
+
+		void visit(const many(decl)& ast) const override
+		{
+			for (auto&& node : ast)
+			{
+				this->visit(node);
+			}
+		}
+
+		void visit(const only(stmt)& ast) const override
+		{
+			std::visit([&](auto&& arg)
+			{
+				arg->accept(*this);
+			},
+			ast);
+		}
+
+		void visit(const many(stmt)& ast) const override
+		{
+			for (auto&& node : ast)
+			{
+				this->visit(node);
+			}
+		}
+
+		void visit(const only(expr)& ast) const override
+		{
+			std::visit([&](auto&& arg)
+			{
+				arg->accept(*this);
+			},
+			ast);
+		}
+
+		void visit(const many(expr)& ast) const override
+		{
+			for (auto&& node : ast)
+			{
+				this->visit(node);
+			}
+		}
+
+		void visit(const only(node)& ast) const override
+		{
+			std::visit([&](auto&& arg)
+			{
+				this->visit(arg);
+			},
+			ast);
+		}
+
+		void visit(const many(node)& ast) const override
+		{
+			for (auto&& node : ast)
+			{
+				this->visit(node);
+			}
+		}
+
+		void visit(const many(body)& ast) const override
+		{
+			for (auto&& node : ast)
+			{
+				this->visit(node);
+			}
+		}
+
+		template
+		<
+			typename T
+		>
+		requires
+		(
+			std::is_same_v<T, many($var)>
+			||
+			std::is_same_v<T, many($fun)>
+		)
+		void visit(const T& _) const
+		{
+			for (auto&& node : _)
+			{ 
+				this->visit(node);
+			}
+		}
+
+		//|---------------|
+		//| variant::decl |
+		//|---------------|
+
+		void visit(const $var& ast) const override
+		{
+			this->visit(ast.init);
+		}
+
+		void visit(const $fun& ast) const override
+		{
+			this->visit(ast.args);
+			this->visit(ast.body);
+		}
+
+		void visit(const $trait& ast) const override
+		{
+			this->visit(ast.body);
+		}
+
+		void visit(const $class& ast) const override
+		{
+			this->visit(ast.body);
+		}
+
+		//|---------------|
+		//| variant::stmt |
+		//|---------------|
+
+		void visit(const $if& ast) const override
+		{
+			this->visit(ast.cases);
+			this->visit(ast.block);
+		}
+
+		void visit(const $for& ast) const override
+		{
+			this->visit(ast.setup);
+			this->visit(ast.input);
+			this->visit(ast.after);
+			this->visit(ast.block);
+		}
+
+		void visit(const $match& ast) const override
+		{
+			this->visit(ast.input);
+			this->visit(ast.cases);
+			this->visit(ast.block);
+		}
+
+		void visit(const $while& ast) const override
+		{
+			this->visit(ast.input);
+			this->visit(ast.block);
+		}
+
+		void visit(const $break& ast) const override
+		{
+			// nothing to do here
+		}
+
+		void visit(const $return& ast) const override
+		{
+			this->visit(ast.value);
+		}
+
+		void visit(const $continue& ast) const override
+		{
+			// nothing to do here
+		}
+
+		//|---------------|
+		//| variant::expr |
+		//|---------------|
+
+		void visit(const $unary& ast) const override
+		{
+			this->visit(ast.rhs);
+		}
+
+		void visit(const $binary& ast) const override 
+		{
+			this->visit(ast.lhs);
+			this->visit(ast.rhs);
+		}
+
+		void visit(const $literal& ast) const override
+		{
+			// nothing to do here
+		}
+
+		void visit(const $symbol& ast) const override
+		{
+			// nothing to do here
+		}
+
+		void visit(const $access& ast) const override
+		{
+			// nothing to do here
+		}
+
+		void visit(const $group& ast) const override
+		{
+			this->visit(ast.expr);
+		}
+
+		void visit(const $call& ast) const override
+		{
+			this->visit(ast.args);
+			this->visit(ast.call);
+		}
+	};
+
+	struct printer : public lang::visitor
+	{
 		std::ostream& out;
+		mutable size_t tab {0};
 
 		#define START          \
 		{                      \
@@ -864,7 +1069,7 @@ struct program
 			this->out << "\n"; \
 		}                      \
 
-		auto gap()
+		auto gap() const
 		{
 			for (size_t i {0}; i < this->tab; ++i)
 			{ /*-!-*/ this->out << "\t"; /*-!-*/ }
@@ -872,18 +1077,22 @@ struct program
 
 	public:
 
-		core(decltype(out) out) : out {out} {}
+		printer(decltype(out) out) : out {out} {}
 
 		//|-----------------|
 		//| member function |
 		//|-----------------|
 
-		void visit(traits::printable auto& ast)
+		template
+		<
+			traits::printable T
+		>
+		void visit(const T& ast) const
 		{
 			this->out << ast << "\n";
 		}
 
-		void visit(const only(decl)& ast) override
+		void visit(const only(decl)& ast) const override
 		{
 			std::visit([&](auto&& arg)
 			{
@@ -892,7 +1101,7 @@ struct program
 			ast);
 		}
 
-		void visit(const many(decl)& ast) override
+		void visit(const many(decl)& ast) const override
 		{
 			if (!ast.empty())
 			{
@@ -917,7 +1126,7 @@ struct program
 			}
 		}
 
-		void visit(const only(stmt)& ast) override
+		void visit(const only(stmt)& ast) const override
 		{
 			std::visit([&](auto&& arg)
 			{
@@ -926,7 +1135,7 @@ struct program
 			ast);
 		}
 
-		void visit(const many(stmt)& ast) override
+		void visit(const many(stmt)& ast) const override
 		{
 			if (!ast.empty())
 			{
@@ -951,7 +1160,7 @@ struct program
 			}
 		}
 
-		void visit(const only(expr)& ast) override
+		void visit(const only(expr)& ast) const override
 		{
 			std::visit([&](auto&& arg)
 			{
@@ -960,7 +1169,7 @@ struct program
 			ast);
 		}
 
-		void visit(const many(expr)& ast) override
+		void visit(const many(expr)& ast) const override
 		{
 			if (!ast.empty())
 			{
@@ -985,7 +1194,7 @@ struct program
 			}
 		}
 
-		void visit(const only(node)& ast) override
+		void visit(const only(node)& ast) const override
 		{
 			std::visit([&](auto&& arg)
 			{
@@ -994,7 +1203,7 @@ struct program
 			ast);
 		}
 
-		void visit(const many(node)& ast) override
+		void visit(const many(node)& ast) const override
 		{
 			if (!ast.empty())
 			{
@@ -1019,7 +1228,7 @@ struct program
 			}
 		}
 
-		void visit(const many(body)& ast) override
+		void visit(const many(body)& ast) const override
 		{
 			if (!ast.empty())
 			{
@@ -1054,7 +1263,7 @@ struct program
 			||
 			std::is_same_v<T, many($fun)>
 		)
-		void visit(T& _)
+		void visit(const T& _) const
 		{
 			if (!_.empty())
 			{
@@ -1083,7 +1292,7 @@ struct program
 		//| variant::decl |
 		//|---------------|
 
-		void visit($var& ast) override
+		void visit(const $var& ast) const override
 		{
 			START
 			this->gap(); this->out << "[var]\n";
@@ -1093,7 +1302,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($fun& ast) override
+		void visit(const $fun& ast) const override
 		{
 
 			START
@@ -1104,7 +1313,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($trait& ast) override
+		void visit(const $trait& ast) const override
 		{
 			START
 			this->gap(); this->out << "[trait]\n";
@@ -1113,7 +1322,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($class& ast) override
+		void visit(const $class& ast) const override
 		{
 			START
 			this->gap(); this->out << "[class]\n";
@@ -1126,7 +1335,7 @@ struct program
 		//| variant::stmt |
 		//|---------------|
 
-		void visit($if& ast) override
+		void visit(const $if& ast) const override
 		{
 			START
 			this->gap(); this->out << "[if]\n";
@@ -1135,7 +1344,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($for& ast) override
+		void visit(const $for& ast) const override
 		{
 			START
 			this->gap(); this->out << "[for]\n";
@@ -1146,7 +1355,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($match& ast) override
+		void visit(const $match& ast) const override
 		{
 			START
 			this->gap(); this->out << "[match]\n";
@@ -1156,7 +1365,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($while& ast) override
+		void visit(const $while& ast) const override
 		{
 			START
 			this->gap(); this->out << "[while]\n";
@@ -1165,7 +1374,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($break& ast) override
+		void visit(const $break& ast) const override
 		{
 			START
 			this->gap(); this->out << "[break]\n";
@@ -1173,7 +1382,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($return& ast) override
+		void visit(const $return& ast) const override
 		{
 			START
 			this->gap(); this->out << "[return]\n";
@@ -1181,7 +1390,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($continue& ast) override
+		void visit(const $continue& ast) const override
 		{
 			START
 			this->gap(); this->out << "[continue]\n";
@@ -1193,7 +1402,7 @@ struct program
 		//| variant::expr |
 		//|---------------|
 
-		void visit($unary& ast) override
+		void visit(const $unary& ast) const override
 		{
 			START
 			this->gap(); this->out << "[unary]\n";
@@ -1202,7 +1411,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($binary& ast) override
+		void visit(const $binary& ast) const override
 		{
 			START
 			this->gap(); this->out << "[binary]\n";
@@ -1212,7 +1421,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($literal& ast) override
+		void visit(const $literal& ast) const override
 		{
 			START
 			this->gap(); this->out << "[literal]\n";
@@ -1221,7 +1430,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($symbol& ast) override
+		void visit(const $symbol& ast) const override
 		{
 
 			START
@@ -1230,7 +1439,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($access& data) override
+		void visit(const $access& data) const override
 		{
 			START
 			this->gap(); this->out << "[access]\n";
@@ -1240,7 +1449,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($group& data) override
+		void visit(const $group& data) const override
 		{
 			START
 			this->gap(); this->out << "[group]\n";
@@ -1248,7 +1457,7 @@ struct program
 			CLOSE
 		}
 
-		void visit($call& data) override
+		void visit(const $call& data) const override
 		{
 			START
 			this->gap(); this->out << "[call]\n";
@@ -1260,10 +1469,24 @@ struct program
 		#undef START
 		#undef CLOSE
 	};
+}
 
-public:
+#undef only
+#undef many
 
-	many(node) ast;
+template
+<
+	type::string A,
+	type::string B
+>
+struct program
+{
+	//|-------<chore>------|
+	typedef error<A, B> fail;
+	//|--------------------|
+
+	std::vector<node> body;
+	std::vector<fail> fault;
 
 	program() = default;
 
@@ -1277,20 +1500,11 @@ public:
 	//| member function |
 	//|-----------------|
 
-	auto print() const
+	auto run(const lang::visitor& impl) const
 	{
-		core impl {std::cout};
-
-		for (auto&& node : this->ast)
+		for (auto&& node : this->body)
 		{
-			std::visit([&](auto&& arg)
-			{
-				impl.visit(arg);
-			},
-			node);
+			impl.visit(node);
 		}
 	}
 };
-
-#undef only
-#undef many

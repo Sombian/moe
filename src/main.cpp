@@ -1,15 +1,18 @@
 #include <cstdlib>
+#include <variant>
 
 #include "core/fs.hpp"
 
-#include "lang/lexer.hpp"
-#include "lang/linter.hpp"
-#include "lang/parser.hpp"
+#include "lang/1_lexer.hpp"
+#include "lang/2_parser.hpp"
+#include "lang/3_linter.hpp"
+// #include "lang/4_codegen.hpp"
 
 auto main() -> int
 {
-	// see [launch.json]
-	if (std::getenv("MSVC"))
+	utf8 path {u8"./samples/main.moe"};
+
+	#ifdef _MSC_VER
 	{
 		#ifdef _WIN32
 		//|-----<change code page>-----|
@@ -17,15 +20,12 @@ auto main() -> int
 		//|----------------------------|
 		#endif//WIN32
 	}
+	#endif//MSC_VER
 
-	if (auto io {fs::open(u8"sample/main.moe")})
+	if (auto io {fs::open(path)})
 	{
 		std::visit([&](auto&& file)
 		{
-			//|-----------------------|
-			//| [source] → [frontend] |
-			//|-----------------------|
-
 			lexer
 			<
 				decltype(file.path),
@@ -47,14 +47,14 @@ auto main() -> int
 			>
 			linter {&parser};
 
-			//|------------------------|
-			//| [frontend] → [backend] |
-			//|------------------------|
+			auto exe {linter.pull()};
 
-			if (auto& exe {linter.pull()})
+			for (auto& error : exe.fault)
 			{
-				
+				std::cout << error << '\n';
 			}
+
+			lang:;
 		},
 		io.value());
 	}

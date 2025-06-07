@@ -26,5 +26,5 @@ struct span
 	}
 };
 
-static_assert(span { .x {1}, .y {0} } < span { .x {0}, .y {1} });
-static_assert(span { .x {0}, .y {2} } < span { .x {1}, .y {2} });
+static_assert(span { .x = 1, .y = 0 } < span { .x = 0, .y = 1 });
+static_assert(span { .x = 0, .y = 2 } < span { .x = 1, .y = 2 });
