@@ -1,11 +1,13 @@
 #include <cstdlib>
 #include <variant>
+#include <iostream>
 
 #include "core/fs.hpp"
 
 #include "lang/1_lexer.hpp"
 #include "lang/2_parser.hpp"
 #include "lang/3_linter.hpp"
+#include "lang/common/ast.hpp"
 // #include "lang/4_codegen.hpp"
 
 auto main() -> int
@@ -47,14 +49,16 @@ auto main() -> int
 			>
 			linter {&parser};
 
-			auto exe {linter.pull()};
+			auto ast {linter.pull()};
 
-			for (auto& error : exe.fault)
+			#ifndef NDEBUG //-----|
+			lang::printer debugger
 			{
-				std::cout << error << '\n';
-			}
-
-			lang:;
+				std::cout
+			};
+			ast.dispatch(debugger);
+			#endif //-------------|
+			
 		},
 		io.value());
 	}

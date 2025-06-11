@@ -2,18 +2,15 @@
 
 #include <deque>
 #include <vector>
-#include <memory>
 #include <variant>
 #include <utility>
 #include <optional>
-#include <functional>
 #include <type_traits>
 
-#include "models/str.hpp"
+#include "./common/ast.hpp"
 
 #include "lang/2_parser.hpp"
 
-#include "./common/ast.hpp"
 
 template
 <
@@ -36,10 +33,10 @@ class linter
 
 		std::vector<std::variant
 		<
-			std::pair<utf8, const $var*>,
-			std::pair<utf8, const $fun*>,
-			std::pair<utf8, const $trait*>,
-			std::pair<utf8, const $class*>
+			std::pair<utf8, $var*>,
+			std::pair<utf8, $fun*>,
+			std::pair<utf8, $trait*>,
+			std::pair<utf8, $model*>
 		>>
 		define; // scalable..?
 
@@ -52,6 +49,9 @@ class linter
 		}
 	};
 
+	#undef only
+	#undef many
+
 	scope* ctx {new scope {nullptr}};
 	//|----------<buffer>----------|
 	decltype(parser->pull()) buffer;
@@ -62,7 +62,7 @@ class linter
 		typename T
 	>
 	static constexpr
-	auto lookup(scope* ctx, const utf8& name) -> T
+	auto lookup(scope* ctx, utf8& name) -> T
 	{
 		typedef std::pair<utf8, T> P;
 
@@ -86,9 +86,9 @@ class linter
 		typename T
 	>
 	static constexpr
-	auto inject(scope* ctx, const T& ast) -> many(utf8)
+	auto inject(scope* ctx, T& ast) -> std::vector<utf8>
 	{
-		many(utf8) report;
+		std::vector<utf8> report;
 
 		for (auto&& plugin : RULES)
 		{
@@ -121,90 +121,94 @@ public:
 		{
 			#define START                            \
 			{                                        \
-				scope* node {new scope {this->ptr}}; \
-				this->ptr->lower.emplace_back(node); \
-				this->ptr = this->ptr->lower.back(); \
+				scope* node {new scope {this->ctx}}; \
+				this->ctx->lower.emplace_back(node); \
+				this->ctx = this->ctx->lower.back(); \
 			}                                        \
 			
 			#define CLOSE                     \
 			{                                 \
-				this->ptr = this->ptr->upper; \
+				this->ctx = this->ctx->upper; \
 			}                                 \
 			
-			//|--<safe ptr--|
+			//|----<safe----|
 			linter<A, B>* src;
 			//|-------------|
-			mutable scope* ptr;
+			mutable scope* ctx;
 			
 		public:
-
-			using reflect::visit; // super
 
 			impl // visitor pattern impl
 			(
 				decltype(src) src
 			)
-			: src {src}, ptr {src->ctx} {}
+			: src {src}, ctx {src->ctx} {}
+		
+			//|-------------|
+			//| inheritance |
+			//|-------------|
+
+			using reflect::visit;
 			
 			//|---------------|
 			//| variant::decl |
 			//|---------------|
 
-			void visit(const $var& ast) const override
+			void visit($fun& ast) override
 			{
-				// insert to the ctx
-				{
-					this->ptr->define /* as same as the def idx */
-					.emplace_back(std::make_pair(ast.name, &ast));
-				}
-				this->visit(ast.init);
-			}
-
-			void visit(const $fun& ast) const override
-			{
-				START;
+				START
 
 				// insert to the ctx
 				{
-					this->ptr->define /* as same as the def idx */
+					this->ctx->define /* as same as the def idx */
 					.emplace_back(std::make_pair(ast.name, &ast));
 				}
 				this->visit(ast.args);
 				this->visit(ast.body);
 
-				CLOSE;
+				CLOSE
 			}
 
-			void visit(const $trait& ast) const override
+			void visit($var& ast) override
 			{
 				// insert to the ctx
 				{
-					this->ptr->define /* as same as the def idx */
+					this->ctx->define /* as same as the def idx */
 					.emplace_back(std::make_pair(ast.name, &ast));
 				}
-				this->visit(ast.body);
+				this->visit(ast.init);
 			}
 
-			void visit(const $class& ast) const override
+			void visit($model& ast) override
 			{
-				START;
+				START
 
 				// insert to the ctx
 				{
-					this->ptr->define /* as same as the def idx */
+					this->ctx->define /* as same as the def idx */
 					.emplace_back(std::make_pair(ast.name, &ast));
 				}
 				this->visit(ast.body);
 
-				CLOSE;
+				CLOSE
+			}
+
+			void visit($trait& ast) override
+			{
+				// insert to the ctx
+				{
+					this->ctx->define /* as same as the def idx */
+					.emplace_back(std::make_pair(ast.name, &ast));
+				}
+				this->visit(ast.body);
 			}
 
 			#undef START
 			#undef CLOSE
-		};
+		}
+		core {this};
 
-		const impl core {this};
-		this->buffer.run(core);
+		this->buffer.dispatch(core);
 	}
 
 	~linter()
@@ -227,76 +231,92 @@ public:
 		{	
 			#define CHECK                                \
 			{                                            \
-				for (auto& msg : inject(this->ptr, ast)) \
+				for (auto& msg : inject(this->ctx, ast)) \
 				{                                        \
-					this->src->buffer.fault.emplace_back \
+					$error report;                       \
+					                                     \
+					report.x = ast.x;                    \
+					report.y = ast.y;                    \
+					                                     \
+					/*|--------<update>--------|*/       \
+					report.data = std::move(msg);        \
+					/*|------------------------|*/       \
+					                                     \
+					this->src->buffer                    \
+					.body.emplace_back                   \
 					(                                    \
-						ast.x, ast.y, *this->src, msg    \
+						std::make_unique                 \
+						<decltype(report)>               \
+						(std::move(report))              \
 					);                                   \
 				}                                        \
 			}                                            \
 
 			#define START                        \
 			{                                    \
-				this->ptr = this->ptr->lower[0]; \
+				this->ctx = this->ctx->lower[0]; \
 			}                                    \
 			
 			#define CLOSE                     \
 			{                                 \
-				this->ptr = this->ptr->upper; \
-				this->ptr->lower.pop_front(); \
+				this->ctx = this->ctx->upper; \
+				this->ctx->lower.pop_front(); \
 			}                                 \
 			
-			//|--<safe ptr--|
+			//|----<safe----|
 			linter<A, B>* src;
 			//|-------------|
-			mutable scope* ptr;
+			mutable scope* ctx;
 
 		public:
-
-			using reflect::visit; // super
 
 			impl // visitor pattern impl
 			(
 				decltype(src) src
 			)
-			: src {src}, ptr {src->ctx} {}
+			: src {src}, ctx {src->ctx} {}
+		
+			//|-------------|
+			//| inheritance |
+			//|-------------|
+
+			using reflect::visit;
 
 			//|---------------|
 			//| variant::decl |
 			//|---------------|
 
-			void visit(const $var& ast) const override
+			void visit($fun& ast) override
 			{
-				CHECK;
-				this->visit(ast.init);
-			}
+				START
 
-			void visit(const $fun& ast) const override
-			{
-				START;
-
-				CHECK;
+				CHECK
 				this->visit(ast.args);
 				this->visit(ast.body);
 				
-				CLOSE;
+				CLOSE
 			}
 
-			void visit(const $trait& ast) const override
+			void visit($var& ast) override
 			{
-				CHECK;
-				this->visit(ast.body);
+				CHECK
+				this->visit(ast.init);
 			}
 
-			void visit(const $class& ast) const override
+			void visit($model& ast) override
 			{
-				START;
+				START
 
-				CHECK;
+				CHECK
 				this->visit(ast.body);
 
-				CLOSE;
+				CLOSE
+			}
+
+			void visit($trait& ast) override
+			{
+				CHECK
+				this->visit(ast.body);
 			}
 
 			#undef START
@@ -306,109 +326,106 @@ public:
 			//| variant::stmt |
 			//|---------------|
 
-			void visit(const $if& ast) const override
+			void visit($if& ast) override
 			{
-				CHECK;
+				CHECK
 				this->visit(ast.cases);
 				this->visit(ast.block);
 			}
 
-			void visit(const $for& ast) const override
+			void visit($for& ast) override
 			{ 
-				CHECK;
+				CHECK
 				this->visit(ast.setup);
 				this->visit(ast.input);
 				this->visit(ast.after);
 				this->visit(ast.block);
 			}
 
-			void visit(const $match& ast) const override
+			void visit($match& ast) override
 			{
-				CHECK;
+				CHECK
 				this->visit(ast.input);
 				this->visit(ast.cases);
 				this->visit(ast.block);
 			}
 
-			void visit(const $while& ast) const override
+			void visit($while& ast) override
 			{
-				CHECK;
+				CHECK
 				this->visit(ast.input);
 				this->visit(ast.block);
 			}
 
-			void visit(const $break& ast) const override
+			void visit($break& ast) override
 			{
-				CHECK;
+				CHECK
 			}
 
-			void visit(const $return& ast) const override
+			void visit($return& ast) override
 			{
-				CHECK;
+				CHECK
 				this->visit(ast.value);
 			}
 
-			void visit(const $continue& ast) const override
+			void visit($continue& ast) override
 			{
-				CHECK;
+				CHECK
 			}
 
 			//|---------------|
 			//| variant::expr |
 			//|---------------|
 
-			void visit(const $unary& ast) const override
+			void visit($unary& ast) override
 			{
-				CHECK;
+				CHECK
 				this->visit(ast.rhs);
 			}
 
-			void visit(const $binary& ast) const override 
+			void visit($binary& ast) override
 			{
-				CHECK;
+				CHECK
 				this->visit(ast.lhs);
 				this->visit(ast.rhs);
 			}
 
-			void visit(const $literal& ast) const override
+			void visit($literal& ast) override
 			{
-				CHECK;
+				CHECK
 			}
 
-			void visit(const $symbol& ast) const override
+			void visit($symbol& ast) override
 			{
-				CHECK;
+				CHECK
 			}
 
-			void visit(const $access& ast) const override
+			void visit($access& ast) override
 			{
-				CHECK;
+				CHECK
 			}
 
-			void visit(const $group& ast) const override
+			void visit($group& ast) override
 			{
-				CHECK;
+				CHECK
 				this->visit(ast.expr);
 			}
 
-			void visit(const $call& ast) const override
+			void visit($call& ast) override
 			{
-				CHECK;
+				CHECK
 				this->visit(ast.args);
 				this->visit(ast.call);
 			}
 
 			#undef CHECK
-		};
-
-		const impl core {this};
-		this->buffer.run(core);
+		}
+		core {this};
+		
+		this->buffer.dispatch(core);
 
 		return std::move(this->buffer);
 	}
-
-	#undef only
-	#undef many
 
 private:
 
@@ -419,72 +436,59 @@ private:
 		//|---------------|
 		//| variant::decl |
 		//|---------------|
-		std::optional<utf8>(*)(scope*, const $var&),
-		std::optional<utf8>(*)(scope*, const $fun&),
-		std::optional<utf8>(*)(scope*, const $trait&),
-		std::optional<utf8>(*)(scope*, const $class&),
+		std::optional<utf8>(*)(scope*, $fun&),
+		std::optional<utf8>(*)(scope*, $var&),
+		std::optional<utf8>(*)(scope*, $model&),
+		std::optional<utf8>(*)(scope*, $trait&),
 		//|---------------|
 		//| variant::stmt |
 		//|---------------|
-		std::optional<utf8>(*)(scope*, const $if&),
-		std::optional<utf8>(*)(scope*, const $for&),
-		std::optional<utf8>(*)(scope*, const $match&),
-		std::optional<utf8>(*)(scope*, const $while&),
-		std::optional<utf8>(*)(scope*, const $break&),
-		std::optional<utf8>(*)(scope*, const $return&),
-		std::optional<utf8>(*)(scope*, const $continue&),
+		std::optional<utf8>(*)(scope*, $if&),
+		std::optional<utf8>(*)(scope*, $for&),
+		std::optional<utf8>(*)(scope*, $match&),
+		std::optional<utf8>(*)(scope*, $while&),
+		std::optional<utf8>(*)(scope*, $break&),
+		std::optional<utf8>(*)(scope*, $return&),
+		std::optional<utf8>(*)(scope*, $continue&),
 		//|---------------|
 		//| variant::expr |
 		//|---------------|
-		std::optional<utf8>(*)(scope*, const $unary&),
-		std::optional<utf8>(*)(scope*, const $binary&),
-		std::optional<utf8>(*)(scope*, const $literal&),
-		std::optional<utf8>(*)(scope*, const $symbol&),
-		std::optional<utf8>(*)(scope*, const $access&),
-		std::optional<utf8>(*)(scope*, const $group&),
-		std::optional<utf8>(*)(scope*, const $call&)
+		std::optional<utf8>(*)(scope*, $unary&),
+		std::optional<utf8>(*)(scope*, $binary&),
+		std::optional<utf8>(*)(scope*, $literal&),
+		std::optional<utf8>(*)(scope*, $symbol&),
+		std::optional<utf8>(*)(scope*, $access&),
+		std::optional<utf8>(*)(scope*, $group&),
+		std::optional<utf8>(*)(scope*, $call&)
 	>
 	RULES[]
 	{
-		[](scope* ctx, const $symbol& ast) -> std::optional<utf8>
+		[](scope* ctx, $symbol& ast) -> std::optional<utf8>
 		{
 			for (auto _ctx {ctx}; _ctx; _ctx = _ctx->upper)
 			{
-				if (auto ptr {lookup<const $var*>(_ctx, ast.name)})
+				if (auto ptr {lookup<$fun*>(_ctx, ast.name)})
 				{
 					if (*ptr < ast) { return std::nullopt; }
 				}
-				if (auto ptr {lookup<const $fun*>(_ctx, ast.name)})
+				if (auto ptr {lookup<$var*>(_ctx, ast.name)})
 				{
 					if (*ptr < ast) { return std::nullopt; }
 				}
-				if (auto ptr {lookup<const $trait*>(_ctx, ast.name)})
+				if (auto ptr {lookup<$model*>(_ctx, ast.name)})
 				{
 					if (*ptr < ast) { return std::nullopt; }
 				}
-				if (auto ptr {lookup<const $class*>(_ctx, ast.name)})
+				if (auto ptr {lookup<$trait*>(_ctx, ast.name)})
 				{
 					if (*ptr < ast) { return std::nullopt; }
 				}
 			}
 			return u8"cannot find definition for symbol '%s'" | ast.name;
 		},
-		[](scope* ctx, const $var& ast) -> std::optional<utf8>
+		[](scope* ctx, $fun& ast) -> std::optional<utf8>
 		{
-			if (auto ptr {lookup<const $var*>(ctx, ast.name)})
-			{
-				if (ptr->x == ast.x
-							&&
-					ptr->y == ast.y)
-				{
-					return std::nullopt;
-				}
-			}
-			return u8"variable definition '%s' already exists" | ast.name;
-		},
-		[](scope* ctx, const $fun& ast) -> std::optional<utf8>
-		{
-			if (auto ptr {lookup<const $fun*>(ctx, ast.name)})
+			if (auto ptr {lookup<$fun*>(ctx, ast.name)})
 			{
 				if (ptr->x == ast.x
 							&&
@@ -495,9 +499,9 @@ private:
 			}
 			return u8"function definition '%s' already exists" | ast.name;
 		},
-		[](scope* ctx, const $trait& ast) -> std::optional<utf8>
+		[](scope* ctx, $var& ast) -> std::optional<utf8>
 		{
-			if (auto ptr {lookup<const $trait*>(ctx, ast.name)})
+			if (auto ptr {lookup<$var*>(ctx, ast.name)})
 			{
 				if (ptr->x == ast.x
 							&&
@@ -506,11 +510,11 @@ private:
 					return std::nullopt;
 				}
 			}
-			return u8"trait definition '%s' already exists" | ast.name;
+			return u8"variable definition '%s' already exists" | ast.name;
 		},
-		[](scope* ctx, const $class& ast) -> std::optional<utf8>
+		[](scope* ctx, $model& ast) -> std::optional<utf8>
 		{
-			if (auto ptr {lookup<const $class*>(ctx, ast.name)})
+			if (auto ptr {lookup<$model*>(ctx, ast.name)})
 			{
 				if (ptr->x == ast.x
 							&&
@@ -521,7 +525,20 @@ private:
 			}
 			return u8"class definition '%s' already exists" | ast.name;
 		},
-		[](scope* ctx, const $binary& ast) -> std::optional<utf8>
+		[](scope* ctx, $trait& ast) -> std::optional<utf8>
+		{
+			if (auto ptr {lookup<$trait*>(ctx, ast.name)})
+			{
+				if (ptr->x == ast.x
+							&&
+					ptr->y == ast.y)
+				{
+					return std::nullopt;
+				}
+			}
+			return u8"trait definition '%s' already exists" | ast.name;
+		},
+		[](scope* ctx, $binary& ast) -> std::optional<utf8>
 		{
 			switch (ast.op)
 			{
@@ -538,7 +555,7 @@ private:
 			}
 			return std::nullopt;
 		},
-		[](scope* ctx, const $binary& ast) -> std::optional<utf8>
+		[](scope* ctx, $binary& ast) -> std::optional<utf8>
 		{
 			switch (ast.op)
 			{
@@ -555,7 +572,7 @@ private:
 			}
 			return std::nullopt;
 		},
-		[](scope* ctx, const $binary& ast) -> std::optional<utf8>
+		[](scope* ctx, $binary& ast) -> std::optional<utf8>
 		{
 			switch (ast.op)
 			{
@@ -571,7 +588,7 @@ private:
 					{
 						for (auto _ctx {ctx}; _ctx; _ctx = _ctx->upper)
 						{
-							if (auto var {lookup<const $var*>(_ctx, (*ptr)->name)})
+							if (auto var {lookup<$var*>(_ctx, (*ptr)->name)})
 							{
 								if (*var < ast)
 								{

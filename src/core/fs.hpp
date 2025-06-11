@@ -30,7 +30,15 @@ namespace fs
 	};
 
 	template<type::string T>
-	auto open(const T& path) -> std::optional<std::variant<file<T, utf8>, file<T, utf16>, file<T, utf32>>>
+	auto open(const T& path) -> std::optional
+	<
+		std::variant
+		<
+			file<T, utf8>,
+			file<T, utf16>,
+			file<T, utf32>
+		>
+	>
 	{
 		auto sys {std::filesystem::path(path.c_str())};
 
@@ -222,7 +230,8 @@ namespace fs
 
 					write_native(data);
 
-					return file<T, decltype(data)>{std::move(path), std::move(data)};
+					return file<T, decltype(data)>
+					{std::move(path), std::move(data)};
 				}
 				case UTF16_BE:
 				{
@@ -243,7 +252,8 @@ namespace fs
 					{
 						write_foreign(data);
 					}
-					return file<T, decltype(data)>{std::move(path), std::move(data)};
+					return file<T, decltype(data)>
+					{std::move(path), std::move(data)};
 				}
 				case UTF16_LE:
 				{
@@ -264,7 +274,8 @@ namespace fs
 					{
 						write_foreign(data);
 					}
-					return file<T, decltype(data)>{std::move(path), std::move(data)};
+					return file<T, decltype(data)>
+					{std::move(path), std::move(data)};
 				}
 				case UTF32_BE:
 				{
@@ -285,7 +296,8 @@ namespace fs
 					{
 						write_foreign(data);
 					}
-					return file<T, decltype(data)>{std::move(path), std::move(data)};
+					return file<T, decltype(data)>
+					{std::move(path), std::move(data)};
 				}
 				case UTF32_LE:
 				{
@@ -302,7 +314,8 @@ namespace fs
 					{
 						write_foreign(data);
 					}
-					return file<T, decltype(data)>{std::move(path), std::move(data)};
+					return file<T, decltype(data)>
+					{std::move(path), std::move(data)};
 				}
 			}
 			#undef IS_BIG

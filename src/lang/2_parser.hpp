@@ -15,7 +15,6 @@
 
 #include "./common/ast.hpp"
 #include "./common/eof.hpp"
-#include "./common/error.hpp"
 #include "./common/token.hpp"
 
 template
@@ -29,17 +28,10 @@ class parser
 	
 	uint16_t x {0};
 	uint16_t y {0};
+
 	//|---------<buffer>---------|
 	decltype(lexer->pull()) buffer;
 	//|--------------------------|
-
-	#define E(value) error<A, B> \
-	{                            \
-		this->x,                 \
-		this->y,                 \
-		*this,                   \
-		value,                   \
-	}                            \
 
 	//|---------------<maybe>--------------|
 	typedef std::optional<token<A, B>> maybe;
@@ -53,11 +45,7 @@ class parser
 
 			if constexpr (std::is_same_v<T, token<A, B>>)
 			{
-				return arg;
-			}
-			if constexpr (std::is_same_v<T, error<A, B>>)
-			{
-				throw arg;
+				return arg; // as-is
 			}
 			return std::nullopt;
 		},
@@ -96,10 +84,6 @@ class parser
 			if constexpr (std::is_same_v<T, token<A, B>>)
 			{
 				return arg == type;
-			}
-			if constexpr (std::is_same_v<T, error<A, B>>)
-			{
-				throw /*|*/arg;/*|*/
 			}
 			return false;
 		},
@@ -164,53 +148,35 @@ public:
 
 	auto pull() -> program<A, B>
 	{
-		program<A, B> exe;
+		program<A, B> ast;
 
 		while (this->peek())
 		{
-			try
-			{
-				if (auto out {this->decl_t()})
-				{
-					//|-------------<insert>-------------|
-					exe.body.emplace_back(std::move(*out));
-					//|----------------------------------|
-					continue;
-				}
-				if (auto out {this->stmt_t()})
-				{
-					//|-------------<insert>-------------|
-					exe.body.emplace_back(std::move(*out));
-					//|----------------------------------|
-					continue;
-				}
-				throw E(u8"[parser] unknown decl/stmt");
-			}
-			catch (error<A, B>& out)
+			if (auto out {this->decl_t()})
 			{
 				//|-------------<insert>-------------|
-				exe.fault.emplace_back(std::move(out));
-				//|----------------------------------|
-				
-				// TODO: better error recovery
-				while (auto tkn {this->next()})
+				std::visit([&](auto&& _)
 				{
-					switch (tkn->type)
-					{
-						case atom::S_COLON:
-						case atom::R_BRACE:
-						case atom::R_BRACK:
-						case atom::R_PAREN:
-						{
-							this->next();
-							goto exit;
-						}
-					}
-				}
-				exit:
+					ast.body.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
+				//|----------------------------------|
+				continue;
 			}
+			if (auto out {this->stmt_t()})
+			{
+				//|-------------<insert>-------------|
+				std::visit([&](auto&& _)
+				{
+					ast.body.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
+				//|----------------------------------|
+				continue;
+			}
+			// TODO: handle error
 		}
-		return std::move(exe);
+		return std::move(ast);
 	}
 
 private:
@@ -221,129 +187,85 @@ private:
 
 	auto decl_t() -> std::optional<decl>
 	{
-		if (auto tkn {this->peek()})
+		try
 		{
-			switch (tkn->type)
+			if (auto tkn {this->peek()})
 			{
-				case atom::LET:
+				switch (tkn->type)
 				{
-					return this->decl_var(false);
+					case atom::FUN:
+					{
+						return this->decl_fun(false);
+					}
+					case atom::FUN$:
+					{
+						return this->decl_fun(true);
+					}
+					case atom::LET:
+					{
+						return this->decl_var(false);
+					}
+					case atom::LET$:
+					{
+						return this->decl_var(true);
+					}
 				}
-				case atom::LET$:
-				{
-					return this->decl_var(true);
-				}
-				case atom::FUN:
-				{
-					return this->decl_fun(false);
-				}
-				case atom::FUN$:
-				{
-					return this->decl_fun(true);
-				}
+				return std::nullopt;
 			}
 		}
-		return std::nullopt;
-	}
-
-	auto decl_var(const bool is_const) -> decltype(this->decl_t())
-	{
-		$var node;
-		
-		node.x = this->x;
-		node.y = this->y;
-
-		this->next();
-
-		//|-------<update>------|
-		node.is_const = is_const;
-		//|---------------------|
-
-		if (this->peek(atom::SYMBOL))
+		catch (const char8_t* data)
 		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
+			$error report;
+
+			report.x = this->x;
+			report.y = this->y;
 
 			this->next();
 
-			//|----------<update>----------|
-			node.name = std::move(tkn.data);
-			//|----------------------------|
-		}
-		else throw E(u8"[parser] N/A <sym>");
+			//|---<update>---|
+			report.data = data;
+			//|--------------|
 
-		if (this->peek(atom::COLON))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] N/A ':'");
-
-		if (this->peek(atom::SYMBOL))
-		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
-
-			this->next();
-
-			//|----------<update>----------|
-			node.type = std::move(tkn.data);
-			//|----------------------------|
-		}
-		else throw E(u8"[parser] N/A <sym>");
-
-		if (!node.is_const)
-		{
-			if (this->peek(atom::ASSIGN))
+			while (auto tkn {this->peek()})
 			{
-				this->next();
-
-				//|--------------<catch>--------------|
-				node.init = *this->expr_t().or_else([&]
-					-> decltype(this->expr_t())
-				{ throw E(u8"[parser] N/A expr"); });
-				//|-----------------------------------|
+				switch (tkn->type)
+				{
+					// resync point
+					case atom::S_COLON:
+					case atom::R_BRACE:
+					case atom::R_BRACK:
+					case atom::R_PAREN:
+					{
+						this->next();
+						goto exit;
+					}
+					default:
+					{
+						this->next();
+						continue;
+					}
+				}
 			}
-			// else throw E(u8"[parser] must init const var");
+			exit: // or anonymous lambda..?
+	
+			return std::make_unique
+			<decltype(report)>(std::move(report));
 		}
-		else // let! name
-		{
-			if (this->peek(atom::ASSIGN))
-			{
-				this->next();
-
-				//|--------------<catch>--------------|
-				node.init = *this->expr_t().or_else([&]
-					-> decltype(this->expr_t())
-				{ throw E(u8"[parser] N/A expr"); });
-				//|-----------------------------------|
-			}
-			else throw E(u8"[parser] must init const var");
-		}
-
-		if (this->peek(atom::S_COLON))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] N/A ';'");
-
-		return std::make_unique /*(wrap)*/
-		<decltype(node)>(std::move(node));
+		assert(false && "-Wreturn-type");
 	}
 
 	auto decl_fun(const bool is_pure) -> decltype(this->decl_t())
 	{
-		$fun node;
+		$fun ast;
 
-		node.x = this->x;
-		node.y = this->y;
+		ast.x = this->x;
+		ast.y = this->y;
 		
 		this->next();
 
-		//|------<update>-----|
-		node.is_pure = is_pure;
-		//|-------------------|
+		//|-----<update>----|
+		ast.is_pure = is_pure;
+		//|-----------------|
 
 		if (this->peek(atom::SYMBOL))
 		{
@@ -353,17 +275,17 @@ private:
 
 			this->next();
 
-			//|----------<update>----------|
-			node.name = std::move(tkn.data);
-			//|----------------------------|
+			//|---------<update>---------|
+			ast.name = std::move(tkn.data);
+			//|--------------------------|
 		}
-		else throw E(u8"[parser] N/A <sym>");
+		else throw u8"[parser] N/A <sym>";
 	
 		if (this->peek(atom::L_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '('");
+		else throw u8"[parser] N/A '('";
 
 		start:
 		if (this->peek(atom::SYMBOL))
@@ -374,17 +296,17 @@ private:
 
 			this->next();
 			
-			$var args;
+			$var arg;
 
-			//|----------<update>----------|
-			args.name = std::move(tkn.data);
-			//|----------------------------|
+			//|---------<update>---------|
+			arg.name = std::move(tkn.data);
+			//|--------------------------|
 
 			if (this->peek(atom::COLON))
 			{
 				this->next();
 			}
-			else throw E(u8"[parser] N/A ':'");
+			else throw u8"[parser] N/A ':'";
 
 			if (this->peek(atom::SYMBOL))
 			{
@@ -394,47 +316,47 @@ private:
 
 				this->next();
 
-				//|----------<update>----------|
-				args.type = std::move(tkn.data);
-				//|----------------------------|
+				//|---------<update>---------|
+				arg.type = std::move(tkn.data);
+				//|--------------------------|
 			}
-			else throw E(u8"[parser] N/A <sym>");
+			else throw u8"[parser] N/A <sym>";
 
 			if (this->peek(atom::ASSIGN))
 			{
 				this->next();
 
 				//|--------------<catch>--------------|
-				args.init = *this->expr_t().or_else([&]
+				arg.init = *this->expr_t().or_else([&]
 					-> decltype(this->expr_t())
-				{ throw E(u8"[parser] N/A expr"); });
+				{ throw u8"[parser] invalid expr"; });
 				//|-----------------------------------|
 			}
-			// else throw E(u8"[parser] N/A '='");
+			// else throw u8"[parser] N/A '='";
 
-			//|--------------<insert>--------------|
-			node.args.emplace_back(std::move(args));
-			//|------------------------------------|
+			//|-------------<insert>-------------|
+			ast.args.emplace_back(std::move(arg));
+			//|----------------------------------|
 			
 			if (this->peek(atom::COMMA))
 			{
 				this->next();
 				goto start;
 			}
-			// else throw E(u8"[parser] N/A ','");
+			// else throw u8"[parser] N/A ','";
 		}
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A ')'");
+		else throw u8"[parser] N/A ')'";
 
 		if (this->peek(atom::COLON))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A ':'");
+		else throw u8"[parser] N/A ':'";
 
 		if (this->peek(atom::SYMBOL))
 		{
@@ -444,45 +366,57 @@ private:
 
 			this->next();
 
-			//|----------<update>----------|
-			node.type = std::move(tkn.data);
-			//|----------------------------|
+			//|---------<update>---------|
+			ast.type = std::move(tkn.data);
+			//|--------------------------|
 		}
-		else throw E(u8"[parser] N/A <sym>");
+		else throw u8"[parser] N/A <sym>";
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '{'");
+		else throw u8"[parser] N/A '{'";
 
 		while (true)
 		{
 			if (auto out {this->stmt_t()})
 			{
-				//|--------------<insert>--------------|
-				node.body.emplace_back(std::move(*out));
-				//|------------------------------------|
+				//|-------------<insert>-------------|
+				std::visit([&](auto&& _)
+				{
+					ast.body.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
+				//|----------------------------------|
 				continue;
 			}
 			if (auto out {this->decl_t()})
 			{
-				//|--------------<insert>--------------|
-				node.body.emplace_back(std::move(*out));
-				//|------------------------------------|
+				//|-------------<insert>-------------|
+				std::visit([&](auto&& _)
+				{
+					ast.body.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
+				//|----------------------------------|
 				continue;
 			}
 			if (auto out {this->expr_t()})
 			{
-				//|--------------<insert>--------------|
-				node.body.emplace_back(std::move(*out));
-				//|------------------------------------|
+				//|-------------<insert>-------------|
+				std::visit([&](auto&& _)
+				{
+					ast.body.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
+				//|----------------------------------|
 	
 				if (this->peek(atom::S_COLON))
 				{
 					this->next();
 				}
-				else throw E(u8"[parser] N/A ';'");
+				else throw u8"[parser] N/A ';'";
 				// again..!
 				continue;
 			}
@@ -493,10 +427,96 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '}'");
+		else throw u8"[parser] N/A '}'";
 
-		return std::make_unique /*(wrap)*/
-		<decltype(node)>(std::move(node));
+		return std::make_unique
+		<decltype(ast)>(std::move(ast));
+	}
+
+	auto decl_var(const bool is_const) -> decltype(this->decl_t())
+	{
+		$var ast;
+		
+		ast.x = this->x;
+		ast.y = this->y;
+
+		this->next();
+
+		//|------<update>-----|
+		ast.is_const = is_const;
+		//|-------------------|
+
+		if (this->peek(atom::SYMBOL))
+		{
+			//|----------<copy>----------|
+			const auto tkn {*this->peek()};
+			//|--------------------------|
+
+			this->next();
+
+			//|---------<update>---------|
+			ast.name = std::move(tkn.data);
+			//|--------------------------|
+		}
+		else throw u8"[parser] N/A <sym>";
+
+		if (this->peek(atom::COLON))
+		{
+			this->next();
+		}
+		else throw u8"[parser] N/A ':'";
+
+		if (this->peek(atom::SYMBOL))
+		{
+			//|----------<copy>----------|
+			const auto tkn {*this->peek()};
+			//|--------------------------|
+
+			this->next();
+
+			//|---------<update>---------|
+			ast.type = std::move(tkn.data);
+			//|--------------------------|
+		}
+		else throw u8"[parser] N/A <sym>";
+
+		if (!ast.is_const)
+		{
+			if (this->peek(atom::ASSIGN))
+			{
+				this->next();
+
+				//|--------------<catch>--------------|
+				ast.init = *this->expr_t().or_else([&]
+					-> decltype(this->expr_t())
+				{ throw u8"[parser] invalid expr"; });
+				//|-----------------------------------|
+			}
+			// else throw u8"[parser] must init const var";
+		}
+		else // let! name
+		{
+			if (this->peek(atom::ASSIGN))
+			{
+				this->next();
+
+				//|--------------<catch>--------------|
+				ast.init = *this->expr_t().or_else([&]
+					-> decltype(this->expr_t())
+				{ throw u8"[parser] invalid expr"; });
+				//|-----------------------------------|
+			}
+			else throw u8"[parser] must init const var";
+		}
+
+		if (this->peek(atom::S_COLON))
+		{
+			this->next();
+		}
+		else throw u8"[parser] N/A ';'";
+
+		return std::make_unique
+		<decltype(ast)>(std::move(ast));
 	}
 
 	//|------------|
@@ -505,49 +525,91 @@ private:
 
 	auto stmt_t() -> std::optional<stmt>
 	{
-		if (auto tkn {this->peek()})
+		try
 		{
-			switch (tkn->type)
+			if (auto tkn {this->peek()})
 			{
-				case atom::IF:
+				switch (tkn->type)
 				{
-					return this->stmt_if();
+					case atom::IF:
+					{
+						return this->stmt_if();
+					}
+					case atom::FOR:
+					{
+						return this->stmt_for();
+					}
+					case atom::MATCH:
+					{
+						return this->stmt_match();
+					}
+					case atom::WHILE:
+					{
+						return this->stmt_while();
+					}
+					case atom::BREAK:
+					{
+						return this->stmt_break();
+					}
+					case atom::RETURN:
+					{
+						return this->stmt_return();
+					}
+					case atom::CONTINUE:
+					{
+						return this->stmt_continue();
+					}
 				}
-				case atom::FOR:
-				{
-					return this->stmt_for();
-				}
-				case atom::MATCH:
-				{
-					return this->stmt_match();
-				}
-				case atom::WHILE:
-				{
-					return this->stmt_while();
-				}
-				case atom::BREAK:
-				{
-					return this->stmt_break();
-				}
-				case atom::RETURN:
-				{
-					return this->stmt_return();
-				}
-				case atom::CONTINUE:
-				{
-					return this->stmt_continue();
-				}
+				return std::nullopt;
 			}
 		}
-		return std::nullopt;
+		catch (const char8_t* data)
+		{
+			$error report;
+
+			report.x = this->x;
+			report.y = this->y;
+
+			this->next();
+
+			//|---<update>---|
+			report.data = data;
+			//|--------------|
+
+			while (auto tkn {this->peek()})
+			{
+				switch (tkn->type)
+				{
+					// resync point
+					case atom::S_COLON:
+					case atom::R_BRACE:
+					case atom::R_BRACK:
+					case atom::R_PAREN:
+					{
+						this->next();
+						goto exit;
+					}
+					default:
+					{
+						this->next();
+						continue;
+					}
+				}
+			}
+			exit: // or anonymous lambda..?
+	
+			return std::make_unique
+			<decltype(report)>(std::move(report));
+		}
+		assert(false && "-Wreturn-type");
 	}
 
 	auto stmt_if() -> decltype(this->stmt_t())
 	{
-		$if node;
+		$if ast;
 
-		node.x = this->x;
-		node.y = this->y;
+		ast.x = this->x;
+		ast.y = this->y;
 		
 		this->next();
 
@@ -559,30 +621,30 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '('");
+		else throw u8"[parser] N/A '('";
 
 		//|--------------<catch>--------------|
 			expr = {*this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw E(u8"[parser] N/A expr"); })};
+		{ throw u8"[parser] invalid expr"; })};
 		//|-----------------------------------|
 
 		//|--------------<insert>--------------|
-		node.cases.emplace_back(std::move(expr));
+		ast.cases.emplace_back(std::move(expr));
 		//|------------------------------------|
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A ')'");
+		else throw u8"[parser] N/A ')'";
 
 		if_block:
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '{'");
+		else throw u8"[parser] N/A '{'";
 
 		// <block>
 		while (true)
@@ -590,21 +652,29 @@ private:
 			if (auto out {this->stmt_t()})
 			{
 				//|-----------<insert>-----------|
-				body.emplace_back(std::move(*out));
+				std::visit([&](auto&& _)
+				{
+					body.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
 				//|------------------------------|
 				continue;
 			}
 			if (auto out {this->expr_t()})
 			{
 				//|-----------<insert>-----------|
-				body.emplace_back(std::move(*out));
+				std::visit([&](auto&& _)
+				{
+					body.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
 				//|------------------------------|
 
 				if (this->peek(atom::S_COLON))
 				{
 					this->next();
 				}
-				else throw E(u8"[parser] N/A ';'");
+				else throw u8"[parser] N/A ';'";
 				// again..!
 				continue;
 			}
@@ -612,14 +682,14 @@ private:
 		}
 
 		//|--------------<insert>--------------|
-		node.block.emplace_back(std::move(body));
+		ast.block.emplace_back(std::move(body));
 		//|------------------------------------|
 
 		if (this->peek(atom::R_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '}'");
+		else throw u8"[parser] N/A '}'";
 
 		if (this->peek(atom::ELSE))
 		{
@@ -631,16 +701,16 @@ private:
 			goto if_block;
 		}
 
-		return std::make_unique /*(wrap)*/
-		<decltype(node)>(std::move(node));
+		return std::make_unique
+		<decltype(ast)>(std::move(ast));
 	}
 
 	auto stmt_for() -> decltype(this->stmt_t())
 	{
-		$for node;
+		$for ast;
 
-		node.x = this->x;
-		node.y = this->y;
+		ast.x = this->x;
+		ast.y = this->y;
 		
 		this->next();
 
@@ -648,49 +718,49 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '('");
+		else throw u8"[parser] N/A '('";
 
 		//|--------------<catch>--------------|
-		node.setup = *this->expr_t().or_else([&]
+		ast.setup = *this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw E(u8"[parser] N/A expr"); });
+		{ throw u8"[parser] invalid expr"; });
 		//|-----------------------------------|
 
 		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A ';'");
+		else throw u8"[parser] N/A ';'";
 
 		//|--------------<catch>--------------|
-		node.input = *this->expr_t().or_else([&]
+		ast.input = *this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw E(u8"[parser] N/A expr"); });
+		{ throw u8"[parser] invalid expr"; });
 		//|-----------------------------------|
 
 		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A ';'");
+		else throw u8"[parser] N/A ';'";
 
 		//|--------------<catch>--------------|
-		node.after = *this->expr_t().or_else([&]
+		ast.after = *this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw E(u8"[parser] N/A expr"); });
+		{ throw u8"[parser] invalid expr"; });
 		//|-----------------------------------|
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A ')'");
+		else throw u8"[parser] N/A ')'";
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '{'");
+		else throw u8"[parser] N/A '{'";
 
 		// <block>
 		while (true)
@@ -698,21 +768,29 @@ private:
 			if (auto out {this->stmt_t()})
 			{
 				//|--------------<insert>--------------|
-				node.block.emplace_back(std::move(*out));
+				std::visit([&](auto&& _)
+				{
+					ast.block.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
 				//|------------------------------------|
 				continue;
 			}
 			if (auto out {this->expr_t()})
 			{
 				//|--------------<insert>--------------|
-				node.block.emplace_back(std::move(*out));
+				std::visit([&](auto&& _)
+				{
+					ast.block.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
 				//|------------------------------------|
 
 				if (this->peek(atom::S_COLON))
 				{
 					this->next();
 				}
-				else throw E(u8"[parser] N/A ';'");
+				else throw u8"[parser] N/A ';'";
 				// again..!
 				continue;
 			}
@@ -723,18 +801,18 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '}'");
+		else throw u8"[parser] N/A '}'";
 
-		return std::make_unique /*(wrap)*/
-		<decltype(node)>(std::move(node));
+		return std::make_unique
+		<decltype(ast)>(std::move(ast));
 	}
 
 	auto stmt_match() -> decltype(this->stmt_t())
 	{
-		$match node;
+		$match ast;
 
-		node.x = this->x;
-		node.y = this->y;
+		ast.x = this->x;
+		ast.y = this->y;
 		
 		this->next();
 
@@ -745,41 +823,41 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '('");
+		else throw u8"[parser] N/A '('";
 
 		//|--------------<catch>--------------|
-		node.input = *this->expr_t().or_else([&]
+		ast.input = *this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw E(u8"[parser] N/A expr"); });
+		{ throw u8"[parser] invalid expr"; });
 		//|-----------------------------------|
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A ')'");
+		else throw u8"[parser] N/A ')'";
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '{'");
+		else throw u8"[parser] N/A '{'";
 
 		if (this->peek(atom::CASE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A 'case'");
+		else throw u8"[parser] N/A 'case'";
 
 		case_block:
 		//|--------------<catch>--------------|
 			expr = *this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw E(u8"[parser] N/A expr"); });
+		{ throw u8"[parser] invalid expr"; });
 		//|-----------------------------------|
 
 		//|--------------<insert>--------------|
-		node.cases.emplace_back(std::move(expr));
+		ast.cases.emplace_back(std::move(expr));
 		//|------------------------------------|
 
 		else_block:
@@ -787,13 +865,13 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A ':'");
+		else throw u8"[parser] N/A ':'";
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '{'");
+		else throw u8"[parser] N/A '{'";
 
 		// <block>
 		while (true)
@@ -801,21 +879,29 @@ private:
 			if (auto out {this->stmt_t()})
 			{
 				//|-----------<insert>-----------|
-				body.emplace_back(std::move(*out));
+				std::visit([&](auto&& _)
+				{
+					body.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
 				//|------------------------------|
 				continue;
 			}
 			if (auto out {this->expr_t()})
 			{
 				//|-----------<insert>-----------|
-				body.emplace_back(std::move(*out));
+				std::visit([&](auto&& _)
+				{
+					body.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
 				//|------------------------------|
 
 				if (this->peek(atom::S_COLON))
 				{
 					this->next();
 				}
-				else throw E(u8"[parser] N/A ';'");
+				else throw u8"[parser] N/A ';'";
 				// again..!
 				continue;
 			}
@@ -823,14 +909,14 @@ private:
 		}
 
 		//|--------------<insert>--------------|
-		node.block.emplace_back(std::move(body));
+		ast.block.emplace_back(std::move(body));
 		//|------------------------------------|
 
 		if (this->peek(atom::R_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '}'");
+		else throw u8"[parser] N/A '}'";
 
 		// check if theres more...
 		if (this->peek(atom::CASE))
@@ -849,18 +935,18 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '}'");
+		else throw u8"[parser] N/A '}'";
 
-		return std::make_unique /*(wrap)*/
-		<decltype(node)>(std::move(node));
+		return std::make_unique
+		<decltype(ast)>(std::move(ast));
 	}
 
 	auto stmt_while() -> decltype(this->stmt_t())
 	{
-		$while node;
+		$while ast;
 
-		node.x = this->x;
-		node.y = this->y;
+		ast.x = this->x;
+		ast.y = this->y;
 		
 		this->next();
 
@@ -868,25 +954,25 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '('");
+		else throw u8"[parser] N/A '('";
 
 		//|--------------<catch>--------------|
-		node.input = *this->expr_t().or_else([&]
+		ast.input = *this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw E(u8"[parser] N/A expr"); });
+		{ throw u8"[parser] invalid expr"; });
 		//|-----------------------------------|
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A ')'");
+		else throw u8"[parser] N/A ')'";
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '{'");
+		else throw u8"[parser] N/A '{'";
 
 		// <block>
 		while (true)
@@ -894,21 +980,29 @@ private:
 			if (auto out {this->stmt_t()})
 			{
 				//|--------------<insert>--------------|
-				node.block.emplace_back(std::move(*out));
+				std::visit([&](auto&& _)
+				{
+					ast.block.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
 				//|------------------------------------|
 				continue;
 			}
 			if (auto out {this->expr_t()})
 			{
 				//|--------------<insert>--------------|
-				node.block.emplace_back(std::move(*out));
+				std::visit([&](auto&& _)
+				{
+					ast.block.emplace_back(std::move(_));
+				},
+				std::move(out.value()));
 				//|------------------------------------|
 
 				if (this->peek(atom::S_COLON))
 				{
 					this->next();
 				}
-				else throw E(u8"[parser] N/A ';'");
+				else throw u8"[parser] N/A ';'";
 				// again..!
 				continue;
 			}
@@ -919,18 +1013,18 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A '}'");
+		else throw u8"[parser] N/A '}'";
 	
-		return std::make_unique /*(wrap)*/
-		<decltype(node)>(std::move(node));
+		return std::make_unique
+		<decltype(ast)>(std::move(ast));
 	}
 
 	auto stmt_break() -> decltype(this->stmt_t())
 	{
-		$break node;
+		$break ast;
 
-		node.x = this->x;
-		node.y = this->y;
+		ast.x = this->x;
+		ast.y = this->y;
 		
 		this->next();
 
@@ -943,46 +1037,46 @@ private:
 			this->next();
 
 			//|----------<update>----------|
-			node.label = std::move(tkn.data);
+			ast.label = std::move(tkn.data);
 			//|----------------------------|
 		}
 
-		return std::make_unique /*(wrap)*/
-		<decltype(node)>(std::move(node));
+		return std::make_unique
+		<decltype(ast)>(std::move(ast));
 	}
 
 	auto stmt_return() -> decltype(this->stmt_t())
 	{
-		$return node;
+		$return ast;
 
-		node.x = this->x;
-		node.y = this->y;
+		ast.x = this->x;
+		ast.y = this->y;
 
 		this->next();
 
 		if (auto out {this->expr_t()})
 		{
-			//|--------<update>---------|
-			node.value = std::move(*out);
-			//|-------------------------|
+			//|-------<update>--------|
+			ast.value = std::move(*out);
+			//|-----------------------|
 		}
 
 		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] N/A ';'");
+		else throw u8"[parser] N/A ';'";
 
-		return std::make_unique /*(wrap)*/
-		<decltype(node)>(std::move(node));
+		return std::make_unique
+		<decltype(ast)>(std::move(ast));
 	}
 
 	auto stmt_continue() -> decltype(this->stmt_t())
 	{
-		$continue node;
+		$continue ast;
 		
-		node.x = this->x;
-		node.y = this->y;
+		ast.x = this->x;
+		ast.y = this->y;
 		
 		this->next();
 
@@ -995,12 +1089,12 @@ private:
 			this->next();
 
 			//|----------<update>----------|
-			node.label = std::move(tkn.data);
+			ast.label = std::move(tkn.data);
 			//|----------------------------|
 		}
 
-		return std::make_unique /*(wrap)*/
-		<decltype(node)>(std::move(node));
+		return std::make_unique
+		<decltype(ast)>(std::move(ast));
 	}
 
 	//|-------------|
@@ -1021,26 +1115,26 @@ private:
 						if (auto tkn {this->peek()})
 						{
 							// handle prefix
-							if (lang::is_l(*tkn))
+							if (is_l(*tkn))
 							{
-								$unary node;
+								$unary ast;
 								
-								node.x = this->x;
-								node.y = this->y;
+								ast.x = this->x;
+								ast.y = this->y;
 
 								this->next();
 
 								//|--------------<catch>--------------|
 								std::optional rhs {impl(69).or_else([&]
 									-> decltype(this->expr_t())
-								{ throw E(u8"[parser] N/A expr");}) };
+								{ throw u8"[parser] invalid expr"; }) };
 								//|-----------------------------------|
 
-								node.op = lang::to_l(*tkn);
-								node.rhs = std::move(*rhs);
+								ast.op = to_l(*tkn);
+								ast.rhs = std::move(*rhs);
 
-								return std::make_unique /*(wrap)*/
-								<decltype(node)>(std::move(node));
+								return std::make_unique
+								<decltype(ast)>(std::move(ast));
 							}
 							// handle primary
 							if (auto out {this->expr_group()})
@@ -1069,7 +1163,7 @@ private:
 					while (auto tkn {this->peek()})
 					{
 						// handle infix
-						if (lang::is_i(*tkn))
+						if (is_i(*tkn))
 						{
 							auto [lbp, rbp]
 							{
@@ -1147,35 +1241,35 @@ private:
 								break;
 							}
 
-							$binary node;
+							$binary ast;
 
-							node.x = this->x;
-							node.y = this->y;
+							ast.x = this->x;
+							ast.y = this->y;
 							
 							this->next();
 
 							//|--------------<catch>--------------|
 							std::optional rhs {impl(rbp).or_else([&]
 								-> decltype(this->expr_t())
-							{ throw E(u8"[parser] N/A expr"); })};
+							{ throw u8"[parser] invalid expr"; })};
 							//|-----------------------------------|
 
-							node.op = lang::to_i(*tkn);
-							node.lhs = std::move(*lhs);
-							node.rhs = std::move(*rhs);
+							ast.op = to_i(*tkn);
+							ast.lhs = std::move(*lhs);
+							ast.rhs = std::move(*rhs);
 
-							lhs = std::make_unique /*(wrap)*/
-							<decltype(node)>(std::move(node));
+							lhs = std::make_unique
+							<decltype(ast)>(std::move(ast));
 							continue;
 						}
 
 						// handle postfix
-						if (lang::is_r(*tkn))
+						if (is_r(*tkn))
 						{
-							$access node;
+							$access ast;
 
-							node.x = this->x;
-							node.y = this->y;
+							ast.x = this->x;
+							ast.y = this->y;
 							
 							this->next();
 
@@ -1188,16 +1282,16 @@ private:
 								this->next();
 
 								//|----------<update>----------|
-								node.name = std::move(tkn.data);
+								ast.name = std::move(tkn.data);
 								//|----------------------------|
 							}
-							else throw E(u8"[parser] N/A <sym>");
+							else throw u8"[parser] N/A <sym>";
 
-							node.expr = std::move(*lhs);
-							node.type = lang::to_r(*tkn);
+							ast.type = to_r(*tkn);
+							ast.expr = std::move(*lhs);
 							
-							lhs = std::make_unique /*(wrap)*/
-							<decltype(node)>(std::move(node));
+							lhs = std::make_unique
+							<decltype(ast)>(std::move(ast));
 							continue;
 						}
 
@@ -1227,16 +1321,16 @@ private:
 									this->next();
 									goto start;
 								}
-								// else throw E(u8"[parser] N/A ','");
+								// else throw u8"[parser] N/A ','";
 							}
 
 							if (this->peek(atom::R_PAREN))
 							{
 								this->next();
 							}
-							else throw E(u8"[parser] N/A ')'");
+							else throw u8"[parser] N/A ')'";
 
-							lhs = std::make_unique /*(wrap)*/
+							lhs = std::make_unique
 							<decltype(node)>(std::move(node));
 							continue;
 						}
@@ -1246,7 +1340,48 @@ private:
 				return lhs;
 			}
 		};
-		return impl(0);
+		try
+		{
+			return impl(0);
+		}
+		catch (const char8_t* data)
+		{
+			$error report;
+
+			report.x = this->x;
+			report.y = this->y;
+
+			this->next();
+
+			//|---<update>---|
+			report.data = data;
+			//|--------------|
+
+			while (auto tkn {this->peek()})
+			{
+				switch (tkn->type)
+				{
+					// resync point
+					case atom::S_COLON:
+					case atom::R_BRACE:
+					case atom::R_BRACK:
+					case atom::R_PAREN:
+					{
+						this->next();
+						goto exit;
+					}
+					default:
+					{
+						this->next();
+						continue;
+					}
+				}
+			}
+			exit: // or anonymous lambda..?
+	
+			return std::make_unique
+			<decltype(report)>(std::move(report));
+		}
 	}
 
 	auto expr_group() -> decltype(this->expr_t())
@@ -1257,27 +1392,27 @@ private:
 			{
 				case atom::L_PAREN:
 				{
-					$group node;
+					$group ast;
 
-					node.x = this->x;
-					node.y = this->y;
+					ast.x = this->x;
+					ast.y = this->y;
 					
 					this->next();
 
 					//|--------------<catch>--------------|
-					node.expr = *this->expr_t().or_else([&]
+					ast.expr = *this->expr_t().or_else([&]
 						-> decltype(this->expr_t())
-					{ throw E(u8"[parser] N/A expr"); });
+					{ throw u8"[parser] invalid expr"; });
 					//|-----------------------------------|
 
 					if (this->peek(atom::R_PAREN))
 					{
 						this->next();
 					}
-					else throw E(u8"[parser] N/A ')'");
+					else throw u8"[parser] N/A ')'";
 
-					return std::make_unique /*(wrap)*/
-					<decltype(node)>(std::move(node));
+					return std::make_unique
+					<decltype(ast)>(std::move(ast));
 				}
 			}
 		}
@@ -1303,7 +1438,7 @@ private:
 					node.name = std::move(tkn->data);
 					//|----------------------------|
 
-					return std::make_unique /*(wrap)*/
+					return std::make_unique
 					<decltype(node)>(std::move(node));
 				}
 			}
@@ -1320,96 +1455,94 @@ private:
 				case atom::TRUE:
 				case atom::FALSE:
 				{
-					$literal node;
+					$literal ast;
 
-					node.x = this->x;
-					node.y = this->y;
+					ast.x = this->x;
+					ast.y = this->y;
 					
 					this->next();
 
 					//|----------<update>----------|
-					node.data = std::move(tkn->data);
-					node.type = std::move(data::BOOL);
+					ast.data = std::move(tkn->data);
+					ast.type = std::move(data::BOOL);
 					//|----------------------------|
 
-					return std::make_unique /*(wrap)*/
-					<decltype(node)>(std::move(node));
+					return std::make_unique
+					<decltype(ast)>(std::move(ast));
 				}
 				case atom::CHAR:
 				{
-					$literal node;
+					$literal ast;
 
-					node.x = this->x;
-					node.y = this->y;
+					ast.x = this->x;
+					ast.y = this->y;
 					
 					this->next();
 
 					//|----------<update>----------|
-					node.data = std::move(tkn->data);
-					node.type = std::move(data::CODE);
+					ast.data = std::move(tkn->data);
+					ast.type = std::move(data::CODE);
 					//|----------------------------|
 
-					return std::make_unique /*(wrap)*/
-					<decltype(node)>(std::move(node));
+					return std::make_unique
+					<decltype(ast)>(std::move(ast));
 				}
 				case atom::TEXT:
 				{
-					$literal node;
+					$literal ast;
 
-					node.x = this->x;
-					node.y = this->y;
+					ast.x = this->x;
+					ast.y = this->y;
 					
 					this->next();
 
 					//|----------<update>----------|
-					node.data = std::move(tkn->data);
-					node.type = std::move(data::UTF8);
+					ast.data = std::move(tkn->data);
+					ast.type = std::move(data::UTF8);
 					//|----------------------------|
 
-					return std::make_unique /*(wrap)*/
-					<decltype(node)>(std::move(node));
+					return std::make_unique
+					<decltype(ast)>(std::move(ast));
 				}
 				case atom::DEC:
 				{
-					$literal node;
+					$literal ast;
 
-					node.x = this->x;
-					node.y = this->y;
+					ast.x = this->x;
+					ast.y = this->y;
 					
 					this->next();
 
 					//|----------<update>----------|
-					node.data = std::move(tkn->data);
-					node.type = std::move(data::F32);
+					ast.data = std::move(tkn->data);
+					ast.type = std::move(data::F32);
 					//|----------------------------|
 
-					return std::make_unique /*(wrap)*/
-					<decltype(node)>(std::move(node));
+					return std::make_unique
+					<decltype(ast)>(std::move(ast));
 				}
 				case atom::INT:
 				case atom::BIN:
 				case atom::OCT:
 				case atom::HEX:
 				{
-					$literal node;
+					$literal ast;
 
-					node.x = this->x;
-					node.y = this->y;
+					ast.x = this->x;
+					ast.y = this->y;
 					
 					this->next();
 
 					//|----------<update>----------|
-					node.data = std::move(tkn->data);
-					node.type = std::move(data::I32);
+					ast.data = std::move(tkn->data);
+					ast.type = std::move(data::I32);
 					//|----------------------------|
 
-					return std::make_unique /*(wrap)*/
-					<decltype(node)>(std::move(node));
+					return std::make_unique
+					<decltype(ast)>(std::move(ast));
 				}
 			}
 		}
 		return std::nullopt;
 	}
-
-	#undef E
 };

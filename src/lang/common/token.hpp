@@ -109,7 +109,7 @@ namespace lang
 	/*|---------|*/               \
 	/*| daclare |*/               \
 	/*|---------|*/               \
-	macro(STRUCT, u8"struct")     \
+	macro(MODEL, u8"model")       \
 	macro(UNION, u8"union")       \
 	macro(TRAIT, u8"trait")       \
 	macro(ENUM, u8"enum")         \
