@@ -25,5 +25,5 @@ fun! main(): i32
 
 	foo += bar;
 
-	return a + b;
+	return hello + world;
 }

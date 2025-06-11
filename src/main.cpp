@@ -49,15 +49,20 @@ auto main() -> int
 			>
 			linter {&parser};
 
-			auto ast {linter.pull()};
+			auto exe {linter.pull()};
 
 			#ifndef NDEBUG //-----|
 			lang::printer debugger
 			{
 				std::cout
 			};
-			ast.dispatch(debugger);
+			exe.dispatch(debugger);
 			#endif //-------------|
+
+			for (auto& error : exe.issue)
+			{
+				std::cout << error << '\n';
+			}
 			
 		},
 		io.value());

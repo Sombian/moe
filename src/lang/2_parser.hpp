@@ -16,6 +16,7 @@
 #include "./common/ast.hpp"
 #include "./common/eof.hpp"
 #include "./common/token.hpp"
+#include "./common/error.hpp"
 
 template
 <
@@ -25,9 +26,19 @@ template
 class parser
 {
 	lexer<A, B>* lexer;
+
+	#define E(value) error<A, B> \
+	{                            \
+		this->x,                 \
+		this->y,                 \
+		*this,                   \
+		value,                   \
+	}                            \
 	
 	uint16_t x {0};
 	uint16_t y {0};
+
+	program<A, B> exe;
 
 	//|---------<buffer>---------|
 	decltype(lexer->pull()) buffer;
@@ -45,7 +56,11 @@ class parser
 
 			if constexpr (std::is_same_v<T, token<A, B>>)
 			{
-				return arg; // as-is
+				return arg;
+			}
+			if constexpr (std::is_same_v<T, error<A, B>>)
+			{
+				throw arg;
 			}
 			return std::nullopt;
 		},
@@ -84,6 +99,10 @@ class parser
 			if constexpr (std::is_same_v<T, token<A, B>>)
 			{
 				return arg == type;
+			}
+			if constexpr (std::is_same_v<T, error<A, B>>)
+			{
+				throw /*|*/arg;/*|*/
 			}
 			return false;
 		},
@@ -148,38 +167,71 @@ public:
 
 	auto pull() -> program<A, B>
 	{
-		program<A, B> ast;
-
 		while (this->peek())
 		{
-			if (auto out {this->decl_t()})
+			try
 			{
-				//|-------------<insert>-------------|
-				std::visit([&](auto&& _)
+				if (auto out {this->decl_t()})
 				{
-					ast.body.emplace_back(std::move(_));
-				},
-				std::move(out.value()));
-				//|----------------------------------|
-				continue;
+					//|-----------------<insert>-----------------|
+					std::visit([&](auto&& _)
+					{
+						this->exe.body.emplace_back(std::move(_));
+					},
+					std::move(out.value()));
+					//|------------------------------------------|
+					continue;
+				}
+				if (auto out {this->stmt_t()})
+				{
+					//|-----------------<insert>-----------------|
+					std::visit([&](auto&& _)
+					{
+						this->exe.body.emplace_back(std::move(_));
+					},
+					std::move(out.value()));
+					//|------------------------------------------|
+					continue;
+				}
+				throw E(u8"[parser] unknown decl/stmt");
 			}
-			if (auto out {this->stmt_t()})
+			catch (error<A, B>& out)
 			{
-				//|-------------<insert>-------------|
-				std::visit([&](auto&& _)
-				{
-					ast.body.emplace_back(std::move(_));
-				},
-				std::move(out.value()));
-				//|----------------------------------|
-				continue;
+				//|----------------<insert>----------------|
+				this->exe.issue.emplace_back(std::move(out));
+				//|----------------------------------------|
+				this->sync(); // ...nothing to do here...
 			}
-			// TODO: handle error
 		}
-		return std::move(ast);
+		return std::move(this->exe);
 	}
 
 private:
+
+	auto sync()
+	{
+		start:
+		if (auto tkn {this->peek()})
+		{
+			switch (tkn->type)
+			{
+				case atom::S_COLON:
+				case atom::R_BRACE:
+				case atom::R_BRACK:
+				case atom::R_PAREN:
+				{
+					this->next();
+					goto close;
+				}
+				default:
+				{
+					this->next();
+					goto start;
+				}
+			}
+		}
+		close:
+	}
 
 	//|--------------|
 	//| declarations |
@@ -213,43 +265,12 @@ private:
 				return std::nullopt;
 			}
 		}
-		catch (const char8_t* data)
+		catch (error<A, B>& out)
 		{
-			$error report;
-
-			report.x = this->x;
-			report.y = this->y;
-
-			this->next();
-
-			//|---<update>---|
-			report.data = data;
-			//|--------------|
-
-			while (auto tkn {this->peek()})
-			{
-				switch (tkn->type)
-				{
-					// resync point
-					case atom::S_COLON:
-					case atom::R_BRACE:
-					case atom::R_BRACK:
-					case atom::R_PAREN:
-					{
-						this->next();
-						goto exit;
-					}
-					default:
-					{
-						this->next();
-						continue;
-					}
-				}
-			}
-			exit: // or anonymous lambda..?
-	
-			return std::make_unique
-			<decltype(report)>(std::move(report));
+			//|----------------<insert>----------------|
+			this->exe.issue.emplace_back(std::move(out));
+			//|----------------------------------------|
+			this->sync(); return this->decl_t();
 		}
 		assert(false && "-Wreturn-type");
 	}
@@ -279,13 +300,13 @@ private:
 			ast.name = std::move(tkn.data);
 			//|--------------------------|
 		}
-		else throw u8"[parser] N/A <sym>";
+		else throw E(u8"[parser] N/A <sym>");
 	
 		if (this->peek(atom::L_PAREN))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '('";
+		else throw E(u8"[parser] N/A '('");
 
 		start:
 		if (this->peek(atom::SYMBOL))
@@ -306,7 +327,7 @@ private:
 			{
 				this->next();
 			}
-			else throw u8"[parser] N/A ':'";
+			else throw E(u8"[parser] N/A ':'");
 
 			if (this->peek(atom::SYMBOL))
 			{
@@ -320,7 +341,7 @@ private:
 				arg.type = std::move(tkn.data);
 				//|--------------------------|
 			}
-			else throw u8"[parser] N/A <sym>";
+			else throw E(u8"[parser] N/A <sym>");
 
 			if (this->peek(atom::ASSIGN))
 			{
@@ -329,10 +350,10 @@ private:
 				//|--------------<catch>--------------|
 				arg.init = *this->expr_t().or_else([&]
 					-> decltype(this->expr_t())
-				{ throw u8"[parser] invalid expr"; });
+				{throw E(u8"[parser] invalid expr");});
 				//|-----------------------------------|
 			}
-			// else throw u8"[parser] N/A '='";
+			// else throw E(u8"[parser] N/A '='");
 
 			//|-------------<insert>-------------|
 			ast.args.emplace_back(std::move(arg));
@@ -343,20 +364,20 @@ private:
 				this->next();
 				goto start;
 			}
-			// else throw u8"[parser] N/A ','";
+			// else throw E(u8"[parser] N/A ','";)
 		}
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A ')'";
+		else throw E(u8"[parser] N/A ')'");
 
 		if (this->peek(atom::COLON))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A ':'";
+		else throw E(u8"[parser] N/A ':'");
 
 		if (this->peek(atom::SYMBOL))
 		{
@@ -370,13 +391,13 @@ private:
 			ast.type = std::move(tkn.data);
 			//|--------------------------|
 		}
-		else throw u8"[parser] N/A <sym>";
+		else throw E(u8"[parser] N/A <sym>");
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '{'";
+		else throw E(u8"[parser] N/A '{'");
 
 		while (true)
 		{
@@ -416,7 +437,7 @@ private:
 				{
 					this->next();
 				}
-				else throw u8"[parser] N/A ';'";
+				else throw E(u8"[parser] N/A ';'");
 				// again..!
 				continue;
 			}
@@ -427,7 +448,7 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '}'";
+		else throw E(u8"[parser] N/A '}'");
 
 		return std::make_unique
 		<decltype(ast)>(std::move(ast));
@@ -458,13 +479,13 @@ private:
 			ast.name = std::move(tkn.data);
 			//|--------------------------|
 		}
-		else throw u8"[parser] N/A <sym>";
+		else throw E(u8"[parser] N/A <sym>");
 
 		if (this->peek(atom::COLON))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A ':'";
+		else throw E(u8"[parser] N/A ':'");
 
 		if (this->peek(atom::SYMBOL))
 		{
@@ -478,7 +499,7 @@ private:
 			ast.type = std::move(tkn.data);
 			//|--------------------------|
 		}
-		else throw u8"[parser] N/A <sym>";
+		else throw E(u8"[parser] N/A <sym>");
 
 		if (!ast.is_const)
 		{
@@ -489,7 +510,7 @@ private:
 				//|--------------<catch>--------------|
 				ast.init = *this->expr_t().or_else([&]
 					-> decltype(this->expr_t())
-				{ throw u8"[parser] invalid expr"; });
+				{throw E(u8"[parser] invalid expr");});
 				//|-----------------------------------|
 			}
 			// else throw u8"[parser] must init const var";
@@ -503,17 +524,17 @@ private:
 				//|--------------<catch>--------------|
 				ast.init = *this->expr_t().or_else([&]
 					-> decltype(this->expr_t())
-				{ throw u8"[parser] invalid expr"; });
+				{throw E(u8"[parser] invalid expr");});
 				//|-----------------------------------|
 			}
-			else throw u8"[parser] must init const var";
+			else throw E(u8"[parser] must init const var");
 		}
 
 		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A ';'";
+		else throw E(u8"[parser] N/A ';'");
 
 		return std::make_unique
 		<decltype(ast)>(std::move(ast));
@@ -563,43 +584,12 @@ private:
 				return std::nullopt;
 			}
 		}
-		catch (const char8_t* data)
+		catch (error<A, B>& out)
 		{
-			$error report;
-
-			report.x = this->x;
-			report.y = this->y;
-
-			this->next();
-
-			//|---<update>---|
-			report.data = data;
-			//|--------------|
-
-			while (auto tkn {this->peek()})
-			{
-				switch (tkn->type)
-				{
-					// resync point
-					case atom::S_COLON:
-					case atom::R_BRACE:
-					case atom::R_BRACK:
-					case atom::R_PAREN:
-					{
-						this->next();
-						goto exit;
-					}
-					default:
-					{
-						this->next();
-						continue;
-					}
-				}
-			}
-			exit: // or anonymous lambda..?
-	
-			return std::make_unique
-			<decltype(report)>(std::move(report));
+			//|----------------<insert>----------------|
+			this->exe.issue.emplace_back(std::move(out));
+			//|----------------------------------------|
+			this->sync(); return this->stmt_t();
 		}
 		assert(false && "-Wreturn-type");
 	}
@@ -621,12 +611,12 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '('";
+		else throw E(u8"[parser] N/A '('");
 
 		//|--------------<catch>--------------|
 			expr = {*this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw u8"[parser] invalid expr"; })};
+		{throw E(u8"[parser] invalid expr");})};
 		//|-----------------------------------|
 
 		//|--------------<insert>--------------|
@@ -637,14 +627,14 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A ')'";
+		else throw E(u8"[parser] N/A ')'");
 
 		if_block:
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '{'";
+		else throw E(u8"[parser] N/A '{'");
 
 		// <block>
 		while (true)
@@ -674,7 +664,7 @@ private:
 				{
 					this->next();
 				}
-				else throw u8"[parser] N/A ';'";
+				else throw E(u8"[parser] N/A ';'");
 				// again..!
 				continue;
 			}
@@ -689,7 +679,7 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '}'";
+		else throw E(u8"[parser] N/A '}'");
 
 		if (this->peek(atom::ELSE))
 		{
@@ -718,49 +708,49 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '('";
+		else throw E(u8"[parser] N/A '('");
 
 		//|--------------<catch>--------------|
 		ast.setup = *this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw u8"[parser] invalid expr"; });
+		{throw E(u8"[parser] invalid expr");});
 		//|-----------------------------------|
 
 		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A ';'";
+		else throw E(u8"[parser] N/A ';'");
 
 		//|--------------<catch>--------------|
 		ast.input = *this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw u8"[parser] invalid expr"; });
+		{throw E(u8"[parser] invalid expr");});
 		//|-----------------------------------|
 
 		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A ';'";
+		else throw E(u8"[parser] N/A ';'");
 
 		//|--------------<catch>--------------|
 		ast.after = *this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw u8"[parser] invalid expr"; });
+		{throw E(u8"[parser] invalid expr");});
 		//|-----------------------------------|
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A ')'";
+		else throw E(u8"[parser] N/A ')'");
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '{'";
+		else throw E(u8"[parser] N/A '{'");
 
 		// <block>
 		while (true)
@@ -790,7 +780,7 @@ private:
 				{
 					this->next();
 				}
-				else throw u8"[parser] N/A ';'";
+				else throw E(u8"[parser] N/A ';'");
 				// again..!
 				continue;
 			}
@@ -801,7 +791,7 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '}'";
+		else throw E(u8"[parser] N/A '}'");
 
 		return std::make_unique
 		<decltype(ast)>(std::move(ast));
@@ -823,37 +813,37 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '('";
+		else throw E(u8"[parser] N/A '('");
 
 		//|--------------<catch>--------------|
 		ast.input = *this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw u8"[parser] invalid expr"; });
+		{throw E(u8"[parser] invalid expr");});
 		//|-----------------------------------|
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A ')'";
+		else throw E(u8"[parser] N/A ')'");
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '{'";
+		else throw E(u8"[parser] N/A '{'");
 
 		if (this->peek(atom::CASE))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A 'case'";
+		else throw E(u8"[parser] N/A 'case'");
 
 		case_block:
 		//|--------------<catch>--------------|
 			expr = *this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw u8"[parser] invalid expr"; });
+		{throw E(u8"[parser] invalid expr");});
 		//|-----------------------------------|
 
 		//|--------------<insert>--------------|
@@ -865,13 +855,13 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A ':'";
+		else throw E(u8"[parser] N/A ':'");
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '{'";
+		else throw E(u8"[parser] N/A '{'");
 
 		// <block>
 		while (true)
@@ -901,7 +891,7 @@ private:
 				{
 					this->next();
 				}
-				else throw u8"[parser] N/A ';'";
+				else throw E(u8"[parser] N/A ';'");
 				// again..!
 				continue;
 			}
@@ -916,7 +906,7 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '}'";
+		else throw E(u8"[parser] N/A '}'");
 
 		// check if theres more...
 		if (this->peek(atom::CASE))
@@ -935,7 +925,7 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '}'";
+		else throw E(u8"[parser] N/A '}'");
 
 		return std::make_unique
 		<decltype(ast)>(std::move(ast));
@@ -954,25 +944,25 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '('";
+		else throw E(u8"[parser] N/A '('");
 
 		//|--------------<catch>--------------|
 		ast.input = *this->expr_t().or_else([&]
 			-> decltype(this->expr_t())
-		{ throw u8"[parser] invalid expr"; });
+		{throw E(u8"[parser] invalid expr");});
 		//|-----------------------------------|
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A ')'";
+		else throw E(u8"[parser] N/A ')'");
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '{'";
+		else throw E(u8"[parser] N/A '{'");
 
 		// <block>
 		while (true)
@@ -1002,7 +992,7 @@ private:
 				{
 					this->next();
 				}
-				else throw u8"[parser] N/A ';'";
+				else throw E(u8"[parser] N/A ';'");
 				// again..!
 				continue;
 			}
@@ -1013,7 +1003,7 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A '}'";
+		else throw E(u8"[parser] N/A '}'");
 	
 		return std::make_unique
 		<decltype(ast)>(std::move(ast));
@@ -1065,7 +1055,7 @@ private:
 		{
 			this->next();
 		}
-		else throw u8"[parser] N/A ';'";
+		else throw E(u8"[parser] N/A ';'");
 
 		return std::make_unique
 		<decltype(ast)>(std::move(ast));
@@ -1101,9 +1091,8 @@ private:
 	//| expressions |
 	//|-------------|
 
-	auto expr_t() -> std::optional<expr>
+	auto expr_t() -> std::optional<expr> // pratt parser
 	{
-		// pratt parser impl
 		std::function<std::optional<expr>(uint8_t)> impl
 		{
 			[&](const uint8_t mbp) -> std::optional<expr>
@@ -1127,7 +1116,7 @@ private:
 								//|--------------<catch>--------------|
 								std::optional rhs {impl(69).or_else([&]
 									-> decltype(this->expr_t())
-								{ throw u8"[parser] invalid expr"; }) };
+								{throw E(u8"[parser] invalid expr");})};
 								//|-----------------------------------|
 
 								ast.op = to_l(*tkn);
@@ -1251,7 +1240,7 @@ private:
 							//|--------------<catch>--------------|
 							std::optional rhs {impl(rbp).or_else([&]
 								-> decltype(this->expr_t())
-							{ throw u8"[parser] invalid expr"; })};
+							{throw E(u8"[parser] invalid expr");})};
 							//|-----------------------------------|
 
 							ast.op = to_i(*tkn);
@@ -1285,7 +1274,7 @@ private:
 								ast.name = std::move(tkn.data);
 								//|----------------------------|
 							}
-							else throw u8"[parser] N/A <sym>";
+							else throw E(u8"[parser] N/A <sym>");
 
 							ast.type = to_r(*tkn);
 							ast.expr = std::move(*lhs);
@@ -1298,22 +1287,22 @@ private:
 						// handle function
 						if (tkn == atom::L_PAREN)
 						{
-							$call node;
+							$call ast;
 
-							node.x = this->x;
-							node.y = this->y;
+							ast.x = this->x;
+							ast.y = this->y;
 
 							this->next();
 
 							//|--------<update>--------|
-							node.call = std::move(*lhs);
+							ast.call = std::move(*lhs);
 							//|------------------------|
 
 							start:
 							if (auto out {this->expr_t()})
 							{
 								//|--------------<insert>--------------|
-								node.args.emplace_back(std::move(*out));
+								ast.args.emplace_back(std::move(*out));
 								//|------------------------------------|
 
 								if (this->peek(atom::COMMA))
@@ -1328,10 +1317,10 @@ private:
 							{
 								this->next();
 							}
-							else throw u8"[parser] N/A ')'";
+							else throw E(u8"[parser] N/A ')'");
 
 							lhs = std::make_unique
-							<decltype(node)>(std::move(node));
+							<decltype(ast)>(std::move(ast));
 							continue;
 						}
 						break;
@@ -1344,44 +1333,14 @@ private:
 		{
 			return impl(0);
 		}
-		catch (const char8_t* data)
+		catch (error<A, B>& out)
 		{
-			$error report;
-
-			report.x = this->x;
-			report.y = this->y;
-
-			this->next();
-
-			//|---<update>---|
-			report.data = data;
-			//|--------------|
-
-			while (auto tkn {this->peek()})
-			{
-				switch (tkn->type)
-				{
-					// resync point
-					case atom::S_COLON:
-					case atom::R_BRACE:
-					case atom::R_BRACK:
-					case atom::R_PAREN:
-					{
-						this->next();
-						goto exit;
-					}
-					default:
-					{
-						this->next();
-						continue;
-					}
-				}
-			}
-			exit: // or anonymous lambda..?
-	
-			return std::make_unique
-			<decltype(report)>(std::move(report));
+			//|----------------<insert>----------------|
+			this->exe.issue.emplace_back(std::move(out));
+			//|----------------------------------------|
+			this->sync(); return this->expr_t();
 		}
+		assert(false && "-Wreturn-type");
 	}
 
 	auto expr_group() -> decltype(this->expr_t())
@@ -1402,14 +1361,14 @@ private:
 					//|--------------<catch>--------------|
 					ast.expr = *this->expr_t().or_else([&]
 						-> decltype(this->expr_t())
-					{ throw u8"[parser] invalid expr"; });
+					{throw E(u8"[parser] invalid expr");});
 					//|-----------------------------------|
 
 					if (this->peek(atom::R_PAREN))
 					{
 						this->next();
 					}
-					else throw u8"[parser] N/A ')'";
+					else throw E(u8"[parser] N/A ')'");
 
 					return std::make_unique
 					<decltype(ast)>(std::move(ast));

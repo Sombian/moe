@@ -19,7 +19,7 @@ struct error : public span
 	//|-----<file>-----|
 	fs::file<A, B>* src;
 	//|----------------|
-	utf8 data;
+	utf8 msg;
 
 public:
 
@@ -28,10 +28,10 @@ public:
 		decltype(x) x,
 		decltype(y) y,
 		decltype(src) src,
-		decltype(data) data
+		decltype(msg) msg
 	)
 	:
-	span {x, y}, src {src}, data {data} {}
+	span {x, y}, src {src}, msg {msg} {}
 
 	//|-----------------|
 	//| member function |
@@ -66,7 +66,7 @@ public:
 			<<
 			" "
 			<<
-			error.data
+			error.msg
 			<<
 			"\033[0m" // reset color
 		);

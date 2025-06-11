@@ -19,7 +19,7 @@ template
 >
 class linter
 {
-	friend class impl;
+	friend class core;
 
 	parser<A, B>* parser;
 
@@ -53,6 +53,7 @@ class linter
 	#undef many
 
 	scope* ctx {new scope {nullptr}};
+
 	//|----------<buffer>----------|
 	decltype(parser->pull()) buffer;
 	//|----------------------------|
@@ -117,7 +118,7 @@ public:
 	)
 	: parser {parser}, buffer {parser->pull()}
 	{
-		class impl : public lang::reflect
+		class core : public lang::reflect
 		{
 			#define START                            \
 			{                                        \
@@ -138,7 +139,7 @@ public:
 			
 		public:
 
-			impl // visitor pattern impl
+			core // visitor pattern impl
 			(
 				decltype(src) src
 			)
@@ -206,9 +207,9 @@ public:
 			#undef START
 			#undef CLOSE
 		}
-		core {this};
+		impl {this};
 
-		this->buffer.dispatch(core);
+		this->buffer.dispatch(impl);
 	}
 
 	~linter()
@@ -227,27 +228,15 @@ public:
 
 	auto pull() -> program<A, B>
 	{
-		class impl : public lang::reflect
+		class core : public lang::reflect
 		{	
 			#define CHECK                                \
 			{                                            \
 				for (auto& msg : inject(this->ctx, ast)) \
 				{                                        \
-					$error report;                       \
-					                                     \
-					report.x = ast.x;                    \
-					report.y = ast.y;                    \
-					                                     \
-					/*|--------<update>--------|*/       \
-					report.data = std::move(msg);        \
-					/*|------------------------|*/       \
-					                                     \
-					this->src->buffer                    \
-					.body.emplace_back                   \
+					this->src->buffer.issue.emplace_back \
 					(                                    \
-						std::make_unique                 \
-						<decltype(report)>               \
-						(std::move(report))              \
+						ast.x, ast.y, *this->src, msg    \
 					);                                   \
 				}                                        \
 			}                                            \
@@ -270,7 +259,7 @@ public:
 
 		public:
 
-			impl // visitor pattern impl
+			core // visitor pattern impl
 			(
 				decltype(src) src
 			)
@@ -420,9 +409,9 @@ public:
 
 			#undef CHECK
 		}
-		core {this};
+		impl {this};
 		
-		this->buffer.dispatch(core);
+		this->buffer.dispatch(impl);
 
 		return std::move(this->buffer);
 	}
@@ -484,7 +473,7 @@ private:
 					if (*ptr < ast) { return std::nullopt; }
 				}
 			}
-			return u8"cannot find definition for symbol '%s'" | ast.name;
+			return u8"[linter] cannot find definition for symbol '%s'" | ast.name;
 		},
 		[](scope* ctx, $fun& ast) -> std::optional<utf8>
 		{
@@ -497,7 +486,7 @@ private:
 					return std::nullopt;
 				}
 			}
-			return u8"function definition '%s' already exists" | ast.name;
+			return u8"[linter] function definition '%s' already exists" | ast.name;
 		},
 		[](scope* ctx, $var& ast) -> std::optional<utf8>
 		{
@@ -510,7 +499,7 @@ private:
 					return std::nullopt;
 				}
 			}
-			return u8"variable definition '%s' already exists" | ast.name;
+			return u8"[linter] variable definition '%s' already exists" | ast.name;
 		},
 		[](scope* ctx, $model& ast) -> std::optional<utf8>
 		{
@@ -523,7 +512,7 @@ private:
 					return std::nullopt;
 				}
 			}
-			return u8"class definition '%s' already exists" | ast.name;
+			return u8"[linter] class definition '%s' already exists" | ast.name;
 		},
 		[](scope* ctx, $trait& ast) -> std::optional<utf8>
 		{
@@ -536,7 +525,7 @@ private:
 					return std::nullopt;
 				}
 			}
-			return u8"trait definition '%s' already exists" | ast.name;
+			return u8"[linter] trait definition '%s' already exists" | ast.name;
 		},
 		[](scope* ctx, $binary& ast) -> std::optional<utf8>
 		{
@@ -596,7 +585,7 @@ private:
 									{
 										return std::nullopt;
 									}
-									return u8"cannot assign to constant variable '%s'" | var->name;
+									return u8"[linter] cannot assign to constant variable '%s'" | var->name;
 								}
 							}
 						}

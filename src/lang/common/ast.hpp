@@ -8,6 +8,7 @@
 
 #include "./span.hpp"
 #include "./token.hpp"
+#include "./error.hpp"
 
 #include "models/str.hpp"
 
@@ -405,9 +406,7 @@ typedef std::variant
 	std::unique_ptr<struct $fun>,
 	std::unique_ptr<struct $var>,
 	std::unique_ptr<struct $model>,
-	std::unique_ptr<struct $trait>,
-	// diagnostic
-	std::unique_ptr<struct $error>
+	std::unique_ptr<struct $trait>
 >
 decl;
 
@@ -424,9 +423,7 @@ typedef std::variant
 	std::unique_ptr<struct $while>,
 	std::unique_ptr<struct $break>,
 	std::unique_ptr<struct $return>,
-	std::unique_ptr<struct $continue>,
-	// diagnostic
-	std::unique_ptr<struct $error>
+	std::unique_ptr<struct $continue>
 >
 stmt;
 
@@ -446,9 +443,7 @@ typedef std::variant
 	std::unique_ptr<struct $symbol>,
 	std::unique_ptr<struct $access>,
 	std::unique_ptr<struct $group>,
-	std::unique_ptr<struct $call>,
-	// diagnostic
-	std::unique_ptr<struct $error>
+	std::unique_ptr<struct $call>
 >
 expr;
 
@@ -482,9 +477,7 @@ typedef std::variant
 	std::unique_ptr<struct $symbol>,
 	std::unique_ptr<struct $access>,
 	std::unique_ptr<struct $group>,
-	std::unique_ptr<struct $call>,
-	// diagnostic
-	std::unique_ptr<struct $error>
+	std::unique_ptr<struct $call>
 >
 node;
 
@@ -767,23 +760,6 @@ struct $call : public span, public traits::visitable<$call>
 	MOVE_ASSIGNMENT($call) = default;
 };
 
-//|--------------|
-//| special node |
-//|--------------|
-
-struct $error : public span, public traits::visitable<$error>
-{
-	only(utf8) data;
-
-	COPY_CONSTRUCTOR($error) = delete;
-	MOVE_CONSTRUCTOR($error) = default;
-
-	$error() = default;
-
-	COPY_ASSIGNMENT($error) = delete;
-	MOVE_ASSIGNMENT($error) = default;
-};
-
 namespace lang
 {
 	struct reflect
@@ -1023,16 +999,6 @@ namespace lang
 		{
 			this->visit(ast.args);
 			this->visit(ast.call);
-		}
-
-		//|--------------|
-		//| special node |
-		//|--------------|
-
-		constexpr virtual
-		void visit($error& ast)
-		{
-			// nothing to do here
 		}
 	};
 
@@ -1498,21 +1464,6 @@ namespace lang
 			CLOSE
 		}
 
-		//|--------------|
-		//| special node |
-		//|--------------|
-
-		constexpr virtual
-		void visit($error& ast)
-		{
-			START
-			this->gap();
-			this->out << "\033[31m";
-			this->visit(ast.data);
-			this->out << "\033[0m";
-			CLOSE
-		}
-
 		#undef START
 		#undef CLOSE
 	};
@@ -1525,7 +1476,12 @@ template
 >
 struct program
 {
-	many(node) body;
+	//|-------<chore>-------|
+	typedef error<A, B> lint;
+	//|---------------------|
+
+	only(body) body;
+	many(lint) issue;
 
 	COPY_CONSTRUCTOR(program) = delete;
 	MOVE_CONSTRUCTOR(program) = default;
