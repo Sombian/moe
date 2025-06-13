@@ -24,7 +24,7 @@ namespace utils
 		{ b < a } -> std::convertible_to<bool>;
 		{ b > a } -> std::convertible_to<bool>;
 	}
-	constexpr auto cmp(const T a, const U b) -> ordering
+	inline constexpr auto cmp(const T a, const U b) -> ordering
 	{
 		//|------------------------------|
 		//| (a < b) -> ordering::LESS    |

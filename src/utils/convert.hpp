@@ -10,11 +10,11 @@
 namespace utils
 {
 	// ASCII to integer
-	auto atoi(const type::string auto& str, const uint8_t radix = 10) -> size_t
+	inline constexpr auto atoi(const type::string auto& str, const uint8_t radix = 10) -> size_t
 	{
 		assert(2 <= radix && radix <= 36);
 
-		static constexpr const auto TBL
+		constexpr static const auto TBL
 		{
 			[]
 			{
@@ -45,27 +45,27 @@ namespace utils
 
 	template<size_t N>
 	// converting constructor
-	auto atoi(const char8_t (&str)[N], const uint8_t radix = 10) -> auto
+	inline constexpr auto atoi(const char8_t (&str)[N], const uint8_t radix = 10) -> auto
 	{
 		return atoi(utf8 {str}, radix);
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto atoi(const char16_t (&str)[N], const uint8_t radix = 10) -> auto
+	inline constexpr auto atoi(const char16_t (&str)[N], const uint8_t radix = 10) -> auto
 	{
 		return atoi(utf16 {str}, radix);
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto atoi(const char32_t (&str)[N], const uint8_t radix = 10) -> auto
+	inline constexpr auto atoi(const char32_t (&str)[N], const uint8_t radix = 10) -> auto
 	{
 		return atoi(utf32 {str}, radix);
 	}
 
 	// integer to ASCII
-	auto itoa(int64_t value, const uint8_t radix = 10) -> utf8
+	inline constexpr auto itoa(int64_t value, const uint8_t radix = 10) -> utf8
 	{
 		assert(2 <= radix && radix <= 36);
 
@@ -121,27 +121,27 @@ namespace utils
 
 	template<size_t N>
 	// converting constructor
-	auto itoa(int32_t value, const uint8_t radix = 10) -> auto
+	inline constexpr auto itoa(int32_t value, const uint8_t radix = 10) -> auto
 	{
 		return itoa(value, radix);
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto itoa(int16_t value, const uint8_t radix = 10) -> auto
+	inline constexpr auto itoa(int16_t value, const uint8_t radix = 10) -> auto
 	{
 		return itoa(value, radix);
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto itoa(int8_t value, const uint8_t radix = 10) -> auto
+	inline constexpr auto itoa(int8_t value, const uint8_t radix = 10) -> auto
 	{
 		return itoa(value, radix);
 	}
 
 	// unsigned to ASCII
-	auto utoa(uint64_t value, const uint8_t radix = 10) -> utf8
+	inline constexpr auto utoa(uint64_t value, const uint8_t radix = 10) -> utf8
 	{
 		assert(2 <= radix && radix <= 36);
 
@@ -190,21 +190,21 @@ namespace utils
 
 	template<size_t N>
 	// converting constructor
-	auto utoa(int32_t value, const uint8_t radix = 10) -> auto
+	inline constexpr auto utoa(int32_t value, const uint8_t radix = 10) -> auto
 	{
 		return utoa(value, radix);
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto utoa(int16_t value, const uint8_t radix = 10) -> auto
+	inline constexpr auto utoa(int16_t value, const uint8_t radix = 10) -> auto
 	{
 		return utoa(value, radix);
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto utoa(int8_t value, const uint8_t radix = 10) -> auto
+	inline constexpr auto utoa(int8_t value, const uint8_t radix = 10) -> auto
 	{
 		return utoa(value, radix);
 	}

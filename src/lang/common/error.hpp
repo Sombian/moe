@@ -37,14 +37,15 @@ public:
 	//| member function |
 	//|-----------------|
 
-	friend auto operator==(const error& lhs, const error& rhs) -> bool = default;
-	friend auto operator!=(const error& lhs, const error& rhs) -> bool = default;
+	friend constexpr auto operator==(const error& lhs, const error& rhs) -> bool = default;
+
+	friend constexpr auto operator!=(const error& lhs, const error& rhs) -> bool = default;
 
 	//|----------------------|
 	//| traits::printable<T> |
 	//|----------------------|
 
-	friend auto operator<<(std::ostream& os, const error& error) -> std::ostream&
+	friend constexpr auto operator<<(std::ostream& os, const error& error) -> std::ostream&
 	{
 		return
 		(

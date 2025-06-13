@@ -8,20 +8,15 @@ struct span
 	uint16_t x;
 	uint16_t y;
 
-	constexpr friend
-	auto operator<=>
-	(
-		const span& lhs,
-		const span& rhs
-	)
+	inline constexpr auto operator<=>(const span& rhs) const
 	{
 		return
 		(
-			lhs.y != rhs.y
+			this->y != rhs.y
 			?
-			lhs.y <=> rhs.y
+			this->y <=> rhs.y
 			:
-			lhs.x <=> rhs.x
+			this->x <=> rhs.x
 		);
 	}
 };

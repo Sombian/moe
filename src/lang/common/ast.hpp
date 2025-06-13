@@ -5,6 +5,7 @@
 #include <variant>
 #include <cassert>
 #include <cstdint>
+#include <iostream>
 
 #include "./span.hpp"
 #include "./token.hpp"
@@ -81,7 +82,7 @@ template
 	typename A,
 	typename B
 >
-auto is_l(const token<A, B>& tkn) -> bool
+inline constexpr auto is_l(const token<A, B>& tkn) -> bool
 {
 	switch (tkn.type)
 	{
@@ -115,7 +116,7 @@ template
 	typename A,
 	typename B
 >
-auto to_l(const token<A, B>& tkn) -> op_l
+inline constexpr auto to_l(const token<A, B>& tkn) -> op_l
 {
 	switch (tkn.type)
 	{
@@ -150,7 +151,7 @@ template
 	typename A,
 	typename B
 >
-auto is_i(const token<A, B>& tkn) -> bool
+inline constexpr auto is_i(const token<A, B>& tkn) -> bool
 {
 	switch (tkn.type)
 	{
@@ -176,7 +177,7 @@ template
 	typename A,
 	typename B
 >
-auto to_i(const token<A, B>& tkn) -> op_i
+inline constexpr auto to_i(const token<A, B>& tkn) -> op_i
 {
 	switch (tkn.type)
 	{
@@ -203,7 +204,7 @@ template
 	typename A,
 	typename B
 >
-auto is_r(const token<A, B>& tkn) -> bool
+inline constexpr auto is_r(const token<A, B>& tkn) -> bool
 {
 	switch (tkn.type)
 	{
@@ -229,7 +230,7 @@ template
 	typename A,
 	typename B
 >
-auto to_r(const token<A, B>& tkn) -> op_r
+inline constexpr auto to_r(const token<A, B>& tkn) -> op_r
 {
 	switch (tkn.type)
 	{
@@ -251,7 +252,7 @@ auto to_r(const token<A, B>& tkn) -> op_r
 	}
 }
 
-auto operator<<(std::ostream& os, const data value) -> std::ostream&
+inline constexpr auto operator<<(std::ostream& os, const data value) -> std::ostream&
 {
 	switch (value)
 	{
@@ -327,7 +328,7 @@ auto operator<<(std::ostream& os, const data value) -> std::ostream&
 	}
 }
 
-auto operator<<(std::ostream& os, const op_l value) -> std::ostream&
+inline constexpr auto operator<<(std::ostream& os, const op_l value) -> std::ostream&
 {
 	switch (value)
 	{
@@ -357,7 +358,7 @@ auto operator<<(std::ostream& os, const op_l value) -> std::ostream&
 	}
 }
 
-auto operator<<(std::ostream& os, const op_i value) -> std::ostream&
+inline constexpr auto operator<<(std::ostream& os, const op_i value) -> std::ostream&
 {
 	switch (value)
 	{
@@ -379,7 +380,7 @@ auto operator<<(std::ostream& os, const op_i value) -> std::ostream&
 	}
 }
 
-auto operator<<(std::ostream& os, const op_r value) -> std::ostream&
+inline constexpr auto operator<<(std::ostream& os, const op_r value) -> std::ostream&
 {
 	switch (value)
 	{
@@ -764,8 +765,7 @@ namespace lang
 {
 	struct reflect
 	{
-		constexpr virtual
-		void visit(only(decl)& ast)
+		virtual constexpr void visit(only(decl)& ast)
 		{
 			std::visit([&](auto&& arg)
 			{
@@ -774,8 +774,7 @@ namespace lang
 			ast);
 		}
 
-		constexpr virtual
-		void visit(many(decl)& ast)
+		virtual constexpr void visit(many(decl)& ast)
 		{
 			for (auto&& node : ast)
 			{
@@ -783,8 +782,7 @@ namespace lang
 			}
 		}
 
-		constexpr virtual
-		void visit(only(stmt)& ast)
+		virtual constexpr void visit(only(stmt)& ast)
 		{
 			std::visit([&](auto&& arg)
 			{
@@ -793,8 +791,7 @@ namespace lang
 			ast);
 		}
 
-		constexpr virtual
-		void visit(many(stmt)& ast)
+		virtual constexpr void visit(many(stmt)& ast)
 		{
 			for (auto&& node : ast)
 			{
@@ -802,8 +799,7 @@ namespace lang
 			}
 		}
 
-		constexpr virtual
-		void visit(only(expr)& ast)
+		virtual constexpr void visit(only(expr)& ast)
 		{
 			std::visit([&](auto&& arg)
 			{
@@ -812,8 +808,7 @@ namespace lang
 			ast);
 		}
 
-		constexpr virtual
-		void visit(many(expr)& ast)
+		virtual constexpr void visit(many(expr)& ast)
 		{
 			for (auto&& node : ast)
 			{
@@ -821,8 +816,7 @@ namespace lang
 			}
 		}
 
-		constexpr virtual
-		void visit(only(node)& ast)
+		virtual constexpr void visit(only(node)& ast)
 		{
 			std::visit([&](auto&& arg)
 			{
@@ -831,8 +825,7 @@ namespace lang
 			ast);
 		}
 
-		constexpr virtual
-		void visit(many(node)& ast)
+		virtual constexpr void visit(many(node)& ast)
 		{
 			for (auto&& node : ast)
 			{
@@ -844,8 +837,7 @@ namespace lang
 		//| edge cases |
 		//|------------|
 
-		constexpr virtual
-		void visit(many(body)& ast)
+		virtual constexpr void visit(many(body)& ast)
 		{
 			for (auto&& node : ast)
 			{
@@ -853,8 +845,7 @@ namespace lang
 			}
 		}
 
-		constexpr virtual
-		void visit(many($fun)& ast)
+		virtual constexpr void visit(many($fun)& ast)
 		{
 			for (auto&& node : ast)
 			{ 
@@ -862,8 +853,7 @@ namespace lang
 			}
 		}
 
-		constexpr virtual
-		void visit(many($var)& ast)
+		virtual constexpr void visit(many($var)& ast)
 		{
 			for (auto&& node : ast)
 			{ 
@@ -875,27 +865,23 @@ namespace lang
 		//| variant::decl |
 		//|---------------|
 
-		constexpr virtual
-		void visit($var& ast)
+		virtual constexpr void visit($var& ast)
 		{
 			this->visit(ast.init);
 		}
 
-		constexpr virtual
-		void visit($fun& ast)
+		virtual constexpr void visit($fun& ast)
 		{
 			this->visit(ast.args);
 			this->visit(ast.body);
 		}
 
-		constexpr virtual
-		void visit($trait& ast)
+		virtual constexpr void visit($trait& ast)
 		{
 			this->visit(ast.body);
 		}
 
-		constexpr virtual
-		void visit($model& ast)
+		virtual constexpr void visit($model& ast)
 		{
 			this->visit(ast.body);
 		}
@@ -904,15 +890,13 @@ namespace lang
 		//| variant::stmt |
 		//|---------------|
 
-		constexpr virtual
-		void visit($if& ast)
+		virtual constexpr void visit($if& ast)
 		{
 			this->visit(ast.cases);
 			this->visit(ast.block);
 		}
 
-		constexpr virtual
-		void visit($for& ast)
+		virtual constexpr void visit($for& ast)
 		{
 			this->visit(ast.setup);
 			this->visit(ast.input);
@@ -920,35 +904,30 @@ namespace lang
 			this->visit(ast.block);
 		}
 
-		constexpr virtual
-		void visit($match& ast)
+		virtual constexpr void visit($match& ast)
 		{
 			this->visit(ast.input);
 			this->visit(ast.cases);
 			this->visit(ast.block);
 		}
 
-		constexpr virtual
-		void visit($while& ast)
+		virtual constexpr void visit($while& ast)
 		{
 			this->visit(ast.input);
 			this->visit(ast.block);
 		}
 
-		constexpr virtual
-		void visit($break& ast)
+		virtual constexpr void visit($break& ast)
 		{
 			// nothing to do here
 		}
 
-		constexpr virtual
-		void visit($return& ast)
+		virtual constexpr void visit($return& ast)
 		{
 			this->visit(ast.value);
 		}
 
-		constexpr virtual
-		void visit($continue& ast)
+		virtual constexpr void visit($continue& ast)
 		{
 			// nothing to do here
 		}
@@ -957,45 +936,38 @@ namespace lang
 		//| variant::expr |
 		//|---------------|
 
-		constexpr virtual
-		void visit($unary& ast)
+		virtual constexpr void visit($unary& ast)
 		{
 			this->visit(ast.rhs);
 		}
 
-		constexpr virtual
-		void visit($binary& ast) 
+		virtual constexpr void visit($binary& ast) 
 		{
 			this->visit(ast.lhs);
 			this->visit(ast.rhs);
 		}
 
-		constexpr virtual
-		void visit($literal& ast)
+		virtual constexpr void visit($literal& ast)
 		{
 			// nothing to do here
 		}
 
-		constexpr virtual
-		void visit($symbol& ast)
+		virtual constexpr void visit($symbol& ast)
 		{
 			// nothing to do here
 		}
 
-		constexpr virtual
-		void visit($access& ast)
+		virtual constexpr void visit($access& ast)
 		{
 			// nothing to do here
 		}
 
-		constexpr virtual
-		void visit($group& ast)
+		virtual constexpr void visit($group& ast)
 		{
 			this->visit(ast.expr);
 		}
 
-		constexpr virtual
-		void visit($call& ast)
+		virtual constexpr void visit($call& ast)
 		{
 			this->visit(ast.args);
 			this->visit(ast.call);
@@ -1038,8 +1010,7 @@ namespace lang
 		//| member function |
 		//|-----------------|
 
-		constexpr virtual
-		void visit(only(decl)& ast)
+		virtual constexpr void visit(only(decl)& ast)
 		{
 			std::visit([&](auto&& arg)
 			{
@@ -1048,8 +1019,7 @@ namespace lang
 			ast);
 		}
 
-		constexpr virtual
-		void visit(many(decl)& ast)
+		virtual constexpr void visit(many(decl)& ast)
 		{
 			if (!ast.empty())
 			{
@@ -1074,8 +1044,7 @@ namespace lang
 			}
 		}
 
-		constexpr virtual
-		void visit(only(stmt)& ast)
+		virtual constexpr void visit(only(stmt)& ast)
 		{
 			std::visit([&](auto&& arg)
 			{
@@ -1084,8 +1053,7 @@ namespace lang
 			ast);
 		}
 
-		constexpr virtual
-		void visit(many(stmt)& ast)
+		virtual constexpr void visit(many(stmt)& ast)
 		{
 			if (!ast.empty())
 			{
@@ -1110,8 +1078,7 @@ namespace lang
 			}
 		}
 
-		constexpr virtual
-		void visit(only(expr)& ast)
+		virtual constexpr void visit(only(expr)& ast)
 		{
 			std::visit([&](auto&& arg)
 			{
@@ -1120,8 +1087,7 @@ namespace lang
 			ast);
 		}
 
-		constexpr virtual
-		void visit(many(expr)& ast)
+		virtual constexpr void visit(many(expr)& ast)
 		{
 			if (!ast.empty())
 			{
@@ -1146,8 +1112,7 @@ namespace lang
 			}
 		}
 
-		constexpr virtual
-		void visit(only(node)& ast)
+		virtual constexpr void visit(only(node)& ast)
 		{
 			std::visit([&](auto&& arg)
 			{
@@ -1156,8 +1121,7 @@ namespace lang
 			ast);
 		}
 
-		constexpr virtual
-		void visit(many(node)& ast)
+		virtual constexpr void visit(many(node)& ast)
 		{
 			if (!ast.empty())
 			{
@@ -1186,8 +1150,7 @@ namespace lang
 		//| edge cases |
 		//|------------|
 
-		constexpr virtual
-		void visit(many(body)& ast)
+		virtual constexpr void visit(many(body)& ast)
 		{
 			if (!ast.empty())
 			{
@@ -1212,8 +1175,7 @@ namespace lang
 			}
 		}
 
-		constexpr virtual
-		void visit(many($fun)& ast)
+		virtual constexpr void visit(many($fun)& ast)
 		{
 			if (!ast.empty())
 			{
@@ -1238,8 +1200,7 @@ namespace lang
 			}
 		}
 
-		constexpr virtual
-		void visit(many($var)& ast)
+		virtual constexpr void visit(many($var)& ast)
 		{
 			if (!ast.empty())
 			{
@@ -1264,7 +1225,7 @@ namespace lang
 			}
 		}
 
-		void visit(traits::printable auto& ast)
+		inline constexpr void visit(auto& ast)
 		{
 			this->out << ast << "\n";
 		}
@@ -1273,8 +1234,7 @@ namespace lang
 		//| variant::decl |
 		//|---------------|
 
-		constexpr virtual
-		void visit($fun& ast)
+		virtual constexpr void visit($fun& ast)
 		{
 			START
 			this->gap(); this->out << "[fun]\n";
@@ -1284,8 +1244,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($var& ast)
+		virtual constexpr void visit($var& ast)
 		{
 			START
 			this->gap(); this->out << "[var]\n";
@@ -1295,8 +1254,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($model& ast)
+		virtual constexpr void visit($model& ast)
 		{
 			START
 			this->gap(); this->out << "[class]\n";
@@ -1305,8 +1263,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($trait& ast)
+		virtual constexpr void visit($trait& ast)
 		{
 			START
 			this->gap(); this->out << "[trait]\n";
@@ -1319,8 +1276,7 @@ namespace lang
 		//| variant::stmt |
 		//|---------------|
 
-		constexpr virtual
-		void visit($if& ast)
+		virtual constexpr void visit($if& ast)
 		{
 			START
 			this->gap(); this->out << "[if]\n";
@@ -1329,8 +1285,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($for& ast)
+		virtual constexpr void visit($for& ast)
 		{
 			START
 			this->gap(); this->out << "[for]\n";
@@ -1341,8 +1296,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($match& ast)
+		virtual constexpr void visit($match& ast)
 		{
 			START
 			this->gap(); this->out << "[match]\n";
@@ -1352,8 +1306,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($while& ast)
+		virtual constexpr void visit($while& ast)
 		{
 			START
 			this->gap(); this->out << "[while]\n";
@@ -1362,8 +1315,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($break& ast)
+		virtual constexpr void visit($break& ast)
 		{
 			START
 			this->gap(); this->out << "[break]\n";
@@ -1371,8 +1323,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($return& ast)
+		virtual constexpr void visit($return& ast)
 		{
 			START
 			this->gap(); this->out << "[return]\n";
@@ -1380,8 +1331,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($continue& ast)
+		virtual constexpr void visit($continue& ast)
 		{
 			START
 			this->gap(); this->out << "[continue]\n";
@@ -1393,8 +1343,7 @@ namespace lang
 		//| variant::expr |
 		//|---------------|
 
-		constexpr virtual
-		void visit($unary& ast)
+		virtual constexpr void visit($unary& ast)
 		{
 			START
 			this->gap(); this->out << "[unary]\n";
@@ -1403,8 +1352,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($binary& ast)
+		virtual constexpr void visit($binary& ast)
 		{
 			START
 			this->gap(); this->out << "[binary]\n";
@@ -1414,8 +1362,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($literal& ast)
+		virtual constexpr void visit($literal& ast)
 		{
 			START
 			this->gap(); this->out << "[literal]\n";
@@ -1424,8 +1371,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($symbol& ast)
+		virtual constexpr void visit($symbol& ast)
 		{
 
 			START
@@ -1434,8 +1380,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($access& data)
+		virtual constexpr void visit($access& data)
 		{
 			START
 			this->gap(); this->out << "[access]\n";
@@ -1445,8 +1390,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($group& data)
+		virtual constexpr void visit($group& data)
 		{
 			START
 			this->gap(); this->out << "[group]\n";
@@ -1454,8 +1398,7 @@ namespace lang
 			CLOSE
 		}
 
-		constexpr virtual
-		void visit($call& data)
+		virtual constexpr void visit($call& data)
 		{
 			START
 			this->gap(); this->out << "[call]\n";
@@ -1469,19 +1412,29 @@ namespace lang
 	};
 }
 
+#include "llvm/IR/Module.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+
+static std::unique_ptr<llvm::LLVMContext> CONTEXT {std::make_unique<llvm::LLVMContext>(/*NONE*/)};
+static std::unique_ptr<llvm::Module> MODULE {std::make_unique<llvm::Module>("moe.exe", *CONTEXT)};
+static std::unique_ptr<llvm::IRBuilder<>> BUILDER {std::make_unique<llvm::IRBuilder<>>(*CONTEXT)};
+
 template
 <
 	type::string A,
 	type::string B
 >
-struct program
+class program
 {
 	//|-------<chore>-------|
 	typedef error<A, B> lint;
 	//|---------------------|
 
+public:
+
 	only(body) body;
-	many(lint) issue;
+	many(lint) error;
 
 	COPY_CONSTRUCTOR(program) = delete;
 	MOVE_CONSTRUCTOR(program) = default;
@@ -1491,17 +1444,44 @@ struct program
 	COPY_ASSIGNMENT(program) = delete;
 	MOVE_ASSIGNMENT(program) = default;
 
-	template<typename V>
-	auto dispatch(V& impl)
+	template
+	<
+		typename V
+	>
+	inline constexpr auto visit(V& impl)
 	{
-		for (auto& node : body)
+		for (const auto& node : body)
 		{
 			std::visit([&](auto&& arg)
 			{
 				arg->accept(impl);
 			},
-			node);
+			node); // <- decl/stmt/expr
 		}
+	}
+
+	inline constexpr auto compile(bool ir)
+	{
+		for (auto& _ : this->error)
+		{
+			std::cout << _ << '\n';
+		}
+
+		#ifndef NDEBUG //-------------------|
+		MODULE->print(llvm::outs(), nullptr);
+		#endif //---------------------------|
+	}
+
+private:
+
+	constexpr auto create_fun()
+	{
+
+	}
+
+	constexpr auto create_var()
+	{
+		
 	}
 };
 

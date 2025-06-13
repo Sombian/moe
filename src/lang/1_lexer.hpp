@@ -117,7 +117,7 @@ public:
 		return this->src;
 	}
 
-	auto pull() -> std::variant<token<A, B>, error<A, B>, eof>
+	inline constexpr auto pull() -> std::variant<token<A, B>, error<A, B>, eof>
 	{
 		for
 		(
@@ -206,7 +206,7 @@ private:
 	//| comments |
 	//|----------|
 
-	auto skip_1_line_comment()
+	inline constexpr auto skip_1_line_comment()
 	{
 		while (this->next())
 		{
@@ -218,7 +218,7 @@ private:
 		}
 	}
 
-	auto skip_N_line_comment()
+	inline constexpr auto skip_N_line_comment()
 	{
 		while (this->next())
 		{
@@ -237,7 +237,7 @@ private:
 	//| string literal |
 	//|----------------|
 
-	auto scan_1_code() -> decltype(this->pull())
+	inline constexpr auto scan_1_code() -> decltype(this->pull())
 	{
 		size_t len {0};
 
@@ -257,7 +257,7 @@ private:
 		return T(atom::CHAR);
 	}
 
-	auto scan_N_code() -> decltype(this->pull())
+	inline constexpr auto scan_N_code() -> decltype(this->pull())
 	{
 		size_t len {0};
 		
@@ -277,7 +277,7 @@ private:
 	//| number literal |
 	//|----------------|
 
-	auto scan_bin() -> decltype(this->pull())
+	inline constexpr auto scan_bin() -> decltype(this->pull())
 	{
 		// skip 'b'
 		this->next();
@@ -308,7 +308,7 @@ private:
 		return T(atom::BIN);
 	}
 
-	auto scan_oct() -> decltype(this->pull())
+	inline constexpr auto scan_oct() -> decltype(this->pull())
 	{
 		// skip 'o'
 		this->next();
@@ -345,7 +345,7 @@ private:
 		return T(atom::OCT);
 	}
 
-	auto scan_hex() -> decltype(this->pull())
+	inline constexpr auto scan_hex() -> decltype(this->pull())
 	{
 		// skip 'x'
 		this->next();
@@ -391,7 +391,7 @@ private:
 		return T(atom::HEX);
 	}
 
-	auto scan_num() -> decltype(this->pull())
+	inline constexpr auto scan_num() -> decltype(this->pull())
 	{
 		auto type {atom::INT};
 
@@ -457,7 +457,7 @@ private:
 	//| TST magic |
 	//|-----------|
 
-	auto scan_sym() -> decltype(this->pull())
+	inline constexpr auto scan_sym() -> decltype(this->pull())
 	{
 		#define macro(K, V) { V, atom::K },
 		

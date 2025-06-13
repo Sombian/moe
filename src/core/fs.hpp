@@ -29,8 +29,11 @@ namespace fs
 		}
 	};
 
-	template<type::string T>
-	auto open(const T& path) -> std::optional
+	template
+	<
+		type::string T
+	>
+	inline constexpr auto open(const T& path) -> std::optional
 	<
 		std::variant
 		<
@@ -331,21 +334,21 @@ namespace fs
 
 	template<size_t N>
 	// converting constructor
-	auto open(const char8_t (&path)[N])
+	inline constexpr auto open(const char8_t (&path)[N])
 	{
 		return open(utf8 {path});
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto open(const char16_t (&path)[N])
+	inline constexpr auto open(const char16_t (&path)[N])
 	{
 		return open(utf16 {path});
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto open(const char32_t (&path)[N])
+	inline constexpr auto open(const char32_t (&path)[N])
 	{
 		return open(utf32 {path});
 	}

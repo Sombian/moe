@@ -28,7 +28,7 @@
 //| here, spare capacity is written to the RMB, and once fully occupied, RMB becomes zero. |
 //|----------------------------------------------------------------------------------------|
 
-auto operator<<(std::ostream& os, const char32_t code) -> std::ostream&
+inline constexpr auto operator<<(std::ostream& os, const char32_t code) -> std::ostream&
 {
 	char data[5]
 	{
@@ -108,34 +108,34 @@ class text
 		size_t capacity : CAPACITY_BITS;
 		size_t metadata : METADATA_BITS;
 
-		auto begin() -> T*
+		inline constexpr auto begin() -> T*
 		{
 			return this->data; // from start
 		}
 
-		auto end() -> T*
+		inline constexpr auto end() -> T*
 		{
 			return this->data + this->size;
 		}
 
-		auto begin() const -> const T*
+		inline constexpr auto begin() const -> const T*
 		{
 			return this->data; // from start
 		}
 
-		auto end() const -> const T*
+		inline constexpr auto end() const -> const T*
 		{
 			return this->data + this->size;
 		}
 
 		// syntax sugar
-		auto operator[](const size_t nth) -> T&
+		inline constexpr auto operator[](const size_t nth) -> T&
 		{
 			return this->data[nth];
 		}
 
 		// syntax sugar
-		auto operator[](const size_t nth) const -> const T&
+		inline constexpr auto operator[](const size_t nth) const -> const T&
 		{
 			return this->data[nth];
 		}
@@ -186,7 +186,7 @@ class text
 	//|-------|-------|-------|-------|-------|-------|-------|-------|
 
 	// getter
-	auto mode() const -> tag
+	inline constexpr auto mode() const -> tag
 	{
 		return static_cast<tag>(this->bytes[RMB] & MSK);
 	}
@@ -200,7 +200,7 @@ public:
 	//|-------|-------|-------|-------|-------|-------|-------|-------|
 
 	// getter
-	auto size() const -> size_t
+	inline constexpr auto size() const -> size_t
 	{
 		switch (this->mode())
 		{
@@ -227,7 +227,7 @@ public:
 	}
 
 	// setter
-	auto size(const size_t value)
+	inline constexpr auto size(const size_t value)
 	{
 		if (this->capacity() < value + 1)
 		{
@@ -294,7 +294,7 @@ public:
 	}
 
 	// getter
-	auto capacity() const -> size_t
+	inline constexpr auto capacity() const -> size_t
 	{
 		switch (this->mode())
 		{
@@ -311,7 +311,7 @@ public:
 	}
 
 	// setter
-	auto capacity(const size_t value)
+	inline constexpr auto capacity(const size_t value)
 	{
 		if (this->capacity() < value)
 		{
@@ -432,7 +432,7 @@ private:
 			return U'\0';
 		}
 
-		auto operator=(const char32_t code)&& -> proxy& requires
+		inline constexpr auto operator=(const char32_t code)&& -> proxy& requires
 		(
 			!std::is_const_v<std::remove_reference_t<S>>
 		)
@@ -534,12 +534,12 @@ private:
 		//| member function |
 		//|-----------------|
 
-		auto operator&() const -> const T*
+		inline constexpr auto operator&() const -> const T*
 		{
 			return this->ptr;
 		}
 
-		auto operator*() const -> char32_t
+		inline constexpr auto operator*() const -> char32_t
 		{
 			char32_t out;
 			// write to ref
@@ -549,7 +549,7 @@ private:
 		}
 
 		// prefix (++it)
-		auto operator++() -> iterator&
+		inline constexpr auto operator++() -> iterator&
 		{
 			// += is fine because [0 < codex::next]
 			this->ptr += codec::next(this->ptr);
@@ -558,7 +558,7 @@ private:
 		}
 
 		// postfix (it++)
-		auto operator++(int) -> iterator
+		inline constexpr auto operator++(int) -> iterator
 		{
 			auto temp {*this};
 			operator++();
@@ -566,7 +566,7 @@ private:
 		}
 
 		// prefix (--it)
-		auto operator--() -> iterator&
+		inline constexpr auto operator--() -> iterator&
 		{
 			// += is fine because [codex::back < 0]
 			this->ptr += codec::back(this->ptr);
@@ -575,7 +575,7 @@ private:
 		}
 
 		// postfix (it--)
-		auto operator--(int) -> iterator
+		inline constexpr auto operator--(int) -> iterator
 		{
 			auto temp {*this};
 			operator--();
@@ -585,7 +585,7 @@ private:
 		//| lhs == rhs |
 		//|------------|
 
-		friend auto operator==(const iterator& lhs, const iterator& rhs) -> bool
+		friend constexpr auto operator==(const iterator& lhs, const iterator& rhs) -> bool
 		{
 			return lhs.ptr == rhs.ptr;
 		}
@@ -594,7 +594,7 @@ private:
 		//| lhs != rhs |
 		//|------------|
 
-		friend auto operator!=(const iterator& lhs, const iterator& rhs) -> bool
+		friend constexpr auto operator!=(const iterator& lhs, const iterator& rhs) -> bool
 		{
 			return lhs.ptr != rhs.ptr;
 		}
@@ -738,32 +738,257 @@ public:
 	{
 		typedef int8_t width_t;
 
+		constexpr static const int8_t TBL[]
+		{
+			/*|----(0xxx)----|*/
+			/*| 0x0          |*/ 1,
+			/*| 0x1          |*/ 1,
+			/*| 0x2          |*/ 1,
+			/*| 0x3          |*/ 1,
+			/*| 0x4          |*/ 1,
+			/*| 0x5          |*/ 1,
+			/*| 0x6          |*/ 1,
+			/*| 0x7          |*/ 1,
+			/*|----(10xx)----|*/
+			/*| 0x8          |*/ 1,
+			/*| 0x9          |*/ 1,
+			/*| 0xA          |*/ 1,
+			/*| 0xB          |*/ 1,
+			/*|----(110x)----|*/
+			/*| 0xC          |*/ 2,
+			/*| 0xD          |*/ 2,
+			/*|----(1110)----|*/
+			/*| 0xE          |*/ 3,
+			/*|----(1111)----|*/
+			/*| 0xF          |*/ 4,
+			/*|--------------|*/
+		};
+
+		static constexpr auto is_lead(char16_t unit) -> bool
+		{
+			return 0xD800 <= unit && unit <= 0xDBFF;
+		}
+
+		static constexpr auto is_tail(char16_t unit) -> bool
+		{
+			return 0xDC00 <= unit && unit <= 0xDFFF;
+		}
+
 	public:
 
-		static inline
 		// where : 0 < result
-		auto next(const T* ptr) -> width_t;
+		static constexpr auto next(const T* ptr) -> width_t
+		{
+			if constexpr (std::is_same_v<T, char8_t>)
+			{
+				//-------------------------------------------//
+				return TBL[(((unsigned) *ptr) >> 4) & 0x0F]; //
+				//-------------------------------------------//
+			}
+			if constexpr (std::is_same_v<T, char16_t>)
+			{
+				if (is_lead(ptr[0])) { return +2; }
+				if (is_tail(ptr[0])) { return +1; }
 
-		static inline
+				return +1;
+			}
+			if constexpr (std::is_same_v<T, char32_t>)
+			{
+				return +1;
+			}
+		}
+
 		// where : result < 0
-		auto back(const T* ptr) -> width_t;
+		static constexpr auto back(const T* ptr) -> width_t
+		{
+			if constexpr (std::is_same_v<T, char8_t>)
+			{
+				width_t i {0};
+				//-------------------------------------------//
+				while ((ptr[i - 1] & 0xC0) == 0x80) { --i; } //
+				//-------------------------------------------//
+				return i - 1;
+			}
+			if constexpr (std::is_same_v<T, char16_t>)
+			{
+				if (is_tail(ptr[0])) { return -2; }
+				if (is_lead(ptr[0])) { return -1; }
 
-		static inline
+				return -1;
+			}
+			if constexpr (std::is_same_v<T, char32_t>)
+			{
+				return 1;
+			}
+		}
+
 		// where : 0 < result
-		auto width(const char32_t code) -> width_t;
+		static constexpr auto width(const char32_t code) -> width_t
+		{
+			if constexpr (std::is_same_v<T, char8_t>)
+			{
+				const auto N {std::bit_width((unsigned) code)};
+				//-------------------------------------------//
+				return 1 + (8 <= N) + (12 <= N) + (17 <= N); //
+				//-------------------------------------------//
+			}
+			if constexpr (std::is_same_v<T, char16_t>)
+			{
+				//--------------------------//
+				return 1 + (0xFFFF < code); //
+				//--------------------------//
+			}
+			if constexpr (std::is_same_v<T, char32_t>)
+			{
+				return +1;
+			}
+		}
 
-		static inline
-		void encode(const char32_t in, T* out, width_t width);
+		static constexpr void encode(const char32_t in, T* out, width_t width)
+		{
+			if constexpr (std::is_same_v<T, char8_t>)
+			{
+				switch (width)
+				{
+					case +1:
+					{
+						out[0] = in;
+						break;
+					}
+					case +2:
+					{
+						out[0] = 0xC0 | ((in >> 06) & 0x1F);
+						out[1] = 0x80 | ((in >> 00) & 0x3F);
+						break;
+					}
+					case +3:
+					{
+						out[0] = 0xE0 | ((in >> 12) & 0x0F);
+						out[1] = 0x80 | ((in >> 06) & 0x3F);
+						out[2] = 0x80 | ((in >> 00) & 0x3F);
+						break;
+					}
+					case +4:
+					{
+						out[0] = 0xF0 | ((in >> 18) & 0x07);
+						out[1] = 0x80 | ((in >> 12) & 0x3F);
+						out[2] = 0x80 | ((in >> 06) & 0x3F);
+						out[3] = 0x80 | ((in >> 00) & 0x3F);
+						break;
+					}
+					default:
+					{
+						assert(!"[ERROR]");
+						std::unreachable();
+					}
+				}
+			}
+			if constexpr (std::is_same_v<T, char16_t>)
+			{
+				switch (width)
+				{
+					case +1:
+					{
+						out[0] = in;
+						break;
+					}
+					case +2:
+					{
+						const auto code {in - 0x10000};
+						out[0] = 0xD800 | (code / 0x400);
+						out[1] = 0xDC00 | (code & 0x3FF);
+						break;
+					}
+					default:
+					{
+						assert(!"[ERROR]");
+						std::unreachable();
+					}
+				}
+			}
+			if constexpr (std::is_same_v<T, char32_t>)
+			{
+				out[0] = in;
+			}
+		}
 
-		static inline
-		void decode(const T* in, char32_t& out, width_t width);
+		static constexpr void decode(const T* in, char32_t& out, width_t width)
+		{
+			if constexpr (std::is_same_v<T, char8_t>)
+			{
+				switch (width)
+				{
+					case +1:
+					{
+						out = in[0];
+						break;
+					}
+					case +2:
+					{
+						out = 0;
+						out |= (in[0] & 0x1F) << 06;
+						out |= (in[1] & 0x3F) << 00;
+						break;
+					}
+					case +3:
+					{
+						out = 0;
+						out |= (in[0] & 0x0F) << 12;
+						out |= (in[1] & 0x3F) << 06;
+						out |= (in[2] & 0x3F) << 00;
+						break;
+					}
+					case +4:
+					{
+						out = 0;
+						out |= (in[0] & 0x07) << 18;
+						out |= (in[1] & 0x3F) << 12;
+						out |= (in[2] & 0x3F) << 06;
+						out |= (in[3] & 0x3F) << 00;
+						break;
+					}
+					default:
+					{
+						assert(!"[ERROR]");
+						std::unreachable();
+					}
+				}
+			}
+			if constexpr (std::is_same_v<T, char16_t>)
+			{
+				switch (width)
+				{
+					case +1:
+					{
+						out = in[0];
+						break;
+					}
+					case +2:
+					{
+						out = 0x10000;
+						out |= (in[0] - 0xD800) << 10;
+						out |= (in[1] - 0xDC00) << 00;
+						break;
+					}
+					default:
+					{
+						assert(!"[ERROR]");
+						std::unreachable();
+					}
+				}
+			}
+			if constexpr (std::is_same_v<T, char32_t>)
+			{
+				out = in[0];
+			}
+		}
 	};
 
 	//|-----------------|
 	//| member function |
 	//|-----------------|
 
-	auto c_str() -> T*
+	inline constexpr auto c_str() -> T*
 	{
 		switch (this->mode())
 		{
@@ -779,7 +1004,7 @@ public:
 		assert(false && "-Wreturn-type");
 	}
 
-	auto c_str() const -> const T*
+	inline constexpr auto c_str() const -> const T*
 	{
 		switch (this->mode())
 		{
@@ -799,7 +1024,7 @@ public:
 	//| lhs.length() |
 	//|--------------|
 
-	auto length() const -> size_t
+	inline constexpr auto length() const -> size_t
 	{
 		// UTF-32
 		if constexpr (std::is_same_v<T, char32_t>)
@@ -843,12 +1068,12 @@ public:
 		//| member function |
 		//|-----------------|
 
-		auto size() const -> size_t
+		inline constexpr auto size() const -> size_t
 		{
 			return this->tail - this->head;
 		}
 
-		auto length() const -> size_t
+		inline constexpr auto length() const -> size_t
 		{
 			// UTF-32
 			if constexpr (std::is_same_v<T, char32_t>)
@@ -868,7 +1093,7 @@ public:
 			return j; // <- O(N)
 		}
 
-		auto to_utf8() const -> text<char8_t>
+		inline constexpr auto to_utf8() const -> text<char8_t>
 		{
 			text<char8_t> rvalue {this->size() + 1};
 
@@ -886,7 +1111,7 @@ public:
 			return rvalue;
 		}
 
-		auto to_utf16() const -> text<char16_t>
+		inline constexpr auto to_utf16() const -> text<char16_t>
 		{
 			text<char16_t> rvalue {this->size() + 1};
 
@@ -904,7 +1129,7 @@ public:
 			return rvalue;
 		}
 
-		auto to_utf32() const -> text<char32_t>
+		inline constexpr auto to_utf32() const -> text<char32_t>
 		{
 			text<char32_t> rvalue {this->size() + 1};
 
@@ -926,8 +1151,11 @@ public:
 		//| lhs.find() |
 		//|------------|
 
-		template<typename U>
-		auto find(const text<U>& str, const size_t offset = 0) const -> size_t
+		template
+		<
+			typename U
+		>
+		inline constexpr auto find(const text<U>& str, const size_t offset = 0) const -> size_t
 		{
 			const T* ptr {this->head};
 
@@ -981,7 +1209,7 @@ public:
 		}
 
 		template<size_t N>
-		auto find(const T (&str)[N], const size_t offset = 0) const -> size_t
+		inline constexpr auto find(const T (&str)[N], const size_t offset = 0) const -> size_t
 		{
 			const T* ptr {this->head};
 
@@ -1034,7 +1262,7 @@ public:
 			return SIZE_MAX;
 		}
 
-		auto find(const char32_t code, const size_t offset = 0) const -> size_t
+		inline constexpr auto find(const char32_t code, const size_t offset = 0) const -> size_t
 		{
 			const T* ptr {this->head};
 
@@ -1062,31 +1290,34 @@ public:
 
 		template<size_t N>
 		// converting constructor
-		auto find(const char8_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char8_t>)
+		inline constexpr auto find(const char8_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char8_t>)
 		{
-			return this->find(text<char8_t>{str}, offset);
+			return this->find(text<char8_t> {str}, offset);
 		}
 
 		template<size_t N>
 		// converting constructor
-		auto find(const char16_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char16_t>)
+		inline constexpr auto find(const char16_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char16_t>)
 		{
-			return this->find(text<char16_t>{str}, offset);
+			return this->find(text<char16_t> {str}, offset);
 		}
 
 		template<size_t N>
 		// converting constructor
-		auto find(const char32_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char32_t>)
+		inline constexpr auto find(const char32_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char32_t>)
 		{
-			return this->find(text<char32_t>{str}, offset);
+			return this->find(text<char32_t> {str}, offset);
 		}
 
 		//|-------------|
 		//| lhs.split() |
 		//|-------------|
 
-		template<typename U>
-		auto split(const text<U>& str) const -> std::vector<slice>
+		template
+		<
+			typename U
+		>
+		inline constexpr auto split(const text<U>& str) const -> std::vector<slice>
 		{
 			if constexpr (std::is_same_v<T, U>)
 			{
@@ -1193,7 +1424,7 @@ public:
 		}
 
 		template<size_t N>
-		auto split(const T (&str)[N]) const -> std::vector<slice>
+		inline constexpr auto split(const T (&str)[N]) const -> std::vector<slice>
 		{
 			std::vector<slice> result;
 
@@ -1236,7 +1467,7 @@ public:
 			return result;
 		}
 
-		auto split(const char32_t code) const -> std::vector<slice>
+		inline constexpr auto split(const char32_t code) const -> std::vector<slice>
 		{
 			std::vector<slice> result;
 
@@ -1269,30 +1500,30 @@ public:
 
 		template<size_t N>
 		// converting constructor
-		auto split(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
+		inline constexpr auto split(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
 		{
-			return this->split(text<char8_t>{str});
+			return this->split(text<char8_t> {str});
 		}
 
 		template<size_t N>
 		// converting constructor
-		auto split(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
+		inline constexpr auto split(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
 		{
-			return this->split(text<char16_t>{str});
+			return this->split(text<char16_t> {str});
 		}
 
 		template<size_t N>
 		// converting constructor
-		auto split(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
+		inline constexpr auto split(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
 		{
-			return this->split(text<char32_t>{str});
+			return this->split(text<char32_t> {str});
 		}
 
 		//|--------------|
 		//| lhs.substr() |
 		//|--------------|
 
-		auto substr(const size_t start, const size_t count) const -> slice
+		inline constexpr auto substr(const size_t start, const size_t count) const -> slice
 		{
 			const auto ptr {this->head};
 			// UTF-32
@@ -1321,7 +1552,7 @@ public:
 		//| lhs < rhs |
 		//|-----------|
 
-		friend auto operator<(const slice& lhs, const slice& rhs) -> bool
+		friend constexpr auto operator<(const slice& lhs, const slice& rhs) -> bool
 		{
 			const auto len {std::min
 			(lhs.size(), rhs.size())};
@@ -1345,7 +1576,7 @@ public:
 		//| lhs[M] |
 		//|--------|
 
-		auto operator[](const size_t nth) const -> char32_t
+		inline constexpr auto operator[](const size_t nth) const -> char32_t
 		{
 			auto ptr {this->head};
 
@@ -1386,7 +1617,7 @@ public:
 		//| lhs == rhs |
 		//|------------|
 
-		friend auto operator==(const slice& lhs, const slice& rhs) -> bool
+		friend constexpr auto operator==(const slice& lhs, const slice& rhs) -> bool
 		{
 			return
 			(
@@ -1396,8 +1627,11 @@ public:
 			);
 		}
 
-		template<typename U>
-		friend auto operator==(const slice& lhs, const text<U>& rhs) -> bool
+		template
+		<
+			typename U
+		>
+		friend constexpr auto operator==(const slice& lhs, const text<U>& rhs) -> bool
 		{
 			if constexpr (std::is_same_v<T, U>)
 			{
@@ -1428,7 +1662,7 @@ public:
 		}
 
 		template<size_t N>
-		friend auto operator==(const slice& lhs, const T (&rhs)[N]) -> bool
+		friend constexpr auto operator==(const slice& lhs, const T (&rhs)[N]) -> bool
 		{
 			if (lhs.tail - lhs.head != N)
 			{
@@ -1442,49 +1676,49 @@ public:
 
 		template<size_t N>
 		// reverse op overloading
-		friend auto operator==(const T (&lhs)[N], const slice& rhs) -> bool
+		friend constexpr auto operator==(const T (&lhs)[N], const slice& rhs) -> bool
 		{
 			return rhs == lhs;
 		}
 
 		template<size_t N>
 		// converting constructor
-		friend auto operator==(const slice& lhs, const char8_t (&rhs)[N]) -> bool requires (!std::is_same_v<T, char8_t>)
+		friend constexpr auto operator==(const slice& lhs, const char8_t (&rhs)[N]) -> bool requires (!std::is_same_v<T, char8_t>)
 		{
-			return lhs == text<char8_t>{rhs};
+			return lhs == text<char8_t> {rhs};
 		}
 
 		template<size_t N>
 		// reverse op overloading
-		friend auto operator==(const char8_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char8_t>)
+		friend constexpr auto operator==(const char8_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char8_t>)
 		{
 			return rhs == lhs;
 		}
 
 		template<size_t N>
 		// converting constructor
-		friend auto operator==(const slice& lhs, const char16_t (&rhs)[N]) -> bool requires (!std::is_same_v<T, char16_t>)
+		friend constexpr auto operator==(const slice& lhs, const char16_t (&rhs)[N]) -> bool requires (!std::is_same_v<T, char16_t>)
 		{
-			return lhs == text<char16_t>{rhs};
+			return lhs == text<char16_t> {rhs};
 		}
 
 		template<size_t N>
 		// reverse op overloading
-		friend auto operator==(const char16_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char16_t>)
+		friend constexpr auto operator==(const char16_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char16_t>)
 		{
 			return rhs == lhs;
 		}
 
 		template<size_t N>
 		// converting constructor
-		friend auto operator==(const slice& lhs, const char32_t (&rhs)[N]) -> bool requires (!std::is_same_v<T, char32_t>)
+		friend constexpr auto operator==(const slice& lhs, const char32_t (&rhs)[N]) -> bool requires (!std::is_same_v<T, char32_t>)
 		{
-			return lhs == text<char32_t>{rhs};
+			return lhs == text<char32_t> {rhs};
 		}
 
 		template<size_t N>
 		// reverse op overloading
-		friend auto operator==(const char32_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char32_t>)
+		friend constexpr auto operator==(const char32_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char32_t>)
 		{
 			return rhs == lhs;
 		}
@@ -1493,67 +1727,71 @@ public:
 		//| lhs != rhs |
 		//|------------|
 
-		friend auto operator!=(const slice& lhs, const slice& rhs) -> bool
+		friend constexpr auto operator!=(const slice& lhs, const slice& rhs) -> bool
 		{
 			return !(lhs == rhs);
 		}
 
-		template<typename U>
-		friend auto operator!=(const slice& lhs, const text<U>& rhs) -> bool
+		template
+		<
+			typename U
+		>
+		friend constexpr auto operator!=(const slice& lhs, const text<U>& rhs) -> bool
 		{
 			return !(lhs == rhs);
 		}
 
 		template<size_t N>
-		friend auto operator!=(const slice& lhs, const T (&rhs)[N]) -> bool
+		friend constexpr auto operator!=(const slice& lhs, const T (&rhs)[N]) -> bool
 		{
 			return !(lhs == rhs);
 		}
 
 		template<size_t N>
-		friend auto operator!=(const T (&lhs)[N], const slice& rhs) -> bool
+		friend constexpr auto operator!=(const T (&lhs)[N], const slice& rhs) -> bool
 		{
 			return !(lhs == rhs);
 		}
 
 		template<size_t N>
 		// converting constructor
-		friend auto operator!=(const slice& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
+		friend
+		inline constexpr auto operator!=(const slice& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
 		{
 			return !(lhs == rhs);
 		}
 
 		template<size_t N>
 		// reverse op overloading
-		friend auto operator!=(const char8_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char8_t>)
+		friend constexpr auto operator!=(const char8_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char8_t>)
 		{
 			return rhs != lhs;
 		}
 
 		template<size_t N>
 		// converting constructor
-		friend auto operator!=(const slice& lhs, const char16_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char16_t>)
+		friend constexpr auto operator!=(const slice& lhs, const char16_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char16_t>)
 		{
 			return !(lhs == rhs);
 		}
 
 		template<size_t N>
 		// reverse op overloading
-		friend auto operator!=(const char16_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char16_t>)
+		friend constexpr auto operator!=(const char16_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char16_t>)
 		{
 			return rhs != lhs;
 		}
 
 		template<size_t N>
 		// converting constructor
-		friend auto operator!=(const slice& lhs, const char32_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char32_t>)
+		friend constexpr auto operator!=(const slice& lhs, const char32_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char32_t>)
 		{
 			return !(lhs == rhs);
 		}
 
 		template<size_t N>
 		// reverse op overloading
-		friend auto operator!=(const char32_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char32_t>)
+		friend constexpr auto operator!=(const char32_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char32_t>)
 		{
 			return rhs != lhs;
 		}
@@ -1562,12 +1800,12 @@ public:
 		//| traits::iterable<T> |
 		//|---------------------|
 
-		auto begin() const -> iterator
+		inline constexpr auto begin() const -> iterator
 		{
 			return {this->head};
 		}
 
-		auto end() const -> iterator
+		inline constexpr auto end() const -> iterator
 		{
 			return {this->tail};
 		}
@@ -1576,7 +1814,7 @@ public:
 		//| traits::printable<T> |
 		//|----------------------|
 
-		friend auto operator<<(std::ostream& os, const slice& str) -> std::ostream&
+		friend constexpr auto operator<<(std::ostream& os, const slice& str) -> std::ostream&
 		{
 			for (const auto code : str) { os << code; } return os; // STL support :3
 		}
@@ -1630,7 +1868,7 @@ public:
 		{ str.to_utf16() } -> std::same_as<text<char16_t>>;
 		{ str.to_utf32() } -> std::same_as<text<char32_t>>;
 	}
-	auto operator=(const slice_t& rhs) -> text&
+	inline constexpr auto operator=(const slice_t& rhs) -> text&
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
 		{
@@ -1661,7 +1899,7 @@ public:
 		{ str.to_utf16() } -> std::same_as<text<char16_t>>;
 		{ str.to_utf32() } -> std::same_as<text<char32_t>>;
 	}
-	auto operator=(const slice_t&& rhs) -> text&
+	inline constexpr auto operator=(const slice_t&& rhs) -> text&
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
 		{
@@ -1682,7 +1920,7 @@ public:
 	//| utf8 <-> utf16 <-> utf32 |
 	//|--------------------------|
 
-	auto to_utf8() const -> text<char8_t>
+	inline constexpr auto to_utf8() const -> text<char8_t>
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
 		{
@@ -1704,7 +1942,7 @@ public:
 		return rvalue;
 	}
 
-	auto to_utf16() const -> text<char16_t>
+	inline constexpr auto to_utf16() const -> text<char16_t>
 	{
 		if constexpr (std::is_same_v<T, char16_t>)
 		{
@@ -1726,7 +1964,7 @@ public:
 		return rvalue;
 	}
 
-	auto to_utf32() const -> text<char32_t>
+	inline constexpr auto to_utf32() const -> text<char32_t>
 	{
 		if constexpr (std::is_same_v<T, char32_t>)
 		{
@@ -1752,8 +1990,11 @@ public:
 	//| lhs.find() |
 	//|------------|
 
-	template<typename U>
-	auto find(const text<U>& str, const size_t offset = 0) const -> size_t
+	template
+	<
+		typename U
+	>
+	inline constexpr auto find(const text<U>& str, const size_t offset = 0) const -> size_t
 	{
 		//----------------------------------------------//
 		const auto LAST {this->c_str() + this->size()}; //
@@ -1810,7 +2051,7 @@ public:
 	}
 
 	template<size_t N>
-	auto find(const T (&str)[N], const size_t offset = 0) const -> size_t
+	inline constexpr auto find(const T (&str)[N], const size_t offset = 0) const -> size_t
 	{
 		//----------------------------------------------//
 		const auto LAST {this->c_str() + this->size()}; //
@@ -1866,7 +2107,7 @@ public:
 		return SIZE_MAX;
 	}
 
-	auto find(const char32_t code, const size_t offset = 0) const -> size_t
+	inline constexpr auto find(const char32_t code, const size_t offset = 0) const -> size_t
 	{
 		//----------------------------------------------//
 		const auto LAST {this->c_str() + this->size()}; //
@@ -1897,31 +2138,34 @@ public:
 
 	template<size_t N>
 	// converting constructor
-	auto find(const char8_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char8_t>)
+	inline constexpr auto find(const char8_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char8_t>)
 	{
-		return this->find(text<char8_t>{str}, offset);
+		return this->find(text<char8_t> {str}, offset);
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto find(const char16_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char16_t>)
+	inline constexpr auto find(const char16_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char16_t>)
 	{
-		return this->find(text<char16_t>{str}, offset);
+		return this->find(text<char16_t> {str}, offset);
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto find(const char32_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char32_t>)
+	inline constexpr auto find(const char32_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char32_t>)
 	{
-		return this->find(text<char32_t>{str}, offset);
+		return this->find(text<char32_t> {str}, offset);
 	}
 
 	//|-------------|
 	//| lhs.split() |
 	//|-------------|
 
-	template<typename U>
-	auto split(const text<U>& str) const -> std::vector<slice>
+	template
+	<
+		typename U
+	>
+	inline constexpr auto split(const text<U>& str) const -> std::vector<slice>
 	{
 		if constexpr (std::is_same_v<T, U>)
 		{
@@ -2035,7 +2279,7 @@ public:
 	}
 
 	template<size_t N>
-	auto split(const T (&str)[N]) const -> std::vector<slice>
+	inline constexpr auto split(const T (&str)[N]) const -> std::vector<slice>
 	{
 		//--------------------------------------------//
 		const T* LAST {this->c_str() + this->size()}; //
@@ -2081,7 +2325,7 @@ public:
 		return result;
 	}
 
-	auto split(const char32_t code) const -> std::vector<slice>
+	inline constexpr auto split(const char32_t code) const -> std::vector<slice>
 	{
 		//--------------------------------------------//
 		const T* LAST {this->c_str() + this->size()}; //
@@ -2117,30 +2361,30 @@ public:
 
 	template<size_t N>
 	// converting constructor
-	auto split(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
+	inline constexpr auto split(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
 	{
-		return this->split(text<char8_t>{str});
+		return this->split(text<char8_t> {str});
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto split(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
+	inline constexpr auto split(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
 	{
-		return this->split(text<char16_t>{str});
+		return this->split(text<char16_t> {str});
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto split(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
+	inline constexpr auto split(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
 	{
-		return this->split(text<char32_t>{str});
+		return this->split(text<char32_t> {str});
 	}
 
 	//|--------------|
 	//| lhs.substr() |
 	//|--------------|
 
-	auto substr(const size_t start, const size_t count) const -> slice
+	inline constexpr auto substr(const size_t start, const size_t count) const -> slice
 	{
 		const auto ptr {this->c_str()};
 		// UTF-32
@@ -2169,12 +2413,12 @@ public:
 	//| lhs[N] |
 	//|--------|
 
-	auto operator[](const size_t nth) const -> proxy<decltype(*this)>
+	inline constexpr auto operator[](const size_t nth) const -> proxy<decltype(*this)>
 	{
 		return {*this, nth};
 	}
 
-	auto operator[](const size_t nth) -> proxy<decltype(*this)>
+	inline constexpr auto operator[](const size_t nth) -> proxy<decltype(*this)>
 	{
 		return {*this, nth};
 	}
@@ -2183,7 +2427,7 @@ public:
 	//| lhs < rhs |
 	//|-----------|
 
-	friend auto operator<(const text<T>& lhs, const text<T>& rhs) -> bool
+	friend constexpr auto operator<(const text<T>& lhs, const text<T>& rhs) -> bool
 	{
 		const auto len {std::min
 		(lhs.size(), rhs.size())};
@@ -2210,7 +2454,7 @@ public:
 		// arguments to concat
 		std::vector<text<T>> args;
 
-		auto full() const -> bool
+		inline constexpr auto full() const -> bool
 		{
 			return // until N = N' + 1
 			(
@@ -2268,7 +2512,18 @@ public:
 		{
 			while (!this->full())
 			{
-				this->args.emplace_back(u8"%s");
+				if constexpr (std::same_as<T, char8_t>)
+				{
+					this->args.emplace_back(u8"%s");
+				}
+				if constexpr (std::same_as<T, char16_t>)
+				{
+					this->args.emplace_back(u"%s");
+				}
+				if constexpr (std::same_as<T, char32_t>)
+				{
+					this->args.emplace_back(U"%s");
+				}
 			}
 			// allocate str
 			text<T> result
@@ -2300,7 +2555,7 @@ public:
 		//| lhs | rhs |
 		//|-----------|
 
-		auto operator|(const text<T>& rhs)&& -> builder&
+		inline constexpr auto operator|(const text<T>& rhs)&& -> builder&
 		{
 			if (!this->full())
 			{
@@ -2309,7 +2564,7 @@ public:
 			return *this;
 		}
 
-		auto operator|(const slice& rhs)&& -> builder&
+		inline constexpr auto operator|(const slice& rhs)&& -> builder&
 		{
 			if (!this->full())
 			{
@@ -2319,7 +2574,7 @@ public:
 		}
 
 		template<size_t N>
-		auto operator|(const T (&rhs)[N])&& -> builder&
+		inline constexpr auto operator|(const T (&rhs)[N])&& -> builder&
 		{
 			if (!this->full())
 			{
@@ -2332,7 +2587,7 @@ public:
 		//| fundamental types |
 		//|-------------------|
 
-		auto operator|(const bool rhs)&& -> builder&
+		inline constexpr auto operator|(const bool rhs)&& -> builder&
 		{
 			return *this | (rhs ? u8"true" : u8"false");
 		}
@@ -2352,34 +2607,118 @@ public:
 	//| lhs | rhs |
 	//|-----------|
 
-	template<typename U>
-	friend auto operator|(const text<T> lhs, const text<U>& rhs) -> builder
+	template
+	<
+		typename U
+	>
+	friend constexpr auto operator|(const text<T> lhs, const text<U>& rhs) -> builder
 	{
 		return builder {lhs} | rhs;
 	}
 
 	template<size_t N>
-	friend auto operator|(const text<T>& lhs, const slice& rhs) -> builder
+	friend constexpr auto operator|(const text<T>& lhs, const slice& rhs) -> builder
 	{
 		return builder {lhs} | rhs;
 	}
 
 	template<size_t N>
-	friend auto operator|(const slice& lhs, const text<T>& rhs) -> builder
+	friend constexpr auto operator|(const slice& lhs, const text<T>& rhs) -> builder
 	{
 		return builder {lhs} | rhs;
 	}
 
 	template<size_t N>
-	friend auto operator|(const text<T>& lhs, const T (&rhs)[N]) -> builder
+	friend constexpr auto operator|(const text<T>& lhs, const T (&rhs)[N]) -> builder
 	{
 		return builder {lhs} | rhs;
 	}
 
 	template<size_t N>
-	friend auto operator|(const T (&lhs)[N], const text<T>& rhs) -> builder
+	friend constexpr auto operator|(const T (&lhs)[N], const text<T>& rhs) -> builder
 	{
 		return builder {lhs} | rhs;
+	}
+
+	template<size_t N>
+	friend constexpr auto operator|(const text<T>& lhs, const char8_t (&rhs)[N]) -> builder requires (!std::is_same_v<T, char8_t>)
+	{
+		if constexpr (std::is_same_v<T, char16_t>)
+		{
+			return builder {lhs} | text<char8_t> {rhs}.to_utf16();
+		}
+		if constexpr (std::is_same_v<T, char32_t>)
+		{
+			return builder {lhs} | text<char8_t> {rhs}.to_utf32();
+		}
+	}
+
+	template<size_t N>
+	// reverse op overloading
+	friend constexpr auto operator|(const char8_t (&lhs)[N], const text<T>& rhs) -> builder requires (!std::is_same_v<T, char8_t>)
+	{
+		if constexpr (std::is_same_v<T, char16_t>)
+		{
+			return builder {text<char8_t> {lhs}.to_utf16()} | rhs;
+		}
+		if constexpr (std::is_same_v<T, char32_t>)
+		{
+			return builder {text<char8_t> {lhs}.to_utf32()} | rhs;
+		}
+	}
+	
+	template<size_t N>
+	friend constexpr auto operator|(const text<T>& lhs, const char16_t (&rhs)[N]) -> builder requires (!std::is_same_v<T, char16_t>)
+	{
+		if constexpr (std::is_same_v<T, char8_t>)
+		{
+			return builder {lhs} | text<char16_t> {rhs}.to_utf8();
+		}
+		if constexpr (std::is_same_v<T, char32_t>)
+		{
+			return builder {lhs} | text<char16_t> {rhs}.to_utf32();
+		}
+	}
+
+	template<size_t N>
+	// reverse op overloading
+	friend constexpr auto operator|(const char16_t (&lhs)[N], const text<T>& rhs) -> builder requires (!std::is_same_v<T, char16_t>)
+	{
+		if constexpr (std::is_same_v<T, char8_t>)
+		{
+			return builder {text<char16_t> {lhs}.to_utf8()} | rhs;
+		}
+		if constexpr (std::is_same_v<T, char32_t>)
+		{
+			return builder {text<char16_t> {lhs}.to_utf32()} | rhs;
+		}
+	}
+
+	template<size_t N>
+	friend constexpr auto operator|(const text<T>& lhs, const char32_t (&rhs)[N]) -> builder requires (!std::is_same_v<T, char32_t>)
+	{
+		if constexpr (std::is_same_v<T, char8_t>)
+		{
+			return builder {lhs} | text<char32_t> {rhs}.to_utf8();
+		}
+		if constexpr (std::is_same_v<T, char16_t>)
+		{
+			return builder {lhs} | text<char32_t> {rhs}.to_utf16();
+		}
+	}
+
+	template<size_t N>
+	// reverse op overloading
+	friend constexpr auto operator|(const char32_t (&lhs)[N], const text<T>& rhs) -> builder requires (!std::is_same_v<T, char32_t>)
+	{
+		if constexpr (std::is_same_v<T, char8_t>)
+		{
+			return builder {text<char32_t> {lhs}.to_utf8()} | rhs;
+		}
+		if constexpr (std::is_same_v<T, char16_t>)
+		{
+			return builder {text<char32_t> {lhs}.to_utf16()} | rhs;
+		}
 	}
 
 	//|------------|
@@ -2390,8 +2729,11 @@ public:
 	#define BUFFER this->c_str() + this->size()
 	/*****************************************/
 
-	template<typename U>
-	auto operator+=(const text<U>& rhs) -> text<T>
+	template
+	<
+		typename U
+	>
+	inline constexpr auto operator+=(const text<U>& rhs) -> text<T>
 	{
 		const auto total {this->size() + rhs.size()};
 
@@ -2434,7 +2776,7 @@ public:
 		}
 	}
 
-	auto operator+=(const slice& rhs) -> text<T>
+	inline constexpr auto operator+=(const slice& rhs) -> text<T>
 	{
 		const auto total {this->size() + rhs.size()};
 
@@ -2458,7 +2800,7 @@ public:
 	}
 
 	template<size_t N>
-	auto operator+=(const T (&rhs)[N]) -> text<T>
+	inline constexpr auto operator+=(const T (&rhs)[N]) -> text<T>
 	{
 		const auto total {this->size() + N - 1};
 
@@ -2487,8 +2829,11 @@ public:
 	//| lhs + rhs |
 	//|-----------|
 
-	template<typename U>
-	friend auto operator+(const text<T> lhs, const text<U>& rhs) -> text<T>
+	template
+	<
+		typename U
+	>
+	friend constexpr auto operator+(const text<T> lhs, const text<U>& rhs) -> text<T>
 	{
 		text<T> rvalue {lhs.size() + rhs.size()};
 
@@ -2500,7 +2845,7 @@ public:
 		return rvalue;
 	}
 
-	friend auto operator+(const text<T> lhs, const slice& rhs) -> text<T>
+	friend constexpr auto operator+(const text<T> lhs, const slice& rhs) -> text<T>
 	{
 		text<T> rvalue {lhs.size() + rhs.size()};
 
@@ -2513,7 +2858,7 @@ public:
 	}
 
 	// reverse op overloading
-	friend auto operator+(const slice& lhs, const text<T> rhs) -> text<T>
+	friend constexpr auto operator+(const slice& lhs, const text<T> rhs) -> text<T>
 	{
 		text<T> rvalue {lhs.size() + rhs.size()};
 
@@ -2526,7 +2871,7 @@ public:
 	}
 
 	template<size_t N>
-	friend auto operator+(const text<T> lhs, const T (&rhs)[N]) -> text<T>
+	friend constexpr auto operator+(const text<T> lhs, const T (&rhs)[N]) -> text<T>
 	{
 		text<T> rvalue {lhs.size() + N - 1};
 
@@ -2540,7 +2885,7 @@ public:
 
 	template<size_t N>
 	// reverse op overloading
-	friend auto operator+(const T (&lhs)[N], const text<T> rhs) -> text<T>
+	friend constexpr auto operator+(const T (&lhs)[N], const text<T> rhs) -> text<T>
 	{
 		text<T> rvalue {N - 1 + rhs.size()};
 
@@ -2556,8 +2901,11 @@ public:
 	//| lhs == rhs |
 	//|------------|
 
-	template<typename U>
-	friend auto operator==(const text<T>& lhs, const text<U>& rhs) -> bool
+	template
+	<
+		typename U
+	>
+	friend constexpr auto operator==(const text<T>& lhs, const text<U>& rhs) -> bool
 	{
 		if constexpr (std::is_same_v<T, U>)
 		{
@@ -2587,7 +2935,7 @@ public:
 		}
 	}
 
-	friend auto operator==(const text<T>& lhs, const slice& rhs) -> bool
+	friend constexpr auto operator==(const text<T>& lhs, const slice& rhs) -> bool
 	{
 		if (lhs.size() != rhs.tail - rhs.head)
 		{
@@ -2599,7 +2947,7 @@ public:
 	}
 
 	template<size_t N>
-	friend auto operator==(const text<T>& lhs, const T (&rhs)[N]) -> bool
+	friend constexpr auto operator==(const text<T>& lhs, const T (&rhs)[N]) -> bool
 	{
 		if (lhs.size() != N - 1)
 		{
@@ -2613,49 +2961,49 @@ public:
 
 	template<size_t N>
 	// reverse op overloading
-	friend auto operator==(const T (&lhs)[N], const text<T>& rhs) -> bool
+	friend constexpr auto operator==(const T (&lhs)[N], const text<T>& rhs) -> bool
 	{
 		return rhs == lhs;
 	}
 
 	template<size_t N>
 	// converting constructor
-	friend auto operator==(const text<T>& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
+	friend constexpr auto operator==(const text<T>& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
 	{
-		return lhs == text<char8_t>{rhs};
+		return lhs == text<char8_t> {rhs};
 	}
 
 	template<size_t N>
 	// reverse op overloading
-	friend auto operator==(const char8_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char8_t>)
+	friend constexpr auto operator==(const char8_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char8_t>)
 	{
 		return rhs == lhs;
 	}
 
 	template<size_t N>
 	// converting constructor
-	friend auto operator==(const text<T>& lhs, const char16_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char16_t>)
+	friend constexpr auto operator==(const text<T>& lhs, const char16_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char16_t>)
 	{
-		return lhs == text<char16_t>{rhs};
+		return lhs == text<char16_t> {rhs};
 	}
 
 	template<size_t N>
 	// reverse op overloading
-	friend auto operator==(const char16_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char16_t>)
+	friend constexpr auto operator==(const char16_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char16_t>)
 	{
 		return rhs == lhs;
 	}
 
 	template<size_t N>
 	// converting constructor
-	friend auto operator==(const text<T>& lhs, const char32_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char32_t>)
+	friend constexpr auto operator==(const text<T>& lhs, const char32_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char32_t>)
 	{
-		return lhs == text<char32_t>{rhs};
+		return lhs == text<char32_t> {rhs};
 	}
 
 	template<size_t N>
 	// reverse op overloading
-	friend auto operator==(const char32_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char32_t>)
+	friend constexpr auto operator==(const char32_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char32_t>)
 	{
 		return rhs == lhs;
 	}
@@ -2664,68 +3012,71 @@ public:
 	//| lhs != rhs |
 	//|------------|
 
-	template<typename U>
-	friend auto operator!=(const text<T>& lhs, const text<U>& rhs) -> bool
+	template
+	<
+		typename U
+	>
+	friend constexpr auto operator!=(const text<T>& lhs, const text<U>& rhs) -> bool
 	{
 		return !(lhs == rhs);
 	}
 
-	friend auto operator!=(const text<T>& lhs, const slice& rhs) -> bool
+	friend constexpr auto operator!=(const text<T>& lhs, const slice& rhs) -> bool
 	{
 		return !(lhs == rhs);
 	}
 
 	template<size_t N>
-	friend auto operator!=(const text<T>& lhs, const T (&rhs)[N]) -> bool
+	friend constexpr auto operator!=(const text<T>& lhs, const T (&rhs)[N]) -> bool
 	{
 		return !(lhs == rhs);
 	}
 
 	template<size_t N>
 	// reverse op overloading
-	friend auto operator!=(const T (&lhs)[N], const text<T>& rhs) -> bool
+	friend constexpr auto operator!=(const T (&lhs)[N], const text<T>& rhs) -> bool
 	{
 		return !(lhs == rhs);
 	}
 
 	template<size_t N>
 	// converting constructor
-	friend auto operator!=(const text<T>& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
+	friend constexpr auto operator!=(const text<T>& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
 	{
 		return !(lhs == rhs);
 	}
 
 	template<size_t N>
 	// reverse op overloading
-	friend auto operator!=(const char8_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char8_t>)
+	friend constexpr auto operator!=(const char8_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char8_t>)
 	{
 		return !(lhs == rhs);
 	}
 
 	template<size_t N>
 	// converting constructor
-	friend auto operator!=(const text<T>& lhs, const char16_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char16_t>)
+	friend constexpr auto operator!=(const text<T>& lhs, const char16_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char16_t>)
 	{
 		return !(lhs == rhs);
 	}
 
 	template<size_t N>
 	// reverse op overloading
-	friend auto operator!=(const char16_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char16_t>)
+	friend constexpr auto operator!=(const char16_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char16_t>)
 	{
 		return !(rhs == lhs);
 	}
 
 	template<size_t N>
 	// converting constructor
-	friend auto operator!=(const text<T>& lhs, const char32_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char32_t>)
+	friend constexpr auto operator!=(const text<T>& lhs, const char32_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char32_t>)
 	{
 		return !(lhs == rhs);
 	}
 
 	template<size_t N>
 	// reverse op overloading
-	friend auto operator!=(const char32_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char32_t>)
+	friend constexpr auto operator!=(const char32_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char32_t>)
 	{
 		return !(rhs == lhs);
 	}
@@ -2734,12 +3085,12 @@ public:
 	//| traits::iterable<T> |
 	//|---------------------|
 
-	auto begin() const -> iterator
+	inline constexpr auto begin() const -> iterator
 	{
 		return {this->c_str()/* from RE:0 */};
 	}
 
-	auto end() const -> iterator
+	inline constexpr auto end() const -> iterator
 	{
 		return {this->c_str() + this->size()};
 	}
@@ -2748,286 +3099,18 @@ public:
 	//| traits::printable<T> |
 	//|----------------------|
 
-	friend auto operator<<(std::ostream& os, const text<T>& str) -> std::ostream&
+	friend constexpr auto operator<<(std::ostream& os, const text<T>& str) -> std::ostream&
 	{
 		for (const auto code : str) { os << code; } return os; // STL support :3
 	}
 };
 
-namespace
-{
-	constexpr const int8_t TBL[]
-	{
-		/*|----(0xxx)----|*/
-		/*| 0x0          |*/ 1,
-		/*| 0x1          |*/ 1,
-		/*| 0x2          |*/ 1,
-		/*| 0x3          |*/ 1,
-		/*| 0x4          |*/ 1,
-		/*| 0x5          |*/ 1,
-		/*| 0x6          |*/ 1,
-		/*| 0x7          |*/ 1,
-		/*|----(10xx)----|*/
-		/*| 0x8          |*/ 1,
-		/*| 0x9          |*/ 1,
-		/*| 0xA          |*/ 1,
-		/*| 0xB          |*/ 1,
-		/*|----(110x)----|*/
-		/*| 0xC          |*/ 2,
-		/*| 0xD          |*/ 2,
-		/*|----(1110)----|*/
-		/*| 0xE          |*/ 3,
-		/*|----(1111)----|*/
-		/*| 0xF          |*/ 4,
-		/*|--------------|*/
-	};
-
-	auto is_lead(char16_t unit) -> bool
-	{
-		return 0xD800 <= unit && unit <= 0xDBFF;
-	}
-
-	auto is_tail(char16_t unit) -> bool
-	{
-		return 0xDC00 <= unit && unit <= 0xDFFF;
-	}
-}
-
 // https://en.wikipedia.org/wiki/UTF-8
 typedef text<char8_t> utf8;
-
-static_assert(traits::printable<utf8>);
-static_assert(traits::rule_of_5<utf8>);
-
-template<>
-auto utf8::codec::next(const char8_t* ptr) -> width_t
-{
-	//-------------------------------------------//
-	return TBL[(((unsigned) *ptr) >> 4) & 0x0F]; //
-	//-------------------------------------------//
-};
-
-template<>
-auto utf8::codec::back(const char8_t* ptr) -> width_t
-{
-	width_t i {0};
-	//-------------------------------------------//
-	while ((ptr[i - 1] & 0xC0) == 0x80) { --i; } //
-	//-------------------------------------------//
-	return i - 1;
-};
-
-template<>
-auto utf8::codec::width(const char32_t code) -> width_t
-{
-	const auto N {std::bit_width((unsigned) code)};
-	//-------------------------------------------//
-	return 1 + (8 <= N) + (12 <= N) + (17 <= N); //
-	//-------------------------------------------//
-};
-
-template<>
-void utf8::codec::encode(const char32_t in, char8_t* out, width_t width)
-{
-	switch (width)
-	{
-		case -1:
-		case +1:
-		{
-			out[0] = in;
-			break;
-		}
-		case -2:
-		case +2:
-		{
-			out[0] = 0xC0 | ((in >> 06) & 0x1F);
-			out[1] = 0x80 | ((in >> 00) & 0x3F);
-			break;
-		}
-		case -3:
-		case +3:
-		{
-			out[0] = 0xE0 | ((in >> 12) & 0x0F);
-			out[1] = 0x80 | ((in >> 06) & 0x3F);
-			out[2] = 0x80 | ((in >> 00) & 0x3F);
-			break;
-		}
-		case -4:
-		case +4:
-		{
-			out[0] = 0xF0 | ((in >> 18) & 0x07);
-			out[1] = 0x80 | ((in >> 12) & 0x3F);
-			out[2] = 0x80 | ((in >> 06) & 0x3F);
-			out[3] = 0x80 | ((in >> 00) & 0x3F);
-			break;
-		}
-		default:
-		{
-			assert(!"[ERROR]");
-			std::unreachable();
-		}
-	}
-}
-
-template<>
-void utf8::codec::decode(const char8_t* in, char32_t& out, width_t width)
-{
-	switch (width)
-	{
-		case +1:
-		{
-			out = in[0];
-			break;
-		}
-		case +2:
-		{
-			out = 0;
-			out |= (in[0] & 0x1F) << 06;
-			out |= (in[1] & 0x3F) << 00;
-			break;
-		}
-		case +3:
-		{
-			out = 0;
-			out |= (in[0] & 0x0F) << 12;
-			out |= (in[1] & 0x3F) << 06;
-			out |= (in[2] & 0x3F) << 00;
-			break;
-		}
-		case +4:
-		{
-			out = 0;
-			out |= (in[0] & 0x07) << 18;
-			out |= (in[1] & 0x3F) << 12;
-			out |= (in[2] & 0x3F) << 06;
-			out |= (in[3] & 0x3F) << 00;
-			break;
-		}
-		default:
-		{
-			assert(!"[ERROR]");
-			std::unreachable();
-		}
-	}
-};
-
 // https://en.wikipedia.org/wiki/UTF-16
 typedef text<char16_t> utf16;
-
-static_assert(traits::printable<utf16>);
-static_assert(traits::rule_of_5<utf16>);
-
-template<>
-auto utf16::codec::next(const char16_t* ptr) -> width_t
-{
-	if (is_lead(ptr[0])) { return +2; }
-	if (is_tail(ptr[0])) { return +1; }
-
-	return +1;
-};
-
-template<>
-auto utf16::codec::back(const char16_t* ptr) -> width_t
-{
-	if (is_tail(ptr[0])) { return -2; }
-	if (is_lead(ptr[0])) { return -1; }
-
-	return -1;
-};
-
-template<>
-auto utf16::codec::width(const char32_t code) -> width_t
-{
-	//--------------------------//
-	return 1 + (0xFFFF < code); //
-	//--------------------------//
-};
-
-template<>
-void utf16::codec::encode(const char32_t in, char16_t* out, width_t width)
-{
-	switch (width)
-	{
-		case +1:
-		{
-			out[0] = in;
-			break;
-		}
-		case +2:
-		{
-			const auto code {in - 0x10000};
-			out[0] = 0xD800 | (code / 0x400);
-			out[1] = 0xDC00 | (code & 0x3FF);
-			break;
-		}
-		default:
-		{
-			assert(!"[ERROR]");
-			std::unreachable();
-		}
-	}
-}
-
-template<>
-void utf16::codec::decode(const char16_t* in, char32_t& out, width_t width)
-{
-	switch (width)
-	{
-		case +1:
-		{
-			out = in[0];
-			break;
-		}
-		case +2:
-		{
-			out = 0x10000; // no plus op
-			out |= (in[0] - 0xD800) << 10;
-			out |= (in[1] - 0xDC00) << 00;
-			break;
-		}
-		default:
-		{
-			assert(!"[ERROR]");
-			std::unreachable();
-		}
-	}
-};
-
 // https://en.wikipedia.org/wiki/UTF-32
 typedef text<char32_t> utf32;
-
-static_assert(traits::printable<utf32>);
-static_assert(traits::rule_of_5<utf32>);
-
-template<>
-auto utf32::codec::next(const char32_t* ptr) -> width_t
-{
-	return +1;
-};
-
-template<>
-auto utf32::codec::back(const char32_t* ptr) -> width_t
-{
-	return -1;
-};
-
-template<>
-auto utf32::codec::width(const char32_t unit) -> width_t
-{
-	return +1;
-};
-
-template<>
-void utf32::codec::encode(const char32_t in, char32_t* out, width_t width)
-{
-	out[0] = in;
-}
-
-template<>
-void utf32::codec::decode(const char32_t* in, char32_t& out, width_t width)
-{
-	out = in[0];
-};
 
 //|--------------|
 //| useful stuff |
@@ -3035,7 +3118,10 @@ void utf32::codec::decode(const char32_t* in, char32_t& out, width_t width)
 
 namespace type
 {
-	template<typename T>
+	template
+	<
+		typename T
+	>
 	concept string =
 	(
 		// string_impl
@@ -3053,7 +3139,10 @@ namespace type
 		std::is_same_v<T, utf32::slice>
 	);
 
-	template<typename T>
+	template
+	<
+		typename T
+	>
 	concept string_impl =
 	(
 		std::is_same_v<T, utf8>
@@ -3063,7 +3152,10 @@ namespace type
 		std::is_same_v<T, utf32>
 	);
 
-	template<typename T>
+	template
+	<
+		typename T
+	>
 	concept string_view =
 	(
 		std::is_same_v<T, utf8::slice>

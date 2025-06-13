@@ -23,13 +23,13 @@ class trail
 			return this->data.back();
 		}
 
-		auto operator++() -> size_t
+		inline constexpr auto operator++() -> size_t
 		{
 			++this->data.back();
 			return this->data.back();
 		}
 
-		auto operator--() -> size_t
+		inline constexpr auto operator--() -> size_t
 		{
 			--this->data.back();
 			return this->data.back();
@@ -54,13 +54,13 @@ class trail
 			return this->data.size();
 		}
 
-		auto operator++() -> size_t
+		inline constexpr auto operator++() -> size_t
 		{
 			this->data.push_back(0);
 			return this->data.size();
 		}
 
-		auto operator--() -> size_t
+		inline constexpr auto operator--() -> size_t
 		{
 			this->data.pop_back();
 			return this->data.size();
@@ -92,25 +92,25 @@ public:
 	}
 
 	// x = column
-	auto x() const -> size_t
+	inline constexpr auto x() const -> size_t
 	{
 		return this->data.back();
 	}
 
 	// x = column
-	auto x() -> proxy_x
+	inline constexpr auto x() -> proxy_x
 	{
 		return {this->data};
 	}
 
 	// y = line
-	auto y() const -> size_t
+	inline constexpr auto y() const -> size_t
 	{
 		return this->data.size();
 	}
 
 	// y = line
-	auto y() -> proxy_y
+	inline constexpr auto y() -> proxy_y
 	{
 		return {this->data};
 	}

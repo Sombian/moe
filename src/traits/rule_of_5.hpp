@@ -4,7 +4,10 @@
 
 namespace traits
 {
-	template<typename T>
+	template
+	<
+		typename T
+	>
 	concept rule_of_5 =
 	(
 		std::is_copy_constructible_v<T>

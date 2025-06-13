@@ -264,12 +264,12 @@ public:
 	//| member function |
 	//|-----------------|
 
-	friend auto operator==(const token& lhs, const atom rhs) -> bool
+	friend constexpr auto operator==(const token& lhs, const atom rhs) -> bool
 	{
 		return lhs.type == rhs;
 	}
 
-	friend auto operator!=(const token& lhs, const atom rhs) -> bool
+	friend constexpr auto operator!=(const token& lhs, const atom rhs) -> bool
 	{
 		return lhs.type != rhs;
 	}
@@ -278,7 +278,7 @@ public:
 	//| traits::printable<T> |
 	//|----------------------|
 
-	friend auto operator<<(std::ostream& os, const token& token) -> std::ostream&
+	friend constexpr auto operator<<(std::ostream& os, const token& token) -> std::ostream&
 	{
 		return
 		(

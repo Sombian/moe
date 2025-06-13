@@ -48,7 +48,7 @@ class parser
 	typedef std::optional<token<A, B>> maybe;
 	//|------------------------------------|
 
-	auto peek() -> maybe
+	inline constexpr auto peek() -> maybe
 	{
 		return std::visit([&](auto&& arg) -> maybe
 		{
@@ -67,7 +67,7 @@ class parser
 		this->buffer);
 	}
 
-	auto next() -> maybe
+	inline constexpr auto next() -> maybe
 	{
 		// step 1. update buffer
 		this->buffer = this->lexer->pull();
@@ -90,7 +90,7 @@ class parser
 		this->buffer);
 	}
 
-	auto peek(const atom type) -> bool
+	inline constexpr auto peek(const atom type) -> bool
 	{
 		return std::visit([&](auto&& arg) -> bool
 		{
@@ -109,7 +109,7 @@ class parser
 		this->buffer);
 	}
 
-	auto next(const atom type) -> bool
+	inline constexpr auto next(const atom type) -> bool
 	{
 		// step 1. update buffer
 		this->buffer = this->lexer->pull();
@@ -165,7 +165,7 @@ public:
 		return *this->lexer;
 	}
 
-	auto pull() -> program<A, B>
+	inline constexpr auto pull() -> program<A, B>
 	{
 		while (this->peek())
 		{
@@ -198,7 +198,7 @@ public:
 			catch (error<A, B>& out)
 			{
 				//|----------------<insert>----------------|
-				this->exe.issue.emplace_back(std::move(out));
+				this->exe.error.emplace_back(std::move(out));
 				//|----------------------------------------|
 				this->sync(); // ...nothing to do here...
 			}
@@ -208,7 +208,7 @@ public:
 
 private:
 
-	auto sync()
+	inline constexpr auto sync()
 	{
 		start:
 		if (auto tkn {this->peek()})
@@ -237,7 +237,7 @@ private:
 	//| declarations |
 	//|--------------|
 
-	auto decl_t() -> std::optional<decl>
+	inline constexpr auto decl_t() -> std::optional<decl>
 	{
 		try
 		{
@@ -268,14 +268,14 @@ private:
 		catch (error<A, B>& out)
 		{
 			//|----------------<insert>----------------|
-			this->exe.issue.emplace_back(std::move(out));
+			this->exe.error.emplace_back(std::move(out));
 			//|----------------------------------------|
 			this->sync(); return this->decl_t();
 		}
 		assert(false && "-Wreturn-type");
 	}
 
-	auto decl_fun(const bool is_pure) -> decltype(this->decl_t())
+	inline constexpr auto decl_fun(const bool is_pure) -> decltype(this->decl_t())
 	{
 		$fun ast;
 
@@ -454,7 +454,7 @@ private:
 		<decltype(ast)>(std::move(ast));
 	}
 
-	auto decl_var(const bool is_const) -> decltype(this->decl_t())
+	inline constexpr auto decl_var(const bool is_const) -> decltype(this->decl_t())
 	{
 		$var ast;
 		
@@ -544,7 +544,7 @@ private:
 	//| statements |
 	//|------------|
 
-	auto stmt_t() -> std::optional<stmt>
+	inline constexpr auto stmt_t() -> std::optional<stmt>
 	{
 		try
 		{
@@ -587,14 +587,14 @@ private:
 		catch (error<A, B>& out)
 		{
 			//|----------------<insert>----------------|
-			this->exe.issue.emplace_back(std::move(out));
+			this->exe.error.emplace_back(std::move(out));
 			//|----------------------------------------|
 			this->sync(); return this->stmt_t();
 		}
 		assert(false && "-Wreturn-type");
 	}
 
-	auto stmt_if() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_if() -> decltype(this->stmt_t())
 	{
 		$if ast;
 
@@ -695,7 +695,7 @@ private:
 		<decltype(ast)>(std::move(ast));
 	}
 
-	auto stmt_for() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_for() -> decltype(this->stmt_t())
 	{
 		$for ast;
 
@@ -797,7 +797,7 @@ private:
 		<decltype(ast)>(std::move(ast));
 	}
 
-	auto stmt_match() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_match() -> decltype(this->stmt_t())
 	{
 		$match ast;
 
@@ -931,7 +931,7 @@ private:
 		<decltype(ast)>(std::move(ast));
 	}
 
-	auto stmt_while() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_while() -> decltype(this->stmt_t())
 	{
 		$while ast;
 
@@ -1009,7 +1009,7 @@ private:
 		<decltype(ast)>(std::move(ast));
 	}
 
-	auto stmt_break() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_break() -> decltype(this->stmt_t())
 	{
 		$break ast;
 
@@ -1035,7 +1035,7 @@ private:
 		<decltype(ast)>(std::move(ast));
 	}
 
-	auto stmt_return() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_return() -> decltype(this->stmt_t())
 	{
 		$return ast;
 
@@ -1061,7 +1061,7 @@ private:
 		<decltype(ast)>(std::move(ast));
 	}
 
-	auto stmt_continue() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_continue() -> decltype(this->stmt_t())
 	{
 		$continue ast;
 		
@@ -1091,7 +1091,7 @@ private:
 	//| expressions |
 	//|-------------|
 
-	auto expr_t() -> std::optional<expr> // pratt parser
+	inline constexpr auto expr_t() -> std::optional<expr> // pratt parser
 	{
 		std::function<std::optional<expr>(uint8_t)> impl
 		{
@@ -1336,14 +1336,14 @@ private:
 		catch (error<A, B>& out)
 		{
 			//|----------------<insert>----------------|
-			this->exe.issue.emplace_back(std::move(out));
+			this->exe.error.emplace_back(std::move(out));
 			//|----------------------------------------|
 			this->sync(); return this->expr_t();
 		}
 		assert(false && "-Wreturn-type");
 	}
 
-	auto expr_group() -> decltype(this->expr_t())
+	inline constexpr auto expr_group() -> decltype(this->expr_t())
 	{
 		if (auto tkn {this->peek()})
 		{
@@ -1378,7 +1378,7 @@ private:
 		return std::nullopt;
 	}
 
-	auto expr_symbol() -> decltype(this->expr_t())
+	inline constexpr auto expr_symbol() -> decltype(this->expr_t())
 	{
 		if (auto tkn {this->peek()})
 		{
@@ -1405,7 +1405,7 @@ private:
 		return std::nullopt;
 	}
 
-	auto expr_literal() -> decltype(this->expr_t())
+	inline constexpr auto expr_literal() -> decltype(this->expr_t())
 	{
 		if (auto tkn {this->peek()})
 		{

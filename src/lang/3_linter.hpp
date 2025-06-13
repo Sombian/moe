@@ -11,7 +11,6 @@
 
 #include "lang/2_parser.hpp"
 
-
 template
 <
 	type::string A,
@@ -62,8 +61,7 @@ class linter
 	<
 		typename T
 	>
-	static constexpr
-	auto lookup(scope* ctx, utf8& name) -> T
+	static constexpr auto lookup(scope* ctx, utf8& name) -> T
 	{
 		typedef std::pair<utf8, T> P;
 
@@ -86,8 +84,7 @@ class linter
 	<
 		typename T
 	>
-	static constexpr
-	auto inject(scope* ctx, T& ast) -> std::vector<utf8>
+	static constexpr auto inject(scope* ctx, T& ast) -> std::vector<utf8>
 	{
 		std::vector<utf8> report;
 
@@ -155,7 +152,7 @@ public:
 			//| variant::decl |
 			//|---------------|
 
-			void visit($fun& ast) override
+			inline constexpr void visit($fun& ast) override
 			{
 				START
 
@@ -170,7 +167,7 @@ public:
 				CLOSE
 			}
 
-			void visit($var& ast) override
+			inline constexpr void visit($var& ast) override
 			{
 				// insert to the ctx
 				{
@@ -180,7 +177,7 @@ public:
 				this->visit(ast.init);
 			}
 
-			void visit($model& ast) override
+			inline constexpr void visit($model& ast) override
 			{
 				START
 
@@ -194,7 +191,7 @@ public:
 				CLOSE
 			}
 
-			void visit($trait& ast) override
+			inline constexpr void visit($trait& ast) override
 			{
 				// insert to the ctx
 				{
@@ -209,7 +206,7 @@ public:
 		}
 		impl {this};
 
-		this->buffer.dispatch(impl);
+		this->buffer.visit(impl);
 	}
 
 	~linter()
@@ -226,7 +223,7 @@ public:
 		return *this->parser;
 	}
 
-	auto pull() -> program<A, B>
+	inline constexpr auto pull() -> program<A, B>
 	{
 		class core : public lang::reflect
 		{	
@@ -234,7 +231,7 @@ public:
 			{                                            \
 				for (auto& msg : inject(this->ctx, ast)) \
 				{                                        \
-					this->src->buffer.issue.emplace_back \
+					this->src->buffer.error.emplace_back \
 					(                                    \
 						ast.x, ast.y, *this->src, msg    \
 					);                                   \
@@ -275,7 +272,7 @@ public:
 			//| variant::decl |
 			//|---------------|
 
-			void visit($fun& ast) override
+			inline constexpr void visit($fun& ast) override
 			{
 				START
 
@@ -286,13 +283,13 @@ public:
 				CLOSE
 			}
 
-			void visit($var& ast) override
+			inline constexpr void visit($var& ast) override
 			{
 				CHECK
 				this->visit(ast.init);
 			}
 
-			void visit($model& ast) override
+			inline constexpr void visit($model& ast) override
 			{
 				START
 
@@ -302,7 +299,7 @@ public:
 				CLOSE
 			}
 
-			void visit($trait& ast) override
+			inline constexpr void visit($trait& ast) override
 			{
 				CHECK
 				this->visit(ast.body);
@@ -315,14 +312,14 @@ public:
 			//| variant::stmt |
 			//|---------------|
 
-			void visit($if& ast) override
+			inline constexpr void visit($if& ast) override
 			{
 				CHECK
 				this->visit(ast.cases);
 				this->visit(ast.block);
 			}
 
-			void visit($for& ast) override
+			inline constexpr void visit($for& ast) override
 			{ 
 				CHECK
 				this->visit(ast.setup);
@@ -331,7 +328,7 @@ public:
 				this->visit(ast.block);
 			}
 
-			void visit($match& ast) override
+			inline constexpr void visit($match& ast) override
 			{
 				CHECK
 				this->visit(ast.input);
@@ -339,25 +336,25 @@ public:
 				this->visit(ast.block);
 			}
 
-			void visit($while& ast) override
+			inline constexpr void visit($while& ast) override
 			{
 				CHECK
 				this->visit(ast.input);
 				this->visit(ast.block);
 			}
 
-			void visit($break& ast) override
+			inline constexpr void visit($break& ast) override
 			{
 				CHECK
 			}
 
-			void visit($return& ast) override
+			inline constexpr void visit($return& ast) override
 			{
 				CHECK
 				this->visit(ast.value);
 			}
 
-			void visit($continue& ast) override
+			inline constexpr void visit($continue& ast) override
 			{
 				CHECK
 			}
@@ -366,41 +363,41 @@ public:
 			//| variant::expr |
 			//|---------------|
 
-			void visit($unary& ast) override
+			inline constexpr void visit($unary& ast) override
 			{
 				CHECK
 				this->visit(ast.rhs);
 			}
 
-			void visit($binary& ast) override
+			inline constexpr void visit($binary& ast) override
 			{
 				CHECK
 				this->visit(ast.lhs);
 				this->visit(ast.rhs);
 			}
 
-			void visit($literal& ast) override
+			inline constexpr void visit($literal& ast) override
 			{
 				CHECK
 			}
 
-			void visit($symbol& ast) override
+			inline constexpr void visit($symbol& ast) override
 			{
 				CHECK
 			}
 
-			void visit($access& ast) override
+			inline constexpr void visit($access& ast) override
 			{
 				CHECK
 			}
 
-			void visit($group& ast) override
+			inline constexpr void visit($group& ast) override
 			{
 				CHECK
 				this->visit(ast.expr);
 			}
 
-			void visit($call& ast) override
+			inline constexpr void visit($call& ast) override
 			{
 				CHECK
 				this->visit(ast.args);
@@ -411,7 +408,7 @@ public:
 		}
 		impl {this};
 		
-		this->buffer.dispatch(impl);
+		this->buffer.visit(impl);
 
 		return std::move(this->buffer);
 	}

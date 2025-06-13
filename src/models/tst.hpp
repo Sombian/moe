@@ -21,7 +21,10 @@
 //| TST(Ternary Search Tree) |
 //|--------------------------|
 
-template<typename T>
+template
+<
+	typename T
+>
 class tst
 {
 	struct node
@@ -42,8 +45,7 @@ class tst
 			delete this->right;
 		}
 
-		static constexpr
-		auto repair(node* a) -> node*
+		static constexpr auto repair(node* a) -> node*
 		{
 			auto balance {node::factor(a)};
 
@@ -82,8 +84,7 @@ class tst
 
 	private:
 
-		static constexpr
-		auto factor(node* a) -> int8_t
+		static constexpr auto factor(node* a) -> int8_t
 		{
 			if (a == nullptr) { return 0; }
 			auto left {node::height(a->left)};
@@ -91,8 +92,7 @@ class tst
 			return left - right; // delta
 		}
 
-		static constexpr
-		auto height(node* a) -> int8_t
+		static constexpr auto height(node* a) -> int8_t
 		{
 			if (a == nullptr) { return 0; }
 			auto left {node::height(a->left)};
@@ -100,8 +100,7 @@ class tst
 			return std::max(left, right) + 1;
 		}
 
-		static constexpr
-		auto rotate_l(node* a) -> node*
+		static constexpr auto rotate_l(node* a) -> node*
 		{
 			//|--------|-------|-------|-------|
 			//|        | A     |       |   B   |
@@ -120,8 +119,7 @@ class tst
 			return b;
 		}
 
-		static constexpr
-		auto rotate_r(node* a) -> node*
+		static constexpr auto rotate_r(node* a) -> node*
 		{
 			//|--------|-------|-------|-------|
 			//|        |     A |       |   B   |
@@ -150,7 +148,10 @@ public:
 		delete this->root; // ok
 	}
 
-	template<type::string S>
+	template
+	<
+		type::string S
+	>
 	tst(std::initializer_list<std::pair<S&, T>> args = {})
 	{
 		for (const auto& [first, second] : args)
@@ -263,7 +264,7 @@ private:
 		//| member function |
 		//|-----------------|
 
-		auto get() const -> std::optional<T> requires
+		inline constexpr auto get() const -> std::optional<T> requires
 		(
 			std::is_class_v<T> ? !std::is_empty_v<T> : true
 		)
@@ -271,33 +272,33 @@ private:
 			return this->ptr ? this->ptr->data : std::nullopt;
 		}
 
-		auto reset()
+		inline constexpr auto reset()
 		{
 			this->ptr = nullptr;
 		}
 
-		auto is_root() const -> bool
+		inline constexpr auto is_root() const -> bool
 		{
 			return this->ptr == nullptr;
 		}
 
-		auto is_leaf() const -> bool
+		inline constexpr auto is_leaf() const -> bool
 		{
 			return ptr && !ptr->left && !ptr->middle && !ptr->right;
 		}
 
-		auto is_child() const -> bool
+		inline constexpr auto is_child() const -> bool
 		{
 			return this->ptr != nullptr;
 		}
 
-		auto is_parent() const -> bool
+		inline constexpr auto is_parent() const -> bool
 		{
 			return ptr && (ptr->left || ptr->middle || ptr->right);
 		}
 
 		// incremental search
-		auto operator[](const char32_t idx) -> bool
+		inline constexpr auto operator[](const char32_t idx) -> bool
 		{
 			node* ptr
 			{
@@ -339,12 +340,12 @@ private:
 
 public:
 
-	auto view() const -> cursor<decltype(*this)>
+	inline constexpr auto view() const -> cursor<decltype(*this)>
 	{
 		return {*this, nullptr};
 	}
 
-	auto view() -> cursor<decltype(*this)>
+	inline constexpr auto view() -> cursor<decltype(*this)>
 	{
 		return {*this, nullptr};
 	}
@@ -471,7 +472,7 @@ private:
 			return ptr ? ptr->data : std::nullopt;
 		}
 
-		auto operator=(const T& value)&& -> proxy& requires
+		inline constexpr auto operator=(const T& value)&& -> proxy& requires
 		(
 			!std::is_const_v<std::remove_reference_t<S>>
 		)
@@ -538,29 +539,32 @@ public:
 	//| lhs[str] | -> const proxy
 	//|----------|
 
-	template<type::string S>
-	auto operator[](const S& str) const -> proxy<decltype(*this), S>
+	template
+	<
+		type::string S
+	>
+	inline constexpr auto operator[](const S& str) const -> proxy<decltype(*this), S>
 	{
 		return {*this, str};
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto operator[](const char8_t (&str)[N]) const -> proxy<decltype(*this), utf8>
+	inline constexpr auto operator[](const char8_t (&str)[N]) const -> proxy<decltype(*this), utf8>
 	{
 		return {*this, str};
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto operator[](const char16_t (&str)[N]) const -> proxy<decltype(*this), utf16>
+	inline constexpr auto operator[](const char16_t (&str)[N]) const -> proxy<decltype(*this), utf16>
 	{
 		return {*this, str};
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto operator[](const char32_t (&str)[N]) const -> proxy<decltype(*this), utf32>
+	inline constexpr auto operator[](const char32_t (&str)[N]) const -> proxy<decltype(*this), utf32>
 	{
 		return {*this, str};
 	}
@@ -569,29 +573,32 @@ public:
 	//| lhs[str] | -> proxy
 	//|----------|
 
-	template<type::string S>
-	auto operator[](const S& str) -> proxy<decltype(*this), S>
+	template
+	<
+		type::string S
+	>
+	inline constexpr auto operator[](const S& str) -> proxy<decltype(*this), S>
 	{
 		return {*this, str};
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto operator[](const char8_t (&str)[N]) -> proxy<decltype(*this), utf8>
+	inline constexpr auto operator[](const char8_t (&str)[N]) -> proxy<decltype(*this), utf8>
 	{
 		return {*this, str};
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto operator[](const char16_t (&str)[N]) -> proxy<decltype(*this), utf16>
+	inline constexpr auto operator[](const char16_t (&str)[N]) -> proxy<decltype(*this), utf16>
 	{
 		return {*this, str};
 	}
 
 	template<size_t N>
 	// converting constructor
-	auto operator[](const char32_t (&str)[N]) -> proxy<decltype(*this), utf32>
+	inline constexpr auto operator[](const char32_t (&str)[N]) -> proxy<decltype(*this), utf32>
 	{
 		return {*this, str};
 	}
@@ -600,7 +607,7 @@ public:
 	//| lhs & rhs |
 	//|-----------|
 
-	auto operator&(const tst<T>& rhs) const -> tst<T>
+	inline constexpr auto operator&(const tst<T>& rhs) const -> tst<T>
 	{
 		// TODO
 	}
@@ -609,7 +616,7 @@ public:
 	//| lhs | rhs |
 	//|-----------|
 
-	auto operator|(const tst<T>& rhs) const -> tst<T>
+	inline constexpr auto operator|(const tst<T>& rhs) const -> tst<T>
 	{
 		// TODO
 	}
@@ -618,7 +625,7 @@ public:
 	//| lhs + rhs |
 	//|-----------|
 
-	auto operator+(const tst<T>& rhs) const -> tst<T>
+	inline constexpr auto operator+(const tst<T>& rhs) const -> tst<T>
 	{
 		// TODO
 	}
@@ -627,7 +634,7 @@ public:
 	//| lhs - rhs |
 	//|-----------|
 
-	auto operator-(const tst<T>& rhs) const -> tst<T>
+	inline constexpr auto operator-(const tst<T>& rhs) const -> tst<T>
 	{
 		// TODO
 	}

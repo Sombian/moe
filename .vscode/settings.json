@@ -6,8 +6,4 @@
 		"build": true,
 		".cache": true,
 	},
-	"clangd.arguments":
-	[
-		"--log=verbose"
-	],
 }

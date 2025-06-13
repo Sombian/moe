@@ -7,8 +7,6 @@
 #include "lang/1_lexer.hpp"
 #include "lang/2_parser.hpp"
 #include "lang/3_linter.hpp"
-#include "lang/common/ast.hpp"
-// #include "lang/4_codegen.hpp"
 
 auto main() -> int
 {
@@ -56,13 +54,10 @@ auto main() -> int
 			{
 				std::cout
 			};
-			exe.dispatch(debugger);
+			exe.visit(debugger);
 			#endif //-------------|
 
-			for (auto& error : exe.issue)
-			{
-				std::cout << error << '\n';
-			}
+			exe.compile(true);
 			
 		},
 		io.value());
