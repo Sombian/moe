@@ -43,21 +43,30 @@ namespace utils
 		return out;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto atoi(const char8_t (&str)[N], const uint8_t radix = 10) -> auto
 	{
 		return atoi(utf8 {str}, radix);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto atoi(const char16_t (&str)[N], const uint8_t radix = 10) -> auto
 	{
 		return atoi(utf16 {str}, radix);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto atoi(const char32_t (&str)[N], const uint8_t radix = 10) -> auto
 	{
@@ -99,6 +108,7 @@ namespace utils
 		// save it before modifying 'value'
 		const auto negative {value < 0};
 
+		// short-circuit
 		if (value == 0)
 		{
 			buffer[--i] = u8'0';
@@ -119,21 +129,30 @@ namespace utils
 		return {&buffer[i]};
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto itoa(int32_t value, const uint8_t radix = 10) -> auto
 	{
 		return itoa(value, radix);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto itoa(int16_t value, const uint8_t radix = 10) -> auto
 	{
 		return itoa(value, radix);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto itoa(int8_t value, const uint8_t radix = 10) -> auto
 	{
@@ -188,21 +207,30 @@ namespace utils
 		return {&buffer[i]};
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto utoa(int32_t value, const uint8_t radix = 10) -> auto
 	{
 		return utoa(value, radix);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto utoa(int16_t value, const uint8_t radix = 10) -> auto
 	{
 		return utoa(value, radix);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto utoa(int8_t value, const uint8_t radix = 10) -> auto
 	{

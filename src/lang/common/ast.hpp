@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <vector>
 #include <memory>
 #include <variant>
@@ -483,8 +484,9 @@ typedef std::variant
 node;
 
 
-#define only(T) T /* sugar */
-#define many(T) std::vector<T>
+#define only(T) /*|*/         T        /*|*/
+#define many(T) /*|*/  std::vector<T>  /*|*/
+#define some(T) /*|*/ std::optional<T> /*|*/
 
 typedef std::vector<node> body;
 
@@ -518,7 +520,7 @@ struct $var : public span, public traits::visitable<$var>
 	//|----------|
 	only(utf8) name;
 	only(utf8) type;
-	only(expr) init;
+	some(expr) init;
 
 	COPY_CONSTRUCTOR($var) = delete;
 	MOVE_CONSTRUCTOR($var) = default;
@@ -622,7 +624,7 @@ struct $while : public span, public traits::visitable<$while>
 
 struct $break : public span, public traits::visitable<$break>
 {
-	only(utf8) label;
+	some(utf8) label;
 
 	COPY_CONSTRUCTOR($break) = delete;
 	MOVE_CONSTRUCTOR($break) = default;
@@ -635,7 +637,7 @@ struct $break : public span, public traits::visitable<$break>
 
 struct $return : public span, public traits::visitable<$return>
 {
-	only(expr) value;
+	some(expr) value;
 
 	COPY_CONSTRUCTOR($return) = delete;
 	MOVE_CONSTRUCTOR($return) = default;
@@ -648,7 +650,7 @@ struct $return : public span, public traits::visitable<$return>
 
 struct $continue : public span, public traits::visitable<$continue>
 {
-	only(utf8) label;
+	some(utf8) label;
 
 	COPY_CONSTRUCTOR($continue) = delete;
 	MOVE_CONSTRUCTOR($continue) = default;
@@ -837,27 +839,31 @@ namespace lang
 		//| edge cases |
 		//|------------|
 
-		virtual constexpr void visit(many(body)& ast)
+		template
+		<
+			typename T
+		>
+		inline constexpr void visit(many(T)& ast)
 		{
 			for (auto&& node : ast)
+			{ 
+				this->visit(node);
+			}
+		}
+
+		template
+		<
+			typename T
+		>
+		inline constexpr void visit(some(T)& ast)
+		{
+			if (ast)
 			{
-				this->visit(node);
+				this->visit(ast.value());
 			}
-		}
-
-		virtual constexpr void visit(many($fun)& ast)
-		{
-			for (auto&& node : ast)
-			{ 
-				this->visit(node);
-			}
-		}
-
-		virtual constexpr void visit(many($var)& ast)
-		{
-			for (auto&& node : ast)
-			{ 
-				this->visit(node);
+			else
+			{
+				// nothing to do here...
 			}
 		}
 
@@ -1150,7 +1156,11 @@ namespace lang
 		//| edge cases |
 		//|------------|
 
-		virtual constexpr void visit(many(body)& ast)
+		template
+		<
+			typename T
+		>
+		inline constexpr void visit(many(T)& ast)
 		{
 			if (!ast.empty())
 			{
@@ -1175,24 +1185,15 @@ namespace lang
 			}
 		}
 
-		virtual constexpr void visit(many($fun)& ast)
+		template
+		<
+			typename T
+		>
+		inline constexpr void visit(some(T)& ast)
 		{
-			if (!ast.empty())
+			if (ast)
 			{
-				size_t count {0};
-
-				for (auto&& node : ast)
-				{
-					this->visit(node);
-
-					if (++count < ast.size())
-					{
-						this->gap();
-						/*-<seperator>-*/
-						this->out << "&";
-						/*-------------*/
-					}
-				}
+				this->visit(ast.value());
 			}
 			else
 			{
@@ -1200,30 +1201,6 @@ namespace lang
 			}
 		}
 
-		virtual constexpr void visit(many($var)& ast)
-		{
-			if (!ast.empty())
-			{
-				size_t count {0};
-
-				for (auto&& node : ast)
-				{
-					this->visit(node);
-
-					if (++count < ast.size())
-					{
-						this->gap();
-						/*-<seperator>-*/
-						this->out << "&";
-						/*-------------*/
-					}
-				}
-			}
-			else
-			{
-				this->out << "[empty]\n";
-			}
-		}
 
 		inline constexpr void visit(auto& ast)
 		{
@@ -1257,7 +1234,7 @@ namespace lang
 		virtual constexpr void visit($model& ast)
 		{
 			START
-			this->gap(); this->out << "[class]\n";
+			this->gap(); this->out << "[model]\n";
 			this->gap(); this->out << "name: "; this->visit(ast.name);
 			this->gap(); this->out << "body: "; this->visit(ast.body);
 			CLOSE
@@ -1416,9 +1393,9 @@ namespace lang
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 
-static std::unique_ptr<llvm::LLVMContext> CONTEXT {std::make_unique<llvm::LLVMContext>(/*NONE*/)};
-static std::unique_ptr<llvm::Module> MODULE {std::make_unique<llvm::Module>("moe.exe", *CONTEXT)};
-static std::unique_ptr<llvm::IRBuilder<>> BUILDER {std::make_unique<llvm::IRBuilder<>>(*CONTEXT)};
+static inline std::unique_ptr<llvm::LLVMContext> CONTEXT {std::make_unique<llvm::LLVMContext>(/*NONE*/)};
+static inline std::unique_ptr<llvm::Module> MODULE {std::make_unique<llvm::Module>("moe.exe", *CONTEXT)};
+static inline std::unique_ptr<llvm::IRBuilder<>> BUILDER {std::make_unique<llvm::IRBuilder<>>(*CONTEXT)};
 
 template
 <
@@ -1471,19 +1448,8 @@ public:
 		MODULE->print(llvm::outs(), nullptr);
 		#endif //---------------------------|
 	}
-
-private:
-
-	constexpr auto create_fun()
-	{
-
-	}
-
-	constexpr auto create_var()
-	{
-		
-	}
 };
 
 #undef only
 #undef many
+#undef some

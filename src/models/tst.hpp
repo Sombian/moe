@@ -548,21 +548,30 @@ public:
 		return {*this, str};
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto operator[](const char8_t (&str)[N]) const -> proxy<decltype(*this), utf8>
 	{
 		return {*this, str};
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto operator[](const char16_t (&str)[N]) const -> proxy<decltype(*this), utf16>
 	{
 		return {*this, str};
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto operator[](const char32_t (&str)[N]) const -> proxy<decltype(*this), utf32>
 	{
@@ -582,21 +591,30 @@ public:
 		return {*this, str};
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto operator[](const char8_t (&str)[N]) -> proxy<decltype(*this), utf8>
 	{
 		return {*this, str};
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto operator[](const char16_t (&str)[N]) -> proxy<decltype(*this), utf16>
 	{
 		return {*this, str};
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto operator[](const char32_t (&str)[N]) -> proxy<decltype(*this), utf32>
 	{

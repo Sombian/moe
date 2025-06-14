@@ -509,7 +509,7 @@ private:
 					return std::nullopt;
 				}
 			}
-			return u8"[linter] class definition '%s' already exists" | ast.name;
+			return u8"[linter] model definition '%s' already exists" | ast.name;
 		},
 		[](scope* ctx, $trait& ast) -> std::optional<utf8>
 		{
@@ -531,7 +531,7 @@ private:
 				case op_i::ASSIGN:
 				case op_i::ADD_EQ:
 				case op_i::SUB_EQ:
-				case op_i::MUL_EQ: 
+				case op_i::MUL_EQ:
 				case op_i::DIV_EQ:
 				case op_i::MOD_EQ:
 				case op_i::POW_EQ:

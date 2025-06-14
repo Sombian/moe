@@ -652,13 +652,23 @@ public:
 		assert(this->mode() == tag::SMALL);
 	}
 
-	text(const size_t size) : text()
+	template
+	<
+		std::integral U
+	>
+	text(U value) : text()
 	{
-		this->capacity(size);
+		this->capacity(value);
 	}
 
-	template<size_t N>
-	requires (N <= MAX)
+	template
+	<
+		size_t N
+	>
+	requires
+	(
+		N <= MAX
+	)
 	text(const T (&str)[N]) : text()
 	{
 		this->size(N);
@@ -668,8 +678,14 @@ public:
 		std::ranges::copy(str, str + N, this->small);
 	}
 
-	template<size_t N>
-	requires (MAX < N)
+	template
+	<
+		size_t N
+	>
+	requires
+	(
+		MAX < N
+	)
 	text(const T (&str)[N]) : text()
 	{
 		this->size(N);
@@ -1208,7 +1224,10 @@ public:
 			return SIZE_MAX;
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		inline constexpr auto find(const T (&str)[N], const size_t offset = 0) const -> size_t
 		{
 			const T* ptr {this->head};
@@ -1288,21 +1307,30 @@ public:
 			return SIZE_MAX;
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// converting constructor
 		inline constexpr auto find(const char8_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char8_t>)
 		{
 			return this->find(text<char8_t> {str}, offset);
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// converting constructor
 		inline constexpr auto find(const char16_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char16_t>)
 		{
 			return this->find(text<char16_t> {str}, offset);
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// converting constructor
 		inline constexpr auto find(const char32_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char32_t>)
 		{
@@ -1423,7 +1451,10 @@ public:
 			}
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		inline constexpr auto split(const T (&str)[N]) const -> std::vector<slice>
 		{
 			std::vector<slice> result;
@@ -1498,21 +1529,30 @@ public:
 			return result;
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// converting constructor
 		inline constexpr auto split(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
 		{
 			return this->split(text<char8_t> {str});
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// converting constructor
 		inline constexpr auto split(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
 		{
 			return this->split(text<char16_t> {str});
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// converting constructor
 		inline constexpr auto split(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
 		{
@@ -1661,7 +1701,10 @@ public:
 			}
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		friend constexpr auto operator==(const slice& lhs, const T (&rhs)[N]) -> bool
 		{
 			if (lhs.tail - lhs.head != N)
@@ -1674,49 +1717,70 @@ public:
 			return std::memcmp(lhs.head, rhs, total) == 0;
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// reverse op overloading
 		friend constexpr auto operator==(const T (&lhs)[N], const slice& rhs) -> bool
 		{
 			return rhs == lhs;
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// converting constructor
 		friend constexpr auto operator==(const slice& lhs, const char8_t (&rhs)[N]) -> bool requires (!std::is_same_v<T, char8_t>)
 		{
 			return lhs == text<char8_t> {rhs};
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// reverse op overloading
 		friend constexpr auto operator==(const char8_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char8_t>)
 		{
 			return rhs == lhs;
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// converting constructor
 		friend constexpr auto operator==(const slice& lhs, const char16_t (&rhs)[N]) -> bool requires (!std::is_same_v<T, char16_t>)
 		{
 			return lhs == text<char16_t> {rhs};
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// reverse op overloading
 		friend constexpr auto operator==(const char16_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char16_t>)
 		{
 			return rhs == lhs;
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// converting constructor
 		friend constexpr auto operator==(const slice& lhs, const char32_t (&rhs)[N]) -> bool requires (!std::is_same_v<T, char32_t>)
 		{
 			return lhs == text<char32_t> {rhs};
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// reverse op overloading
 		friend constexpr auto operator==(const char32_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char32_t>)
 		{
@@ -1741,19 +1805,28 @@ public:
 			return !(lhs == rhs);
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		friend constexpr auto operator!=(const slice& lhs, const T (&rhs)[N]) -> bool
 		{
 			return !(lhs == rhs);
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		friend constexpr auto operator!=(const T (&lhs)[N], const slice& rhs) -> bool
 		{
 			return !(lhs == rhs);
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// converting constructor
 		friend
 		inline constexpr auto operator!=(const slice& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
@@ -1761,35 +1834,50 @@ public:
 			return !(lhs == rhs);
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// reverse op overloading
 		friend constexpr auto operator!=(const char8_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char8_t>)
 		{
 			return rhs != lhs;
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// converting constructor
 		friend constexpr auto operator!=(const slice& lhs, const char16_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char16_t>)
 		{
 			return !(lhs == rhs);
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// reverse op overloading
 		friend constexpr auto operator!=(const char16_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char16_t>)
 		{
 			return rhs != lhs;
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// converting constructor
 		friend constexpr auto operator!=(const slice& lhs, const char32_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char32_t>)
 		{
 			return !(lhs == rhs);
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		// reverse op overloading
 		friend constexpr auto operator!=(const char32_t (&lhs)[N], const slice& rhs) -> bool requires (!std::is_same_v<T, char32_t>)
 		{
@@ -2050,7 +2138,10 @@ public:
 		return SIZE_MAX;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	inline constexpr auto find(const T (&str)[N], const size_t offset = 0) const -> size_t
 	{
 		//----------------------------------------------//
@@ -2136,21 +2227,30 @@ public:
 		return SIZE_MAX;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto find(const char8_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char8_t>)
 	{
 		return this->find(text<char8_t> {str}, offset);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto find(const char16_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char16_t>)
 	{
 		return this->find(text<char16_t> {str}, offset);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto find(const char32_t (&str)[N], const size_t offset = 0) const -> auto requires (!std::is_same_v<T, char32_t>)
 	{
@@ -2278,7 +2378,10 @@ public:
 		}
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	inline constexpr auto split(const T (&str)[N]) const -> std::vector<slice>
 	{
 		//--------------------------------------------//
@@ -2359,21 +2462,30 @@ public:
 		return result;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto split(const char8_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char8_t>)
 	{
 		return this->split(text<char8_t> {str});
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto split(const char16_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char16_t>)
 	{
 		return this->split(text<char16_t> {str});
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto split(const char32_t (&str)[N]) const -> auto requires (!std::is_same_v<T, char32_t>)
 	{
@@ -2573,7 +2685,10 @@ public:
 			return *this;
 		}
 
-		template<size_t N>
+		template
+		<
+			size_t N
+		>
 		inline constexpr auto operator|(const T (&rhs)[N])&& -> builder&
 		{
 			if (!this->full())
@@ -2616,31 +2731,46 @@ public:
 		return builder {lhs} | rhs;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	friend constexpr auto operator|(const text<T>& lhs, const slice& rhs) -> builder
 	{
 		return builder {lhs} | rhs;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	friend constexpr auto operator|(const slice& lhs, const text<T>& rhs) -> builder
 	{
 		return builder {lhs} | rhs;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	friend constexpr auto operator|(const text<T>& lhs, const T (&rhs)[N]) -> builder
 	{
 		return builder {lhs} | rhs;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	friend constexpr auto operator|(const T (&lhs)[N], const text<T>& rhs) -> builder
 	{
 		return builder {lhs} | rhs;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	friend constexpr auto operator|(const text<T>& lhs, const char8_t (&rhs)[N]) -> builder requires (!std::is_same_v<T, char8_t>)
 	{
 		if constexpr (std::is_same_v<T, char16_t>)
@@ -2653,7 +2783,10 @@ public:
 		}
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// reverse op overloading
 	friend constexpr auto operator|(const char8_t (&lhs)[N], const text<T>& rhs) -> builder requires (!std::is_same_v<T, char8_t>)
 	{
@@ -2667,7 +2800,10 @@ public:
 		}
 	}
 	
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	friend constexpr auto operator|(const text<T>& lhs, const char16_t (&rhs)[N]) -> builder requires (!std::is_same_v<T, char16_t>)
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
@@ -2680,7 +2816,10 @@ public:
 		}
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// reverse op overloading
 	friend constexpr auto operator|(const char16_t (&lhs)[N], const text<T>& rhs) -> builder requires (!std::is_same_v<T, char16_t>)
 	{
@@ -2694,7 +2833,10 @@ public:
 		}
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	friend constexpr auto operator|(const text<T>& lhs, const char32_t (&rhs)[N]) -> builder requires (!std::is_same_v<T, char32_t>)
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
@@ -2707,7 +2849,10 @@ public:
 		}
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// reverse op overloading
 	friend constexpr auto operator|(const char32_t (&lhs)[N], const text<T>& rhs) -> builder requires (!std::is_same_v<T, char32_t>)
 	{
@@ -2799,7 +2944,10 @@ public:
 		return *this;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	inline constexpr auto operator+=(const T (&rhs)[N]) -> text<T>
 	{
 		const auto total {this->size() + N - 1};
@@ -2870,7 +3018,10 @@ public:
 		return rvalue;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	friend constexpr auto operator+(const text<T> lhs, const T (&rhs)[N]) -> text<T>
 	{
 		text<T> rvalue {lhs.size() + N - 1};
@@ -2883,7 +3034,10 @@ public:
 		return rvalue;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// reverse op overloading
 	friend constexpr auto operator+(const T (&lhs)[N], const text<T> rhs) -> text<T>
 	{
@@ -2946,7 +3100,10 @@ public:
 		return std::memcmp(lhs.c_str(), rhs.head, total) == 0;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	friend constexpr auto operator==(const text<T>& lhs, const T (&rhs)[N]) -> bool
 	{
 		if (lhs.size() != N - 1)
@@ -2959,49 +3116,70 @@ public:
 		return std::memcmp(lhs.c_str(), rhs, total) == 0;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// reverse op overloading
 	friend constexpr auto operator==(const T (&lhs)[N], const text<T>& rhs) -> bool
 	{
 		return rhs == lhs;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	friend constexpr auto operator==(const text<T>& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
 	{
 		return lhs == text<char8_t> {rhs};
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// reverse op overloading
 	friend constexpr auto operator==(const char8_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char8_t>)
 	{
 		return rhs == lhs;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	friend constexpr auto operator==(const text<T>& lhs, const char16_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char16_t>)
 	{
 		return lhs == text<char16_t> {rhs};
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// reverse op overloading
 	friend constexpr auto operator==(const char16_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char16_t>)
 	{
 		return rhs == lhs;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	friend constexpr auto operator==(const text<T>& lhs, const char32_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char32_t>)
 	{
 		return lhs == text<char32_t> {rhs};
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// reverse op overloading
 	friend constexpr auto operator==(const char32_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char32_t>)
 	{
@@ -3026,55 +3204,79 @@ public:
 		return !(lhs == rhs);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	friend constexpr auto operator!=(const text<T>& lhs, const T (&rhs)[N]) -> bool
 	{
 		return !(lhs == rhs);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// reverse op overloading
 	friend constexpr auto operator!=(const T (&lhs)[N], const text<T>& rhs) -> bool
 	{
 		return !(lhs == rhs);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	friend constexpr auto operator!=(const text<T>& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
 	{
 		return !(lhs == rhs);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// reverse op overloading
 	friend constexpr auto operator!=(const char8_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char8_t>)
 	{
 		return !(lhs == rhs);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	friend constexpr auto operator!=(const text<T>& lhs, const char16_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char16_t>)
 	{
 		return !(lhs == rhs);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// reverse op overloading
 	friend constexpr auto operator!=(const char16_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char16_t>)
 	{
 		return !(rhs == lhs);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	friend constexpr auto operator!=(const text<T>& lhs, const char32_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char32_t>)
 	{
 		return !(lhs == rhs);
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// reverse op overloading
 	friend constexpr auto operator!=(const char32_t (&lhs)[N], const text<T>& rhs) -> auto requires (!std::is_same_v<T, char32_t>)
 	{

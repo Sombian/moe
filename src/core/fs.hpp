@@ -225,11 +225,11 @@ namespace fs
 					typedef char8_t unit;
 					
 					text<unit> data
-					(
+					{
 						(size / sizeof(unit))
 						+
 						1 /*null-terminator*/
-					);
+					};
 
 					write_native(data);
 
@@ -241,11 +241,11 @@ namespace fs
 					typedef char16_t unit;
 
 					text<unit> data
-					(
+					{
 						(size / sizeof(unit))
 						+
 						1 /*null-terminator*/
-					);
+					};
 
 					if constexpr (IS_BIG)
 					{
@@ -263,11 +263,11 @@ namespace fs
 					typedef char16_t unit;
 
 					text<unit> data
-					(
+					{
 						(size / sizeof(unit))
 						+
 						1 /*null-terminator*/
-					);
+					};
 
 					if constexpr (!IS_BIG)
 					{
@@ -285,11 +285,11 @@ namespace fs
 					typedef char32_t unit;
 
 					text<unit> data
-					(
+					{
 						(size / sizeof(unit))
 						+
 						1 /*null-terminator*/
-					);
+					};
 
 					if constexpr (IS_BIG)
 					{
@@ -306,8 +306,12 @@ namespace fs
 				{
 					typedef char32_t unit;
 
-					// null-terminator
-					text<unit> data ((size / sizeof(unit)) + 1);
+					text<unit> data
+					{
+						(size / sizeof(unit))
+						+
+						1 /*null-terminator*/
+					};
 					
 					if constexpr (!IS_BIG)
 					{
@@ -332,21 +336,30 @@ namespace fs
 		return std::nullopt;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto open(const char8_t (&path)[N])
 	{
 		return open(utf8 {path});
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto open(const char16_t (&path)[N])
 	{
 		return open(utf16 {path});
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto open(const char32_t (&path)[N])
 	{

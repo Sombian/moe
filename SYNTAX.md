@@ -1,23 +1,169 @@
+# decl
+
+```bnf
+decl ::= fun
+       | pure_fun
+       | var
+       | const_var
+       | model
+       | trait
+
+fun ::= "fun"
+        symbol
+        "("
+        param?
+        ")"
+        block
+
+pure_fun ::= "fun!"
+             symbol
+             "("
+             param?
+             ")"
+             block
+
+var ::= "let"
+        symbol
+        ":"
+        symbol
+        (
+        	"="
+        	expr
+        )?
+        ";"
+
+const_var ::= "let!"
+              symbol
+              ":"
+              symbol
+              "="
+              expr
+              ";"
+
+model ::= "model"
+          symbol
+          "{"
+          (
+          	symbol
+          	":"
+          	symbol
+          	(
+          		"="
+          		expr
+          	)?
+          	";"
+          )*
+          "}"
+
+trait ::= "trait"
+          symbol
+          "{"
+          (
+          	(
+          		"fun"
+          		|
+          		"fun!"
+          	)
+          	symbol
+          	"("
+          	param?
+          	")"
+          	":"
+          	symbol
+          	(
+          		block
+          		|
+          		";"
+          	)
+          )*
+          "}"
+
+...
+
+param ::= symbol ":" symbol
+          ("," symbol ":" symbol)*
+          ("," symbol ":" symbol "=" expr)*
+```
+
+# stmt
+
+```bnf
+stmt ::= if
+       | for
+       | while
+       | match
+       | break
+       | return
+       | continue
+
+if ::= "if"
+       "("
+       expr
+       ")"
+       block
+
+for ::= "for"
+        "("
+        decl
+        ";"
+        expr
+        ";"
+        expr
+        ")"
+        block
+
+while ::= "while"
+          "("
+          expr
+          ")"
+          block
+
+match ::= "match"
+          "("
+          expr
+          ")"
+          block
+
+break ::= "break"
+          symbol?
+          ";"
+
+return ::= "return"
+           expr?
+           ";"
+
+continue ::= "continue"
+             symbol?
+             ";"
+
+...
+
+block ::= "{"
+          (
+          	expr ";"
+          	|
+          	stmt
+          )*
+          "}"
+```
+
 # expr
 
 ```bnf
-expr ::= unary_l
+expr ::= unary
        | binary
-       | unary_r
        | literal
        | symbol
        | group
        | call
 
-unary_l ::= op_l
-            expr
+unary ::= op_l
+          expr
 
 binary ::= expr
            op_i
            expr
 
-unary_r ::= expr
-            op_r
 
 literal ::= NUMBER
           | STRING
@@ -25,29 +171,34 @@ literal ::= NUMBER
           | "true"
           | "false"
 
-symbol ::= XID_S
-           XID_C*
+symbol ::= XID_Start
+           XID_Continue*
+
+access ::= expr
+           (
+           	"."
+           	|
+           	"?."
+           	|
+           	"!."
+           	|
+           	"::"
+           )
+           symbol
 
 group ::= "("
           expr
           ")"
 
 call ::= expr
-         duty
-         symbol
          "("
          args?
          ")"
 
-duty ::= "."
-         |
-         "?."
-         |
-         "!."
-         |
-         "::"
+...
 
-args ::= expr ("," expr)*
+args ::= expr
+         ("," expr)*
 ```
 
 *left recursion fix: from the lowest to the highest priority*
@@ -155,97 +306,47 @@ pow_op ::= "^"
 # 02 # unary prefix
 ######
 
-expr_02 ::= ( pre_op )* expr_01 ( post_op)?
+expr_02 ::= ( pre_op )* expr_01
 
 pre_op ::= "@"
          | "&"
          | "!"
          | "not"
 
+######
+# 01 # access & call
+######
+
+expr_01 ::= primary
+            (
+            	(
+              	(
+              		"."
+              		|
+              		"?."
+              		|
+              		"!."
+              		|
+              		"::"
+              	)
+              	symbol
+              )
+            	|
+            	(
+              	"("
+              	args?
+              	")"
+              )
+            )*
+
 post_op ::= "."
-            "?."
-            "!."
-            "::"
+          | "?."
+          | "!."
+          | "::"
 
-######
-# 01 # primary
-######
+...
 
-expr_01 ::= literal
+primary ::= literal
           | symbol
           | group
-          | call
-```
-
-# decl
-
-```bnf
-decl := fun
-      | pure_fun
-      | var
-      | const_var
-
-fun := "fun"
-       symbol
-       block
-
-pure_fun := "fun!"
-            symbol
-            block
-
-var := "let"
-       symbol
-       ":"
-       type
-       ("=" expr)?
-       ";"
-
-const_var := "let!"
-             symbol
-             ":"
-             type
-             "="
-             expr
-             ";"
-```
-
-# stmt
-
-```bnf
-stmt := for
-      | while
-      | if
-      | match
-
-for ::= "for"
-        "("
-        decl
-        ";"
-        expr
-        ";"
-        expr
-        ")"
-        block
-
-while ::= "while"
-          "("
-          expr
-          ")"
-          block
-
-if ::= "if"
-       "("
-       expr
-       ")"
-       block
-
-match ::= "match"
-          "("
-          expr
-          ")"
-          block
-
-block ::= "{"
-          (expr | stmt | decl)*
-          "}"
 ```

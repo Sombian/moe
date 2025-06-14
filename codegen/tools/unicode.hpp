@@ -47,21 +47,30 @@ namespace
 		return result;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto UnicodeData(const char8_t (&name)[N]) -> auto
 	{
 		return UnicodeData(utf8 {name});
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto UnicodeData(const char16_t (&name)[N]) -> auto
 	{
 		return UnicodeData(utf16 {name});
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto UnicodeData(const char32_t (&name)[N]) -> auto
 	{
@@ -89,21 +98,30 @@ namespace detail
 		return result;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto CaseFolding(const char8_t (&name)[N]) -> auto
 	{
 		return CaseFolding(utf8 {name});
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto CaseFolding(const char16_t (&name)[N]) -> auto
 	{
 		return CaseFolding(utf16 {name});
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto CaseFolding(const char32_t (&name)[N]) -> auto
 	{
@@ -132,21 +150,30 @@ namespace detail
 		return result;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto CompositionExclusions(const char8_t (&name)[N]) -> auto
 	{
 		return CompositionExclusions(utf8 {name});
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto CompositionExclusions(const char16_t (&name)[N]) -> auto
 	{
 		return CompositionExclusions(utf16 {name});
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto CompositionExclusions(const char32_t (&name)[N]) -> auto
 	{
@@ -209,21 +236,30 @@ namespace
 		return result;
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto DerivedCoreProperties(const char8_t (&name)[N]) -> auto
 	{
 		return DerivedCoreProperties(utf8 {name});
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto DerivedCoreProperties(const char16_t (&name)[N]) -> auto
 	{
 		return DerivedCoreProperties(utf16 {name});
 	}
 
-	template<size_t N>
+	template
+	<
+		size_t N
+	>
 	// converting constructor
 	inline constexpr auto DerivedCoreProperties(const char32_t (&name)[N]) -> auto
 	{

@@ -15,13 +15,19 @@
 ⡝⡵⡕⡀⠑⠳⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠛⢉⡠⡲⡫⡪⡪⡣
 */
 
-let! foo: i32 = 1;
-let! bar: i32 = 2;
+let foo: i32;
+let bar: i32;
+
+model cat
+{
+	foo: i32;
+	bar: i32;
+}
 
 fun! main(): i32
 {
-	let foo!: i32 = 1;
-	let bar!: i32 = 2;
+	let foo!: i32 = 6;
+	let bar!: i32 = 9;
 
 	foo += bar;
 
