@@ -1,4 +1,3 @@
-#include <cstdlib>
 #include <variant>
 #include <iostream>
 
@@ -58,6 +57,9 @@ auto main() -> int
 			#endif //-------------|
 
 			exe.compile(true);
+
+			// std::cout << "stoi:" << utils::stoi(u8"-1234567") << std::endl;
+			// std::cout << "stof:" << utils::stof(u8"-123.456") << std::endl;
 			
 		},
 		io.value());

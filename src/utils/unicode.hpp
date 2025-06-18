@@ -4,7 +4,7 @@
 
 namespace utils
 {
-	namespace
+	namespace // private
 	{
 		struct props
 		{

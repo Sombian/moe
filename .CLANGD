@@ -2,9 +2,6 @@ Index:
     Background: Build
     StandardLibrary: Yes
 
-Hover:
-    ShowAKA: Yes
-
 InlayHints:
     Designators: Off
     DeducedTypes: Off

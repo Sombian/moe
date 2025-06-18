@@ -1,11 +1,11 @@
 #pragma once
 
-#include <optional>
 #include <vector>
 #include <memory>
 #include <variant>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <iostream>
 
 #include "./span.hpp"
@@ -13,6 +13,8 @@
 #include "./error.hpp"
 
 #include "models/str.hpp"
+
+#include "utils/convert.hpp"
 
 #include "traits/rule_of_5.hpp"
 #include "traits/visitable.hpp"
@@ -484,11 +486,21 @@ typedef std::variant
 node;
 
 
-#define only(T) /*|*/         T        /*|*/
-#define many(T) /*|*/  std::vector<T>  /*|*/
-#define some(T) /*|*/ std::optional<T> /*|*/
+#define only(T) /**/         T        /**/
+#define many(T) /**/  std::vector<T>  /**/
+#define some(T) /**/ std::optional<T> /**/
 
 typedef std::vector<node> body;
+
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+
+static inline std::unique_ptr<llvm::LLVMContext> CONTEXT {std::make_unique<llvm::LLVMContext>(/*NONE*/)};
+static inline std::unique_ptr<llvm::Module> MODULE {std::make_unique<llvm::Module>("moe.exe", *CONTEXT)};
+static inline std::unique_ptr<llvm::IRBuilder<>> BUILDER {std::make_unique<llvm::IRBuilder<>>(*CONTEXT)};
 
 //|---------------|
 //| variant::decl |
@@ -511,6 +523,11 @@ struct $fun : public span, public traits::visitable<$fun>
 
 	COPY_ASSIGNMENT($fun) = delete;
 	MOVE_ASSIGNMENT($fun) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $var : public span, public traits::visitable<$var>
@@ -529,6 +546,11 @@ struct $var : public span, public traits::visitable<$var>
 
 	COPY_ASSIGNMENT($var) = delete;
 	MOVE_ASSIGNMENT($var) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $model : public span, public traits::visitable<$model>
@@ -543,6 +565,11 @@ struct $model : public span, public traits::visitable<$model>
 
 	COPY_ASSIGNMENT($model) = delete;
 	MOVE_ASSIGNMENT($model) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $trait : public span, public traits::visitable<$trait>
@@ -557,6 +584,11 @@ struct $trait : public span, public traits::visitable<$trait>
 
 	COPY_ASSIGNMENT($trait) = delete;
 	MOVE_ASSIGNMENT($trait) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 //|---------------|
@@ -575,6 +607,11 @@ struct $if : public span, public traits::visitable<$if>
 
 	COPY_ASSIGNMENT($if) = delete;
 	MOVE_ASSIGNMENT($if) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $for : public span, public traits::visitable<$for>
@@ -591,6 +628,11 @@ struct $for : public span, public traits::visitable<$for>
 
 	COPY_ASSIGNMENT($for) = delete;
 	MOVE_ASSIGNMENT($for) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $match : public span, public traits::visitable<$match>
@@ -606,6 +648,11 @@ struct $match : public span, public traits::visitable<$match>
 
 	COPY_ASSIGNMENT($match) = delete;
 	MOVE_ASSIGNMENT($match) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $while : public span, public traits::visitable<$while>
@@ -620,6 +667,11 @@ struct $while : public span, public traits::visitable<$while>
 
 	COPY_ASSIGNMENT($while) = delete;
 	MOVE_ASSIGNMENT($while) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $break : public span, public traits::visitable<$break>
@@ -633,6 +685,11 @@ struct $break : public span, public traits::visitable<$break>
 
 	COPY_ASSIGNMENT($break) = delete;
 	MOVE_ASSIGNMENT($break) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $return : public span, public traits::visitable<$return>
@@ -646,6 +703,11 @@ struct $return : public span, public traits::visitable<$return>
 
 	COPY_ASSIGNMENT($return) = delete;
 	MOVE_ASSIGNMENT($return) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $continue : public span, public traits::visitable<$continue>
@@ -659,6 +721,11 @@ struct $continue : public span, public traits::visitable<$continue>
 
 	COPY_ASSIGNMENT($continue) = delete;
 	MOVE_ASSIGNMENT($continue) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 //|---------------|
@@ -677,6 +744,11 @@ struct $unary : public span, public traits::visitable<$unary>
 
 	COPY_ASSIGNMENT($unary) = delete;
 	MOVE_ASSIGNMENT($unary) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $binary : public span, public traits::visitable<$binary>
@@ -692,6 +764,11 @@ struct $binary : public span, public traits::visitable<$binary>
 
 	COPY_ASSIGNMENT($binary) = delete;
 	MOVE_ASSIGNMENT($binary) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $literal : public span, public traits::visitable<$literal>
@@ -706,6 +783,64 @@ struct $literal : public span, public traits::visitable<$literal>
 
 	COPY_ASSIGNMENT($literal) = delete;
 	MOVE_ASSIGNMENT($literal) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+
+		switch (this->type)
+		{
+			//|----------------|
+			//| signed integer |
+			//|----------------|
+			case data::I8:
+			{
+				return ConstantInt::get(Type::getInt8Ty(*CONTEXT), utils::stoi(this->data), true);
+			}
+			case data::I16:
+			{
+				return ConstantInt::get(Type::getInt16Ty(*CONTEXT), utils::stoi(this->data), true);
+			}
+			case data::I32:
+			{
+				return ConstantInt::get(Type::getInt32Ty(*CONTEXT), utils::stoi(this->data), true);
+			}
+			case data::I64:
+			{
+				return ConstantInt::get(Type::getInt64Ty(*CONTEXT), utils::stoi(this->data), true);
+			}
+			//|-----------------|
+			//| floating points |
+			//|-----------------|
+			case data::F32:
+			{
+				return ConstantInt::get(Type::getFloatTy(*CONTEXT), utils::stof(this->data));
+			}
+			case data::F64:
+			{
+				return ConstantInt::get(Type::getDoubleTy(*CONTEXT), utils::stof(this->data));
+			}
+			//|------------------|
+			//| unsigned integer |
+			//|------------------|
+			case data::U8:
+			{
+				return ConstantInt::get(Type::getInt8Ty(*CONTEXT), utils::stoi(this->data), false);
+			}
+			case data::U16:
+			{
+				return ConstantInt::get(Type::getInt16Ty(*CONTEXT), utils::stoi(this->data), false);
+			}
+			case data::U32:
+			{
+				return ConstantInt::get(Type::getInt32Ty(*CONTEXT), utils::stoi(this->data), false);
+			}
+			case data::U64:
+			{
+				return ConstantInt::get(Type::getInt64Ty(*CONTEXT), utils::stoi(this->data), false);
+			}
+		}
+	}
 };
 
 struct $symbol : public span, public traits::visitable<$symbol>
@@ -719,6 +854,11 @@ struct $symbol : public span, public traits::visitable<$symbol>
 
 	COPY_ASSIGNMENT($symbol) = delete;
 	MOVE_ASSIGNMENT($symbol) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $access : public span, public traits::visitable<$access>
@@ -734,6 +874,11 @@ struct $access : public span, public traits::visitable<$access>
 
 	COPY_ASSIGNMENT($access) = delete;
 	MOVE_ASSIGNMENT($access) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $group : public span, public traits::visitable<$group>
@@ -747,6 +892,11 @@ struct $group : public span, public traits::visitable<$group>
 
 	COPY_ASSIGNMENT($group) = delete;
 	MOVE_ASSIGNMENT($group) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 struct $call : public span, public traits::visitable<$call>
@@ -761,6 +911,11 @@ struct $call : public span, public traits::visitable<$call>
 
 	COPY_ASSIGNMENT($call) = delete;
 	MOVE_ASSIGNMENT($call) = default;
+
+	inline constexpr auto codegen() -> llvm::Value*
+	{
+		using namespace llvm;
+	}
 };
 
 namespace lang
@@ -1389,14 +1544,6 @@ namespace lang
 	};
 }
 
-#include "llvm/IR/Module.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LLVMContext.h"
-
-static inline std::unique_ptr<llvm::LLVMContext> CONTEXT {std::make_unique<llvm::LLVMContext>(/*NONE*/)};
-static inline std::unique_ptr<llvm::Module> MODULE {std::make_unique<llvm::Module>("moe.exe", *CONTEXT)};
-static inline std::unique_ptr<llvm::IRBuilder<>> BUILDER {std::make_unique<llvm::IRBuilder<>>(*CONTEXT)};
-
 template
 <
 	type::string A,
@@ -1433,7 +1580,7 @@ public:
 			{
 				arg->accept(impl);
 			},
-			node); // <- decl/stmt/expr
+			node); // decl/stmt/expr
 		}
 	}
 

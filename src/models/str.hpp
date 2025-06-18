@@ -15,7 +15,6 @@
 
 #include "utils/ordering.hpp"
 
-#include "traits/printable.hpp"
 #include "traits/rule_of_5.hpp"
 
 //|----------------------------------------------------------------------------------------|
@@ -108,37 +107,14 @@ class text
 		size_t capacity : CAPACITY_BITS;
 		size_t metadata : METADATA_BITS;
 
-		inline constexpr auto begin() -> T*
-		{
-			return this->data; // from start
-		}
+		inline constexpr auto begin() const -> const T* { return this->data; }
+		inline constexpr auto begin()       ->       T* { return this->data; }
 
-		inline constexpr auto end() -> T*
-		{
-			return this->data + this->size;
-		}
+		inline constexpr auto end() const -> const T* { return this->data + this->size; }
+		inline constexpr auto end()       ->       T* { return this->data + this->size; }
 
-		inline constexpr auto begin() const -> const T*
-		{
-			return this->data; // from start
-		}
-
-		inline constexpr auto end() const -> const T*
-		{
-			return this->data + this->size;
-		}
-
-		// syntax sugar
-		inline constexpr auto operator[](const size_t nth) -> T&
-		{
-			return this->data[nth];
-		}
-
-		// syntax sugar
-		inline constexpr auto operator[](const size_t nth) const -> const T&
-		{
-			return this->data[nth];
-		}
+		inline constexpr auto operator[](const size_t nth) const -> const T& { return this->data[nth]; }
+		inline constexpr auto operator[](const size_t nth)       ->       T& { return this->data[nth]; }
 	};
 
 	static_assert(std::is_standard_layout_v<buffer>, "use other compiler");
@@ -198,6 +174,26 @@ public:
 	//|---------------|-------|-------|-------|-------|-------|-------|
 	//| 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit |
 	//|-------|-------|-------|-------|-------|-------|-------|-------|
+
+	inline constexpr auto c_str() const -> const T*
+	{
+		switch (this->mode())
+		{
+			case tag::SMALL: { return this->small     ; }
+			case tag::LARGE: { return this->large.data; }
+		}
+		assert(false && "-Wreturn-type");
+	}
+
+	inline constexpr auto c_str()       ->       T*
+	{
+		switch (this->mode())
+		{
+			case tag::SMALL: { return this->small     ; }
+			case tag::LARGE: { return this->large.data; }
+		}
+		assert(false && "-Wreturn-type");
+	}
 
 	// getter
 	inline constexpr auto size() const -> size_t
@@ -359,6 +355,31 @@ public:
 			}
 		}
 		assert(this->size() < this->capacity());
+	}
+
+	inline constexpr auto empty() const -> bool
+	{
+		return this->size() == 0;
+	}
+
+	inline constexpr auto length() const -> size_t
+	{
+		// UTF-32
+		if constexpr (std::is_same_v<T, char32_t>)
+		{
+			return this->size();
+		}
+		// UTF-8/16
+		const auto ptr {this->c_str()};
+
+		size_t i {0};
+		size_t j {0};
+
+		for (; ptr[i]; ++j)
+		{
+			i += codec::next(ptr + i);
+		}
+		return j; // <- O(N)
 	}
 
 private:
@@ -703,7 +724,7 @@ public:
 			// copy meta
 			this->size(N);
 			// copy data
-			std::ranges::copy(ptr, ptr + N + 1, this->c_str());
+			std::ranges::copy(ptr, ptr + N, this->c_str());
 		}
 	}
 
@@ -1000,66 +1021,6 @@ public:
 		}
 	};
 
-	//|-----------------|
-	//| member function |
-	//|-----------------|
-
-	inline constexpr auto c_str() -> T*
-	{
-		switch (this->mode())
-		{
-			case tag::SMALL:
-			{
-				return this->small;
-			}
-			case tag::LARGE:
-			{
-				return this->large.data;
-			}
-		}
-		assert(false && "-Wreturn-type");
-	}
-
-	inline constexpr auto c_str() const -> const T*
-	{
-		switch (this->mode())
-		{
-			case tag::SMALL:
-			{
-				return this->small;
-			}
-			case tag::LARGE:
-			{
-				return this->large.data;
-			}
-		}
-		assert(false && "-Wreturn-type");
-	}
-
-	//|--------------|
-	//| lhs.length() |
-	//|--------------|
-
-	inline constexpr auto length() const -> size_t
-	{
-		// UTF-32
-		if constexpr (std::is_same_v<T, char32_t>)
-		{
-			return this->size();
-		}
-		// UTF-8/16
-		const auto ptr {this->c_str()};
-
-		size_t i {0};
-		size_t j {0};
-
-		for (; ptr[i]; ++j)
-		{
-			i += codec::next(ptr + i);
-		}
-		return j; // <- O(N)
-	}
-
 	class slice
 	{
 		friend text;
@@ -1089,6 +1050,11 @@ public:
 			return this->tail - this->head;
 		}
 
+		inline constexpr auto empty() const -> bool
+		{
+			return this->size() == 0;
+		}
+
 		inline constexpr auto length() const -> size_t
 		{
 			// UTF-32
@@ -1109,58 +1075,90 @@ public:
 			return j; // <- O(N)
 		}
 
-		inline constexpr auto to_utf8() const -> text<char8_t>
+		//|--------------------------|
+		//| utf8 <-> utf16 <-> utf32 |
+		//|--------------------------|
+
+		template
+		<
+			typename U
+		>
+		inline constexpr auto convert() const -> text<U>
 		{
-			text<char8_t> rvalue {this->size() + 1};
-
-			char8_t* ptr {rvalue.c_str()};
-
-			for (const auto code : *this)
+			text<U> str
 			{
-				auto width {text<char8_t>::codec::width(code)};
-				text<char8_t>::codec::encode(code, ptr, width);
-				ptr += width; // move to next code point slot
+				[&]
+				{
+					size_t impl {0};
+					// accumulate size
+					for (auto code : *this)
+					{
+						//|------------<width>------------|
+						impl += text<U>::codec::width(code);
+						//|-------------------------------|
+					}
+					// null-terminator
+					return impl + 1;
+				}
+				()
+			};
+
+			auto ptr {str.c_str()};
+
+			for (auto code : *this)
+			{
+				auto width {text<U>::codec::width(code)};
+				text<U>::codec::encode(code, ptr, width);
+				ptr += width; // move to next code point
 			}
 			// update size
-			rvalue.size(ptr - rvalue.c_str());
+			str.size(ptr - str.c_str());
 
-			return rvalue;
+			return str;
+		}
+
+		inline constexpr auto to_utf8() const -> text<char8_t>
+		{
+			return this->convert<char8_t>();
 		}
 
 		inline constexpr auto to_utf16() const -> text<char16_t>
 		{
-			text<char16_t> rvalue {this->size() + 1};
-
-			char16_t* ptr {rvalue.c_str()};
-
-			for (const auto code : *this)
-			{
-				auto width {text<char16_t>::codec::width(code)};
-				text<char16_t>::codec::encode(code, ptr, width);
-				ptr += width; // move to next code point slot
-			}
-			// update size
-			rvalue.size(ptr - rvalue.c_str());
-
-			return rvalue;
+			return this->convert<char16_t>();
 		}
 
 		inline constexpr auto to_utf32() const -> text<char32_t>
 		{
-			text<char32_t> rvalue {this->size() + 1};
+			return this->convert<char32_t>();
+		}
 
-			char32_t* ptr {rvalue.c_str()};
+		//|--------------|
+		//| lhs.substr() |
+		//|--------------|
 
-			for (const auto code : *this)
+		inline constexpr auto substr(const size_t start, const size_t count = SIZE_MAX) const -> slice
+		{
+			const auto ptr {this->head};
+			// UTF-32
+			if constexpr (std::is_same_v<T, char32_t>) // short-circuit on UTF32
 			{
-				auto width {text<char32_t>::codec::width(code)};
-				text<char32_t>::codec::encode(code, ptr, width);
-				ptr += width; // move to next code point slot
+				return {ptr + start, ptr + std::min(start + count, this->size())};
 			}
-			// update size
-			rvalue.size(ptr - rvalue.c_str());
-
-			return rvalue;
+			// UTF-8/16
+			size_t a {0};
+	
+			for (size_t i {0}; ptr[a] && i < start; ++i)
+			{
+				a += codec::next(ptr + a);
+			}
+			// continue
+			size_t b {a};
+	
+			for (size_t i {0}; ptr[b] && i < count; ++i)
+			{
+				b += codec::next(ptr + b);
+			}
+			return {ptr + a, ptr + b};
 		}
 
 		//|------------|
@@ -1559,35 +1557,6 @@ public:
 			return this->split(text<char32_t> {str});
 		}
 
-		//|--------------|
-		//| lhs.substr() |
-		//|--------------|
-
-		inline constexpr auto substr(const size_t start, const size_t count) const -> slice
-		{
-			const auto ptr {this->head};
-			// UTF-32
-			if constexpr (std::is_same_v<T, char32_t>)
-			{
-				return {ptr + start, ptr + start + count};
-			}
-			// UTF-8/16
-			size_t a {0};
-	
-			for (size_t i {0}; ptr[a] && i < start; ++i)
-			{
-				a += codec::next(ptr + a);
-			}
-			// continue
-			size_t b {a};
-	
-			for (size_t i {0}; ptr[b] && i < count; ++i)
-			{
-				b += codec::next(ptr + b);
-			}
-			return {ptr + a, ptr + b};
-		}
-
 		//|-----------|
 		//| lhs < rhs |
 		//|-----------|
@@ -1675,13 +1644,11 @@ public:
 		{
 			if constexpr (std::is_same_v<T, U>)
 			{
-				if (lhs.tail - lhs->head != rhs.size())
-				{
-					return false;
-				}
-				const auto total {rhs.size() * sizeof(T)};
-				// content equality without null terminator
-				return std::memcmp(lhs.head, rhs.c_str(), total) == 0;
+				return lhs.size() == rhs.size() && std::memcmp
+				(
+					lhs.head, rhs.c_str(), rhs.size() * sizeof(T)
+				)
+				== 0;
 			}
 			else // if (!std::is_same_v<T, U>)
 			{
@@ -1707,14 +1674,11 @@ public:
 		>
 		friend constexpr auto operator==(const slice& lhs, const T (&rhs)[N]) -> bool
 		{
-			if (lhs.tail - lhs.head != N)
-			{
-				return false;
-			}
-			// skip a null terminator, thus - 1
-			const auto total {(N - 1) * sizeof(T)};
-			// content equality without null terminator
-			return std::memcmp(lhs.head, rhs, total) == 0;
+			return lhs.size() == N - 1 && 
+			(
+				lhs.head, rhs, (N - 1) * sizeof(T)
+			)
+			== 0;
 		}
 
 		template
@@ -1828,8 +1792,7 @@ public:
 			size_t N
 		>
 		// converting constructor
-		friend
-		inline constexpr auto operator!=(const slice& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
+		friend constexpr auto operator!=(const slice& lhs, const char8_t (&rhs)[N]) -> auto requires (!std::is_same_v<T, char8_t>)
 		{
 			return !(lhs == rhs);
 		}
@@ -1922,6 +1885,8 @@ public:
 		!std::is_same_v<slice_t, text<char16_t>>;
 		!std::is_same_v<slice_t, text<char32_t>>;
 
+		// requires requires { str.head; str.tail; }
+
 		{ str.to_utf8() } -> std::same_as<text<char8_t>>;
 		{ str.to_utf16() } -> std::same_as<text<char16_t>>;
 		{ str.to_utf32() } -> std::same_as<text<char32_t>>;
@@ -1952,42 +1917,13 @@ public:
 		!std::is_same_v<slice_t, text<char16_t>>;
 		!std::is_same_v<slice_t, text<char32_t>>;
 
-		{ str.to_utf8() } -> std::same_as<text<char8_t>>;
-		{ str.to_utf16() } -> std::same_as<text<char16_t>>;
-		{ str.to_utf32() } -> std::same_as<text<char32_t>>;
-	}
-	inline constexpr auto operator=(const slice_t& rhs) -> text&
-	{
-		if constexpr (std::is_same_v<T, char8_t>)
-		{
-			*this = rhs.to_utf8();
-		}
-		if constexpr (std::is_same_v<T, char16_t>)
-		{
-			*this = rhs.to_utf16();
-		}
-		if constexpr (std::is_same_v<T, char32_t>)
-		{
-			*this = rhs.to_utf32();
-		}
-		return *this;
-	}
-
-	template
-	<
-		typename slice_t
-	>
-	requires requires (slice_t str)
-	{
-		!std::is_same_v<slice_t, text<char8_t>>;
-		!std::is_same_v<slice_t, text<char16_t>>;
-		!std::is_same_v<slice_t, text<char32_t>>;
+		// requires requires { str.head; str.tail; }
 
 		{ str.to_utf8() } -> std::same_as<text<char8_t>>;
 		{ str.to_utf16() } -> std::same_as<text<char16_t>>;
 		{ str.to_utf32() } -> std::same_as<text<char32_t>>;
 	}
-	inline constexpr auto operator=(const slice_t&& rhs) -> text&
+	auto operator=(const slice_t& rhs) -> text&
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
 		{
@@ -2008,70 +1944,92 @@ public:
 	//| utf8 <-> utf16 <-> utf32 |
 	//|--------------------------|
 
+	template
+	<
+		typename U
+	>
+	inline constexpr auto convert() const -> text<U>
+	{
+		if constexpr (std::is_same_v<T, U>)
+		{
+			return *this;
+		}
+		else // if (!std::is_same_v<T, U>)
+		{
+			text<U> str
+			{
+				[&]
+				{
+					size_t impl {0};
+					// accumulate size
+					for (auto code : *this)
+					{
+						//|------------<width>------------|
+						impl += text<U>::codec::width(code);
+						//|-------------------------------|
+					}
+					// null-terminator
+					return impl + 1;
+				}
+				()
+			};
+			auto ptr {str.c_str()};
+
+			for (const auto code : *this)
+			{
+				auto width {text<U>::codec::width(code)};
+				text<U>::codec::encode(code, ptr, width);
+				ptr += width; // move to next code point
+			}
+			// update size
+			str.size(ptr - str.c_str());
+
+			return str;
+		}
+	}
+
 	inline constexpr auto to_utf8() const -> text<char8_t>
 	{
-		if constexpr (std::is_same_v<T, char8_t>)
-		{
-			return text<char8_t> {*this};
-		}
-		text<char8_t> rvalue {this->size()};
-
-		char8_t* ptr {rvalue.c_str()};
-
-		for (const auto code : *this)
-		{
-			auto width {text<char8_t>::codec::width(code)};
-			text<char8_t>::codec::encode(code, ptr, width);
-			ptr += width; // move to next code point slot
-		}
-		// update size
-		rvalue.size(ptr - rvalue.c_str());
-
-		return rvalue;
+		return this->convert<char8_t>();
 	}
 
 	inline constexpr auto to_utf16() const -> text<char16_t>
 	{
-		if constexpr (std::is_same_v<T, char16_t>)
-		{
-			return text<char16_t> {*this};
-		}
-		text<char16_t> rvalue {this->size()};
-
-		char16_t* ptr {rvalue.c_str()};
-
-		for (const auto code : *this)
-		{
-			auto width {text<char16_t>::codec::width(code)};
-			text<char16_t>::codec::encode(code, ptr, width);
-			ptr += width; // move to next code point slot
-		}
-		// update size
-		rvalue.size(ptr - rvalue.c_str());
-
-		return rvalue;
+		return this->convert<char16_t>();
 	}
 
 	inline constexpr auto to_utf32() const -> text<char32_t>
 	{
-		if constexpr (std::is_same_v<T, char32_t>)
+		return this->convert<char32_t>();
+	}
+
+	//|--------------|
+	//| lhs.substr() |
+	//|--------------|
+
+	inline constexpr auto substr(const size_t start, const size_t count = SIZE_MAX) const -> slice
+	{
+		const auto ptr {this->c_str()};
+		// UTF-32
+		if constexpr (std::is_same_v<T, char32_t>) // short-circuit on UTF32
 		{
-			return text<char32_t> {*this};
+			return {ptr + start, ptr + std::min(start + count, this->size())};
 		}
-		text<char32_t> rvalue {this->size()};
+		// UTF-8/16
+		size_t a {0};
 
-		char32_t* ptr {rvalue.c_str()};
-
-		for (const auto code : *this)
+		for (size_t i {0}; ptr[a] && i < start; ++i)
 		{
-			auto width {text<char32_t>::codec::width(code)};
-			text<char32_t>::codec::encode(code, ptr, width);
-			ptr += width; // move to next code point slot
+			a += codec::next(ptr + a);
 		}
-		// update size
-		rvalue.size(ptr - rvalue.c_str());
+		// continue
+		size_t b {a};
 
-		return rvalue;
+		for (size_t i {0}; ptr[b] && i < count; ++i)
+		{
+			b += codec::next(ptr + b);
+		}
+		return {ptr + a, ptr + b};
 	}
 
 	//|------------|
@@ -2084,9 +2042,9 @@ public:
 	>
 	inline constexpr auto find(const text<U>& str, const size_t offset = 0) const -> size_t
 	{
-		//----------------------------------------------//
-		const auto LAST {this->c_str() + this->size()}; //
-		//----------------------------------------------//
+		//|-------------------------------------------|
+		const auto LAST {this->c_str() + this->size()};
+		//|-------------------------------------------|
 		const T* ptr {this->c_str()};
 
 		size_t nth {0};
@@ -2144,9 +2102,9 @@ public:
 	>
 	inline constexpr auto find(const T (&str)[N], const size_t offset = 0) const -> size_t
 	{
-		//----------------------------------------------//
-		const auto LAST {this->c_str() + this->size()}; //
-		//----------------------------------------------//
+		//|-------------------------------------------|
+		const auto LAST {this->c_str() + this->size()};
+		//|-------------------------------------------|
 		const T* ptr {this->c_str()};
 
 		size_t nth {0};
@@ -2200,9 +2158,9 @@ public:
 
 	inline constexpr auto find(const char32_t code, const size_t offset = 0) const -> size_t
 	{
-		//----------------------------------------------//
-		const auto LAST {this->c_str() + this->size()}; //
-		//----------------------------------------------//
+		//|-------------------------------------------|
+		const auto LAST {this->c_str() + this->size()};
+		//|-------------------------------------------|
 		const T* ptr {this->c_str()};
 
 		size_t nth {0};
@@ -2492,35 +2450,6 @@ public:
 		return this->split(text<char32_t> {str});
 	}
 
-	//|--------------|
-	//| lhs.substr() |
-	//|--------------|
-
-	inline constexpr auto substr(const size_t start, const size_t count) const -> slice
-	{
-		const auto ptr {this->c_str()};
-		// UTF-32
-		if constexpr (std::is_same_v<T, char32_t>)
-		{
-			return {ptr + start, ptr + start + count};
-		}
-		// UTF-8/16
-		size_t a {0};
-
-		for (size_t i {0}; ptr[a] && i < start; ++i)
-		{
-			a += codec::next(ptr + a);
-		}
-		// continue
-		size_t b {a};
-
-		for (size_t i {0}; ptr[b] && i < count; ++i)
-		{
-			b += codec::next(ptr + b);
-		}
-		return {ptr + a, ptr + b};
-	}
-
 	//|--------|
 	//| lhs[N] |
 	//|--------|
@@ -2530,7 +2459,7 @@ public:
 		return {*this, nth};
 	}
 
-	inline constexpr auto operator[](const size_t nth) -> proxy<decltype(*this)>
+	inline constexpr auto operator[](const size_t nth)       -> proxy<decltype(*this)>
 	{
 		return {*this, nth};
 	}
@@ -2773,14 +2702,7 @@ public:
 	>
 	friend constexpr auto operator|(const text<T>& lhs, const char8_t (&rhs)[N]) -> builder requires (!std::is_same_v<T, char8_t>)
 	{
-		if constexpr (std::is_same_v<T, char16_t>)
-		{
-			return builder {lhs} | text<char8_t> {rhs}.to_utf16();
-		}
-		if constexpr (std::is_same_v<T, char32_t>)
-		{
-			return builder {lhs} | text<char8_t> {rhs}.to_utf32();
-		}
+		return builder {lhs} | text<char8_t> {rhs}.convert<T>();
 	}
 
 	template
@@ -2790,14 +2712,7 @@ public:
 	// reverse op overloading
 	friend constexpr auto operator|(const char8_t (&lhs)[N], const text<T>& rhs) -> builder requires (!std::is_same_v<T, char8_t>)
 	{
-		if constexpr (std::is_same_v<T, char16_t>)
-		{
-			return builder {text<char8_t> {lhs}.to_utf16()} | rhs;
-		}
-		if constexpr (std::is_same_v<T, char32_t>)
-		{
-			return builder {text<char8_t> {lhs}.to_utf32()} | rhs;
-		}
+		return builder {text<char8_t> {lhs}.convert<T>()} | rhs;
 	}
 	
 	template
@@ -2806,14 +2721,7 @@ public:
 	>
 	friend constexpr auto operator|(const text<T>& lhs, const char16_t (&rhs)[N]) -> builder requires (!std::is_same_v<T, char16_t>)
 	{
-		if constexpr (std::is_same_v<T, char8_t>)
-		{
-			return builder {lhs} | text<char16_t> {rhs}.to_utf8();
-		}
-		if constexpr (std::is_same_v<T, char32_t>)
-		{
-			return builder {lhs} | text<char16_t> {rhs}.to_utf32();
-		}
+		return builder {lhs} | text<char16_t> {rhs}.convert<T>();
 	}
 
 	template
@@ -2823,14 +2731,7 @@ public:
 	// reverse op overloading
 	friend constexpr auto operator|(const char16_t (&lhs)[N], const text<T>& rhs) -> builder requires (!std::is_same_v<T, char16_t>)
 	{
-		if constexpr (std::is_same_v<T, char8_t>)
-		{
-			return builder {text<char16_t> {lhs}.to_utf8()} | rhs;
-		}
-		if constexpr (std::is_same_v<T, char32_t>)
-		{
-			return builder {text<char16_t> {lhs}.to_utf32()} | rhs;
-		}
+		return builder {text<char16_t> {lhs}.convert<T>()} | rhs;
 	}
 
 	template
@@ -2839,14 +2740,7 @@ public:
 	>
 	friend constexpr auto operator|(const text<T>& lhs, const char32_t (&rhs)[N]) -> builder requires (!std::is_same_v<T, char32_t>)
 	{
-		if constexpr (std::is_same_v<T, char8_t>)
-		{
-			return builder {lhs} | text<char32_t> {rhs}.to_utf8();
-		}
-		if constexpr (std::is_same_v<T, char16_t>)
-		{
-			return builder {lhs} | text<char32_t> {rhs}.to_utf16();
-		}
+		return builder {lhs} | text<char32_t> {rhs}.convert<T>();
 	}
 
 	template
@@ -2856,14 +2750,7 @@ public:
 	// reverse op overloading
 	friend constexpr auto operator|(const char32_t (&lhs)[N], const text<T>& rhs) -> builder requires (!std::is_same_v<T, char32_t>)
 	{
-		if constexpr (std::is_same_v<T, char8_t>)
-		{
-			return builder {text<char32_t> {lhs}.to_utf8()} | rhs;
-		}
-		if constexpr (std::is_same_v<T, char16_t>)
-		{
-			return builder {text<char32_t> {lhs}.to_utf16()} | rhs;
-		}
+		return builder {text<char32_t> {lhs}.convert<T>()} | rhs;
 	}
 
 	//|------------|
@@ -2880,7 +2767,12 @@ public:
 	>
 	inline constexpr auto operator+=(const text<U>& rhs) -> text<T>
 	{
-		const auto total {this->size() + rhs.size()};
+		const auto total
+		{
+			this->size()
+			+
+			rhs.size()
+		};
 
 		if constexpr (std::is_same_v<T, U>)
 		{
@@ -2923,7 +2815,12 @@ public:
 
 	inline constexpr auto operator+=(const slice& rhs) -> text<T>
 	{
-		const auto total {this->size() + rhs.size()};
+		const auto total
+		{
+			this->size()
+			+
+			rhs.size()
+		};
 
 		if (this->capacity() < total + 1)
 		{
@@ -2950,7 +2847,12 @@ public:
 	>
 	inline constexpr auto operator+=(const T (&rhs)[N]) -> text<T>
 	{
-		const auto total {this->size() + N - 1};
+		const auto total
+		{
+			this->size()
+			+
+			N - 1 // :3
+		};
 
 		if (this->capacity() < total + 1)
 		{
@@ -3063,13 +2965,11 @@ public:
 	{
 		if constexpr (std::is_same_v<T, U>)
 		{
-			if (lhs.size() != rhs.size())
-			{
-				return false;
-			}
-			const auto total {lhs.size() * sizeof(T)};
-			// content equality without null terminator
-			return std::memcmp(lhs.c_str(), rhs.c_str(), total) == 0;
+			return lhs.size() == rhs.size() && std::memcmp
+			(
+				lhs.c_str(), rhs.c_str(), lhs.size() * sizeof(T)
+			)
+			== 0;
 		}
 		else // if (!std::is_same_v<T, U>)
 		{
@@ -3091,13 +2991,11 @@ public:
 
 	friend constexpr auto operator==(const text<T>& lhs, const slice& rhs) -> bool
 	{
-		if (lhs.size() != rhs.tail - rhs.head)
-		{
-			return false;
-		}
-		const auto total {lhs.size() * sizeof(T)};
-		// content equality without null terminator
-		return std::memcmp(lhs.c_str(), rhs.head, total) == 0;
+		return lhs.size() == rhs.size() && std::memcmp
+		(
+			lhs.c_str(), rhs.head, lhs.size() * sizeof(T)
+		)
+		== 0;
 	}
 
 	template
@@ -3106,14 +3004,11 @@ public:
 	>
 	friend constexpr auto operator==(const text<T>& lhs, const T (&rhs)[N]) -> bool
 	{
-		if (lhs.size() != N - 1)
-		{
-			return false;
-		}
-		// skip a null terminator, thus - 1
-		const auto total {(N - 1) * sizeof(T)};
-		// content equality without null terminator
-		return std::memcmp(lhs.c_str(), rhs, total) == 0;
+		return lhs.size() == N - 1 && std::memcmp
+		(
+			lhs.c_str(), rhs, (N - 1) * sizeof(T)
+		)
+		== 0;
 	}
 
 	template
@@ -3289,7 +3184,7 @@ public:
 
 	inline constexpr auto begin() const -> iterator
 	{
-		return {this->c_str()/* from RE:0 */};
+		return {this->c_str() + (0b00000000)};
 	}
 
 	inline constexpr auto end() const -> iterator

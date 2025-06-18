@@ -12,22 +12,28 @@
 #include "models/str.hpp"
 #include "utils/convert.hpp"
 
-constexpr const size_t BLOCK {2*2*2*2*2*2*2*2};
-//-----------------------------------------//
-typedef std::array<uint16_t, BLOCK> block; //
-//-----------------------------------------//
-constexpr const size_t LIMIT {0x10FFFF / BLOCK};
-
-struct props
+namespace // private
 {
-	bool XID_Start : 1 {false};
-	bool XID_Continue : 1 {false};
+	struct props
+	{
+		bool XID_Start : 1 {false};
+		bool XID_Continue : 1 {false};
 
-	inline constexpr bool operator==(const props&) const = default;
-	inline constexpr auto operator<=>(const props&) const = default;
-};
+		inline constexpr bool
+		operator==(const props&) const = default;
+		
+		inline constexpr auto
+		operator<=>(const props&) const = default;
+	};
 
-namespace
+	constexpr const size_t BLOCK {2*2*2*2*2*2*2*2};
+	//-----------------------------------------//
+	typedef std::array<uint16_t, BLOCK> block; //
+	//-----------------------------------------//
+	constexpr const size_t LIMIT {0x10FFFF / BLOCK};
+}
+
+namespace // private
 {
 	inline constexpr auto UnicodeData(const type::string auto& name) -> std::set<uint32_t>
 	{
@@ -78,7 +84,7 @@ namespace
 	}
 }
 
-namespace detail
+namespace // private
 {
 	inline constexpr auto CaseFolding(const type::string auto& name) -> std::set<uint32_t>
 	{
@@ -129,7 +135,7 @@ namespace detail
 	}
 }
 
-namespace detail
+namespace // private
 {
 	inline constexpr auto CompositionExclusions(const type::string auto& name) -> std::set<uint32_t>
 	{
@@ -181,7 +187,7 @@ namespace detail
 	}
 }
 
-namespace
+namespace // private
 {
 	inline constexpr auto DerivedCoreProperties(const type::string auto& name) -> std::set<uint32_t>
 	{
@@ -211,14 +217,14 @@ namespace
 							{
 								case 1:
 								{
-									foo = utils::atoi(range[0], 16);
-									bar = utils::atoi(range[0], 16);
+									foo = utils::stoi(range[0], 16);
+									bar = utils::stoi(range[0], 16);
 									break;
 								}
 								case 2:
 								{
-									foo = utils::atoi(range[0], 16);
-									bar = utils::atoi(range[1], 16);
+									foo = utils::stoi(range[0], 16);
+									bar = utils::stoi(range[1], 16);
 									break;
 								}
 							}
@@ -267,7 +273,7 @@ namespace
 	}
 }
 
-namespace
+namespace // private
 {
 	inline constexpr auto write_stage1(std::vector<uint16_t> stage1, const char* name)
 	{
