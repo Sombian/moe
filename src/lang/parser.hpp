@@ -11,12 +11,12 @@
 #include <functional>
 #include <type_traits>
 
-#include "lang/1_lexer.hpp"
+#include "./lexer.hpp"
 
-#include "./common/ast.hpp"
-#include "./common/eof.hpp"
-#include "./common/token.hpp"
-#include "./common/error.hpp"
+#include "lang/common/ast.hpp"
+#include "lang/common/eof.hpp"
+#include "lang/common/token.hpp"
+#include "lang/common/error.hpp"
 
 template
 <
@@ -176,7 +176,7 @@ public:
 					//|-----------------<insert>-----------------|
 					std::visit([&](auto&& _)
 					{
-						this->exe.body.emplace_back(std::move(_));
+						this->exe.entry.emplace_back(std::move(_));
 					},
 					std::move(out.value()));
 					//|------------------------------------------|
@@ -187,7 +187,7 @@ public:
 					//|-----------------<insert>-----------------|
 					std::visit([&](auto&& _)
 					{
-						this->exe.body.emplace_back(std::move(_));
+						this->exe.entry.emplace_back(std::move(_));
 					},
 					std::move(out.value()));
 					//|------------------------------------------|
@@ -198,7 +198,7 @@ public:
 			catch (error<A, B>& out)
 			{
 				//|----------------<insert>----------------|
-				this->exe.error.emplace_back(std::move(out));
+				this->exe.issue.emplace_back(std::move(out));
 				//|----------------------------------------|
 				this->sync(); // ...nothing to do here...
 			}
@@ -276,7 +276,7 @@ private:
 		catch (error<A, B>& out)
 		{
 			//|----------------<insert>----------------|
-			this->exe.error.emplace_back(std::move(out));
+			this->exe.issue.emplace_back(std::move(out));
 			//|----------------------------------------|
 			this->sync(); return this->decl_t();
 		}
@@ -967,7 +967,7 @@ private:
 		catch (error<A, B>& out)
 		{
 			//|----------------<insert>----------------|
-			this->exe.error.emplace_back(std::move(out));
+			this->exe.issue.emplace_back(std::move(out));
 			//|----------------------------------------|
 			this->sync(); return this->stmt_t();
 		}
@@ -1499,7 +1499,7 @@ private:
 								{throw E(u8"[parser] invalid expr");})};
 								//|-----------------------------------|
 
-								ast.op = to_l(*tkn);
+								ast.opr = to_l(*tkn);
 								ast.rhs = std::move(*rhs);
 
 								return std::make_unique
@@ -1623,7 +1623,7 @@ private:
 							{throw E(u8"[parser] invalid expr");})};
 							//|-----------------------------------|
 
-							ast.op = to_i(*tkn);
+							ast.opr = to_i(*tkn);
 							ast.lhs = std::move(*lhs);
 							ast.rhs = std::move(*rhs);
 
@@ -1675,7 +1675,7 @@ private:
 							this->next();
 
 							//|--------<update>--------|
-							ast.call = std::move(*lhs);
+							ast.self = std::move(*lhs);
 							//|------------------------|
 
 							start:
@@ -1716,7 +1716,7 @@ private:
 		catch (error<A, B>& out)
 		{
 			//|----------------<insert>----------------|
-			this->exe.error.emplace_back(std::move(out));
+			this->exe.issue.emplace_back(std::move(out));
 			//|----------------------------------------|
 			this->sync(); return this->expr_t();
 		}

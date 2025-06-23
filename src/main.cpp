@@ -1,11 +1,9 @@
 #include <variant>
-#include <iostream>
 
 #include "core/fs.hpp"
 
-#include "lang/1_lexer.hpp"
-#include "lang/2_parser.hpp"
-#include "lang/3_linter.hpp"
+#include "lang/lexer.hpp"
+#include "lang/parser.hpp"
 
 auto main() -> int
 {
@@ -39,28 +37,11 @@ auto main() -> int
 			>
 			parser {&lexer};
 
-			linter
-			<
-				decltype(file.path),
-				decltype(file.data)
-			>
-			linter {&parser};
+			//|----<fontend>----|
+			//| lexer -> parser |
+			//|-----------------|
 
-			auto exe {linter.pull()};
-
-			#ifndef NDEBUG //-----|
-			lang::printer debugger
-			{
-				std::cout
-			};
-			exe.visit(debugger);
-			#endif //-------------|
-
-			exe.compile(true);
-
-			// std::cout << "stoi:" << utils::stoi(u8"-1234567") << std::endl;
-			// std::cout << "stof:" << utils::stof(u8"-123.456") << std::endl;
-			
+			parser.pull().compile();
 		},
 		io.value());
 	}

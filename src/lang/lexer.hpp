@@ -9,13 +9,13 @@
 
 #include "models/tst.hpp"
 
-#include "./common/eof.hpp"
-#include "./common/token.hpp"
-#include "./common/error.hpp"
-#include "./common/trail.hpp"
-
 #include "utils/unicode.hpp"
 #include "utils/ordering.hpp"
+
+#include "lang/common/eof.hpp"
+#include "lang/common/token.hpp"
+#include "lang/common/error.hpp"
+#include "lang/common/trail.hpp"
 
 template
 <

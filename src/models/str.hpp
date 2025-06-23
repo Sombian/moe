@@ -167,223 +167,6 @@ class text
 		return static_cast<tag>(this->bytes[RMB] & MSK);
 	}
 
-public:
-
-	//|-------------------------------------------------------|-------|
-	//|   ↓       ↓       ↓       ↓       ↓       ↓       ↓   |       |
-	//|---------------|-------|-------|-------|-------|-------|-------|
-	//| 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit |
-	//|-------|-------|-------|-------|-------|-------|-------|-------|
-
-	inline constexpr auto c_str() const -> const T*
-	{
-		switch (this->mode())
-		{
-			case tag::SMALL: { return this->small     ; }
-			case tag::LARGE: { return this->large.data; }
-		}
-		assert(false && "-Wreturn-type");
-	}
-
-	inline constexpr auto c_str()       ->       T*
-	{
-		switch (this->mode())
-		{
-			case tag::SMALL: { return this->small     ; }
-			case tag::LARGE: { return this->large.data; }
-		}
-		assert(false && "-Wreturn-type");
-	}
-
-	// getter
-	inline constexpr auto size() const -> size_t
-	{
-		switch (this->mode())
-		{
-			case tag::SMALL:
-			{
-				//|------------|    |-[little endian]-|
-				//| 0b0XXXXXXX | -> | no need to skip |
-				//|------------|    |-----------------|
-
-				//|------------|    |---[big endian]---|
-				//| 0bXXXXXXX0 | -> | skip right 1 bit |
-				//|------------|    |------------------|
-
-				return MAX - (this->bytes[RMB] >> SFT);
-			}
-			case tag::LARGE:
-			{
-				// "it just works" - its in the middle
-
-				return this->large.size; // ¯\_(ツ)_/¯
-			}
-		}
-		assert(false && "-Wreturn-type");
-	}
-
-	// setter
-	inline constexpr auto size(const size_t value)
-	{
-		if (this->capacity() < value + 1)
-		{
-			allocate:
-			auto data {new T[value + 1]};
-
-			switch (this->mode())
-			{
-				// S -> L
-				case tag::SMALL:
-				{
-					std::ranges::copy(this->small, data);
-					// delete[] this->small;
-					break;
-				}
-				// L -> L
-				case tag::LARGE:
-				{
-					std::ranges::copy(this->large, data);
-					delete[] this->large.data;
-					break;
-				}
-			}
-			this->large.data = data;
-			this->large.size = value + 0;
-			this->large.capacity = value + 1;
-			this->large.metadata = tag::LARGE;
-		}
-		else if (value < this->capacity())
-		{
-			switch (this->mode())
-			{
-				// L -> L
-				case tag::LARGE:
-				{
-					this->large.size = value;
-					// terminate
-					this->large[value] = '\0';
-					break;
-				}
-				// S -> S
-				case tag::SMALL:
-				{
-					assert(value <= RMB);
-
-					auto slot {MAX - value};
-
-					//|------------|    |-[little endian]-|
-					//| 0b0XXXXXXX | -> | no need to skip |
-					//|------------|    |-----------------|
-
-					//|------------|    |---[big endian]---|
-					//| 0bXXXXXXX0 | -> | skip right 1 bit |
-					//|------------|    |------------------|
-
-					this->bytes[RMB] = slot << SFT;
-					// terminate
-					this->small[value] = '\0';
-					break;
-				}
-			}
-		}
-		assert(this->size() < this->capacity());
-	}
-
-	// getter
-	inline constexpr auto capacity() const -> size_t
-	{
-		switch (this->mode())
-		{
-			case tag::SMALL:
-			{
-				return MAX; // always MAX
-			}
-			case tag::LARGE:
-			{
-				return this->large.capacity;
-			}
-		}
-		assert(false && "-Wreturn-type");
-	}
-
-	// setter
-	inline constexpr auto capacity(const size_t value)
-	{
-		if (this->capacity() < value)
-		{
-			allocate:
-			auto data {new T[value]};
-			auto size {this->size()};
-
-			switch (this->mode())
-			{
-				// S -> L
-				case tag::SMALL:
-				{
-					std::ranges::copy(this->small, data);
-					// delete[] this->small;
-					break;
-				}
-				// L -> L
-				case tag::LARGE:
-				{
-					std::ranges::copy(this->large, data);
-					delete[] this->large.data;
-					break;
-				}
-			}
-			this->large.data = data;
-			this->large.size = size;
-			this->large.capacity = value;
-			this->large.metadata = tag::LARGE;
-		}
-		else if (value < this->capacity())
-		{
-			switch (this->mode())
-			{
-				// L -> L
-				case tag::LARGE:
-				{
-					goto allocate;
-				}
-				// S -> S
-				case tag::SMALL:
-				{
-					// ¯\_(ツ)_/¯
-					break;
-				}
-			}
-		}
-		assert(this->size() < this->capacity());
-	}
-
-	inline constexpr auto empty() const -> bool
-	{
-		return this->size() == 0;
-	}
-
-	inline constexpr auto length() const -> size_t
-	{
-		// UTF-32
-		if constexpr (std::is_same_v<T, char32_t>)
-		{
-			return this->size();
-		}
-		// UTF-8/16
-		const auto ptr {this->c_str()};
-
-		size_t i {0};
-		size_t j {0};
-
-		for (; ptr[i]; ++j)
-		{
-			i += codec::next(ptr + i);
-		}
-		return j; // <- O(N)
-	}
-
-private:
-
 	template
 	<
 		typename S
@@ -622,154 +405,6 @@ private:
 	};
 
 public:
-
-	// a -> b
-	COPY_CALL(text<T>)
-	{
-		const auto N {from.size()};
-
-		if (dest.capacity() < N + 1)
-		{
-			dest.capacity(N + 1);
-		}
-		// copy data
-		std::ranges::copy
-		(
-			from.c_str() + 0,
-			from.c_str() + N,
-			// destination
-			dest.c_str() + 0
-		);
-		// copy size
-		dest.size(N);
-	}
-
-	// a <-> b
-	SWAP_CALL(text<T>)
-	{
-		switch (from.mode())
-		{
-			case tag::SMALL:
-			{
-				std::swap(from.small, dest.small);
-				break;
-			}
-			case tag::LARGE:
-			{
-				std::swap(from.large, dest.large);
-				break;
-			}
-		}
-	}
-
-	//|---------------|
-	//| the rule of 5 |
-	//|---------------|
-
-	text() : bytes {0} // clear
-	{
-		this->bytes[RMB] = MAX << SFT;
-		// then...
-		assert(this->mode() == tag::SMALL);
-	}
-
-	template
-	<
-		std::integral U
-	>
-	text(U value) : text()
-	{
-		this->capacity(value);
-	}
-
-	template
-	<
-		size_t N
-	>
-	requires
-	(
-		N <= MAX
-	)
-	text(const T (&str)[N]) : text()
-	{
-		this->size(N);
-		// check mode
-		assert(this->mode() == tag::SMALL);
-		// write data
-		std::ranges::copy(str, str + N, this->small);
-	}
-
-	template
-	<
-		size_t N
-	>
-	requires
-	(
-		MAX < N
-	)
-	text(const T (&str)[N]) : text()
-	{
-		this->size(N);
-		// check mode
-		assert(this->mode() == tag::LARGE);
-		// write data
-		std::ranges::copy(str, str + N, this->large.data);
-	}
-
-	text(const T* ptr) : text()
-	{
-		if (ptr != nullptr)
-		{
-			const auto N {std::char_traits<T>::length(ptr)};
-			// copy meta
-			this->size(N);
-			// copy data
-			std::ranges::copy(ptr, ptr + N, this->c_str());
-		}
-	}
-
-	COPY_CONSTRUCTOR(text) : text()
-	{
-		if (this != &other)
-		{
-			copy(other, *this);
-		}
-	}
-
-	MOVE_CONSTRUCTOR(text) : text()
-	{
-		if (this != &other)
-		{
-			swap(other, *this);
-		}
-	}
-
-	~text()
-	{
-		if (this->mode() == tag::LARGE)
-		{
-			delete[] this->large.data;
-		}
-		// no need to delete in SSO mode
-	}
-
-	COPY_ASSIGNMENT(text)
-	{
-		if (this != &rhs)
-		{
-			copy(rhs, *this);
-		}
-		return *this;
-	}
-
-	MOVE_ASSIGNMENT(text)
-	{
-		if (this != &rhs)
-		{
-			swap(rhs, *this);
-		}
-		return *this;
-	}
 
 	class codec
 	{
@@ -1871,9 +1506,269 @@ public:
 		}
 	};
 
-	//|----------------------|
-	//| from slice to string |
-	//|----------------------|
+	class format
+	{
+		// fragments of source
+		std::vector<text<T>> atom;
+		// arguments to concat
+		std::vector<text<T>> args;
+
+		inline constexpr auto full() const -> bool
+		{
+			return // until N = N' + 1
+			(
+				this->atom.size() + 0
+				==
+				this->args.size() + 1
+			);
+		}
+
+	public:
+
+		format(const slice& str)
+		{
+			for (auto& _ : str.split(u8"%s"))
+			{
+				if constexpr (std::same_as<T, char8_t>)
+				{
+					this->atom.emplace_back(_.to_utf8());
+				}
+				if constexpr (std::same_as<T, char16_t>)
+				{
+					this->atom.emplace_back(_.to_utf16());
+				}
+				if constexpr (std::same_as<T, char32_t>)
+				{
+					this->atom.emplace_back(_.to_utf32());
+				}
+			}
+		}
+
+		format(const text<T>& str)
+		{
+			for (auto& _ : str.split(u8"%s"))
+			{
+				if constexpr (std::same_as<T, char8_t>)
+				{
+					this->atom.emplace_back(_.to_utf8());
+				}
+				if constexpr (std::same_as<T, char16_t>)
+				{
+					this->atom.emplace_back(_.to_utf16());
+				}
+				if constexpr (std::same_as<T, char32_t>)
+				{
+					this->atom.emplace_back(_.to_utf32());
+				}
+			}
+		}
+
+		//|-----------------|
+		//| member function |
+		//|-----------------|
+
+		operator text<T>()&&
+		{
+			while (!this->full())
+			{
+				if constexpr (std::same_as<T, char8_t>)
+				{
+					this->args.emplace_back(u8"%s");
+				}
+				if constexpr (std::same_as<T, char16_t>)
+				{
+					this->args.emplace_back(u"%s");
+				}
+				if constexpr (std::same_as<T, char32_t>)
+				{
+					this->args.emplace_back(U"%s");
+				}
+			}
+			// allocate str
+			text<T> result
+			{
+				[&]
+				{
+					size_t impl {0};
+
+					for (auto& _ : this->atom) { impl += _.size(); }
+					for (auto& _ : this->args) { impl += _.size(); }
+
+					return impl + 1;
+				}
+				()
+			};
+			// mix and join
+			for (size_t i {0}; i < args.size(); ++i)
+			{
+				result += this->atom[i]; // write
+				result += this->args[i]; // write
+			}
+			// last fragment
+			result += this->atom.back();
+
+			return result;
+		}
+
+		//|-----------|
+		//| lhs | rhs |
+		//|-----------|
+
+		inline constexpr auto operator|(const text<T>& rhs)&& -> format&
+		{
+			if (!this->full())
+			{
+				this->args.emplace_back(rhs);
+			}
+			return *this;
+		}
+
+		inline constexpr auto operator|(const slice& rhs)&& -> format&
+		{
+			if (!this->full())
+			{
+				this->args.emplace_back(rhs);
+			}
+			return *this;
+		}
+
+		template
+		<
+			size_t N
+		>
+		inline constexpr auto operator|(const T (&rhs)[N])&& -> format&
+		{
+			if (!this->full())
+			{
+				this->args.emplace_back(rhs);
+			}
+			return *this;
+		}
+
+		//|-------------------|
+		//| fundamental types |
+		//|-------------------|
+
+		inline constexpr auto operator|(const bool rhs)&& -> format&
+		{
+			return *this | (rhs ? u8"true" : u8"false");
+		}
+
+		// auto operator|(const int64_t rhs) && -> builder&
+		// {
+		// 	return *this | utils::itoa(rhs);
+		// }
+	
+		// auto operator|(const uint64_t rhs) && -> builder&
+		// {
+		// 	return *this | utils::utoa(rhs);
+		// }
+	};
+
+	// a -> b
+	COPY_CALL(text<T>)
+	{
+		const auto N {from.size()};
+
+		if (dest.capacity() < N + 1)
+		{
+			dest.capacity(N + 1);
+		}
+		// copy data
+		std::ranges::copy
+		(
+			from.c_str() + 0,
+			from.c_str() + N,
+			// destination
+			dest.c_str() + 0
+		);
+		// copy size
+		dest.size(N);
+	}
+
+	// a <-> b
+	SWAP_CALL(text<T>)
+	{
+		switch (from.mode())
+		{
+			case tag::SMALL:
+			{
+				std::swap(from.small, dest.small);
+				break;
+			}
+			case tag::LARGE:
+			{
+				std::swap(from.large, dest.large);
+				break;
+			}
+		}
+	}
+
+	//|---------------|
+	//| the rule of 5 |
+	//|---------------|
+
+	text() : bytes {0} // clear
+	{
+		this->bytes[RMB] = MAX << SFT;
+		// then...
+		assert(this->mode() == tag::SMALL);
+	}
+
+	template
+	<
+		std::integral U
+	>
+	text(U value) : text()
+	{
+		this->capacity(value);
+	}
+
+	template
+	<
+		size_t N
+	>
+	requires
+	(
+		N <= MAX
+	)
+	text(const T (&str)[N]) : text()
+	{
+		this->size(N);
+		// check mode
+		assert(this->mode() == tag::SMALL);
+		// write data
+		std::ranges::copy(str, str + N, this->small);
+	}
+
+	template
+	<
+		size_t N
+	>
+	requires
+	(
+		MAX < N
+	)
+	text(const T (&str)[N]) : text()
+	{
+		this->size(N);
+		// check mode
+		assert(this->mode() == tag::LARGE);
+		// write data
+		std::ranges::copy(str, str + N, this->large.data);
+	}
+
+	text(const T* ptr) : text()
+	{
+		if (ptr != nullptr)
+		{
+			const auto N {std::char_traits<T>::length(ptr)};
+			// copy meta
+			this->size(N);
+			// copy data
+			std::ranges::copy(ptr, ptr + N, this->c_str());
+		}
+	}
 
 	template
 	<
@@ -1907,6 +1802,49 @@ public:
 		}
 	}
 
+	COPY_CONSTRUCTOR(text) : text()
+	{
+		if (this != &other)
+		{
+			copy(other, *this);
+		}
+	}
+
+	MOVE_CONSTRUCTOR(text) : text()
+	{
+		if (this != &other)
+		{
+			swap(other, *this);
+		}
+	}
+
+	~text()
+	{
+		if (this->mode() == tag::LARGE)
+		{
+			delete[] this->large.data;
+		}
+		// no need to delete in SSO mode
+	}
+
+	COPY_ASSIGNMENT(text)
+	{
+		if (this != &rhs)
+		{
+			copy(rhs, *this);
+		}
+		return *this;
+	}
+
+	MOVE_ASSIGNMENT(text)
+	{
+		if (this != &rhs)
+		{
+			swap(rhs, *this);
+		}
+		return *this;
+	}
+
 	template
 	<
 		typename slice_t
@@ -1938,6 +1876,220 @@ public:
 			*this = rhs.to_utf32();
 		}
 		return *this;
+	}
+
+
+	//|-------------------------------------------------------|-------|
+	//|   ↓       ↓       ↓       ↓       ↓       ↓       ↓   |       |
+	//|---------------|-------|-------|-------|-------|-------|-------|
+	//| 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit |
+	//|-------|-------|-------|-------|-------|-------|-------|-------|
+
+	inline constexpr auto c_str() const -> const T*
+	{
+		switch (this->mode())
+		{
+			case tag::SMALL: { return this->small     ; }
+			case tag::LARGE: { return this->large.data; }
+		}
+		assert(false && "-Wreturn-type");
+	}
+
+	inline constexpr auto c_str()       ->       T*
+	{
+		switch (this->mode())
+		{
+			case tag::SMALL: { return this->small     ; }
+			case tag::LARGE: { return this->large.data; }
+		}
+		assert(false && "-Wreturn-type");
+	}
+
+	// getter
+	inline constexpr auto size() const -> size_t
+	{
+		switch (this->mode())
+		{
+			case tag::SMALL:
+			{
+				//|------------|    |-[little endian]-|
+				//| 0b0XXXXXXX | -> | no need to skip |
+				//|------------|    |-----------------|
+
+				//|------------|    |---[big endian]---|
+				//| 0bXXXXXXX0 | -> | skip right 1 bit |
+				//|------------|    |------------------|
+
+				return MAX - (this->bytes[RMB] >> SFT);
+			}
+			case tag::LARGE:
+			{
+				// "it just works" - its in the middle
+
+				return this->large.size; // ¯\_(ツ)_/¯
+			}
+		}
+		assert(false && "-Wreturn-type");
+	}
+
+	// setter
+	inline constexpr auto size(const size_t value)
+	{
+		if (this->capacity() < value + 1)
+		{
+			allocate:
+			auto data {new T[value + 1]};
+
+			switch (this->mode())
+			{
+				// S -> L
+				case tag::SMALL:
+				{
+					std::ranges::copy(this->small, data);
+					// delete[] this->small;
+					break;
+				}
+				// L -> L
+				case tag::LARGE:
+				{
+					std::ranges::copy(this->large, data);
+					delete[] this->large.data;
+					break;
+				}
+			}
+			this->large.data = data;
+			this->large.size = value + 0;
+			this->large.capacity = value + 1;
+			this->large.metadata = tag::LARGE;
+		}
+		else if (value < this->capacity())
+		{
+			switch (this->mode())
+			{
+				// L -> L
+				case tag::LARGE:
+				{
+					this->large.size = value;
+					// terminate
+					this->large[value] = '\0';
+					break;
+				}
+				// S -> S
+				case tag::SMALL:
+				{
+					assert(value <= RMB);
+
+					auto slot {MAX - value};
+
+					//|------------|    |-[little endian]-|
+					//| 0b0XXXXXXX | -> | no need to skip |
+					//|------------|    |-----------------|
+
+					//|------------|    |---[big endian]---|
+					//| 0bXXXXXXX0 | -> | skip right 1 bit |
+					//|------------|    |------------------|
+
+					this->bytes[RMB] = slot << SFT;
+					// terminate
+					this->small[value] = '\0';
+					break;
+				}
+			}
+		}
+		assert(this->size() < this->capacity());
+	}
+
+	inline constexpr auto empty() const -> bool
+	{
+		return this->size() == 0;
+	}
+
+	inline constexpr auto length() const -> size_t
+	{
+		// UTF-32
+		if constexpr (std::is_same_v<T, char32_t>)
+		{
+			return this->size();
+		}
+		// UTF-8/16
+		const auto ptr {this->c_str()};
+
+		size_t i {0};
+		size_t j {0};
+
+		for (; ptr[i]; ++j)
+		{
+			i += codec::next(ptr + i);
+		}
+		return j; // <- O(N)
+	}
+
+	// getter
+	inline constexpr auto capacity() const -> size_t
+	{
+		switch (this->mode())
+		{
+			case tag::SMALL:
+			{
+				return MAX; // always MAX
+			}
+			case tag::LARGE:
+			{
+				return this->large.capacity;
+			}
+		}
+		assert(false && "-Wreturn-type");
+	}
+
+	// setter
+	inline constexpr auto capacity(const size_t value)
+	{
+		if (this->capacity() < value)
+		{
+			allocate:
+			auto data {new T[value]};
+			auto size {this->size()};
+
+			switch (this->mode())
+			{
+				// S -> L
+				case tag::SMALL:
+				{
+					std::ranges::copy(this->small, data);
+					// delete[] this->small;
+					break;
+				}
+				// L -> L
+				case tag::LARGE:
+				{
+					std::ranges::copy(this->large, data);
+					delete[] this->large.data;
+					break;
+				}
+			}
+			this->large.data = data;
+			this->large.size = size;
+			this->large.capacity = value;
+			this->large.metadata = tag::LARGE;
+		}
+		else if (value < this->capacity())
+		{
+			switch (this->mode())
+			{
+				// L -> L
+				case tag::LARGE:
+				{
+					goto allocate;
+				}
+				// S -> S
+				case tag::SMALL:
+				{
+					// ¯\_(ツ)_/¯
+					break;
+				}
+			}
+		}
+		assert(this->size() < this->capacity());
 	}
 
 	//|--------------------------|
@@ -2488,278 +2640,9 @@ public:
 		return lhs.size() < rhs.size();
 	}
 
-	class builder
-	{
-		// fragments of source
-		std::vector<text<T>> atom;
-		// arguments to concat
-		std::vector<text<T>> args;
-
-		inline constexpr auto full() const -> bool
-		{
-			return // until N = N' + 1
-			(
-				this->atom.size() + 0
-				==
-				this->args.size() + 1
-			);
-		}
-
-	public:
-
-		builder(const slice& str)
-		{
-			for (auto& _ : str.split(u8"%s"))
-			{
-				if constexpr (std::same_as<T, char8_t>)
-				{
-					this->atom.emplace_back(_.to_utf8());
-				}
-				if constexpr (std::same_as<T, char16_t>)
-				{
-					this->atom.emplace_back(_.to_utf16());
-				}
-				if constexpr (std::same_as<T, char32_t>)
-				{
-					this->atom.emplace_back(_.to_utf32());
-				}
-			}
-		}
-
-		builder(const text<T>& str)
-		{
-			for (auto& _ : str.split(u8"%s"))
-			{
-				if constexpr (std::same_as<T, char8_t>)
-				{
-					this->atom.emplace_back(_.to_utf8());
-				}
-				if constexpr (std::same_as<T, char16_t>)
-				{
-					this->atom.emplace_back(_.to_utf16());
-				}
-				if constexpr (std::same_as<T, char32_t>)
-				{
-					this->atom.emplace_back(_.to_utf32());
-				}
-			}
-		}
-
-		//|-----------------|
-		//| member function |
-		//|-----------------|
-
-		operator text<T>()&&
-		{
-			while (!this->full())
-			{
-				if constexpr (std::same_as<T, char8_t>)
-				{
-					this->args.emplace_back(u8"%s");
-				}
-				if constexpr (std::same_as<T, char16_t>)
-				{
-					this->args.emplace_back(u"%s");
-				}
-				if constexpr (std::same_as<T, char32_t>)
-				{
-					this->args.emplace_back(U"%s");
-				}
-			}
-			// allocate str
-			text<T> result
-			{
-				[&]
-				{
-					size_t impl {0};
-
-					for (auto& _ : this->atom) { impl += _.size(); }
-					for (auto& _ : this->args) { impl += _.size(); }
-
-					return impl + 1;
-				}
-				()
-			};
-			// mix and join
-			for (size_t i {0}; i < args.size(); ++i)
-			{
-				result += this->atom[i]; // write
-				result += this->args[i]; // write
-			}
-			// last fragment
-			result += this->atom.back();
-
-			return result;
-		}
-
-		//|-----------|
-		//| lhs | rhs |
-		//|-----------|
-
-		inline constexpr auto operator|(const text<T>& rhs)&& -> builder&
-		{
-			if (!this->full())
-			{
-				this->args.emplace_back(rhs);
-			}
-			return *this;
-		}
-
-		inline constexpr auto operator|(const slice& rhs)&& -> builder&
-		{
-			if (!this->full())
-			{
-				this->args.emplace_back(rhs);
-			}
-			return *this;
-		}
-
-		template
-		<
-			size_t N
-		>
-		inline constexpr auto operator|(const T (&rhs)[N])&& -> builder&
-		{
-			if (!this->full())
-			{
-				this->args.emplace_back(rhs);
-			}
-			return *this;
-		}
-
-		//|-------------------|
-		//| fundamental types |
-		//|-------------------|
-
-		inline constexpr auto operator|(const bool rhs)&& -> builder&
-		{
-			return *this | (rhs ? u8"true" : u8"false");
-		}
-
-		// auto operator|(const int64_t rhs) && -> builder&
-		// {
-		// 	return *this | utils::itoa(rhs);
-		// }
-	
-		// auto operator|(const uint64_t rhs) && -> builder&
-		// {
-		// 	return *this | utils::utoa(rhs);
-		// }
-	};
-
-	//|-----------|
-	//| lhs | rhs |
-	//|-----------|
-
-	template
-	<
-		typename U
-	>
-	friend constexpr auto operator|(const text<T> lhs, const text<U>& rhs) -> builder
-	{
-		return builder {lhs} | rhs;
-	}
-
-	template
-	<
-		size_t N
-	>
-	friend constexpr auto operator|(const text<T>& lhs, const slice& rhs) -> builder
-	{
-		return builder {lhs} | rhs;
-	}
-
-	template
-	<
-		size_t N
-	>
-	friend constexpr auto operator|(const slice& lhs, const text<T>& rhs) -> builder
-	{
-		return builder {lhs} | rhs;
-	}
-
-	template
-	<
-		size_t N
-	>
-	friend constexpr auto operator|(const text<T>& lhs, const T (&rhs)[N]) -> builder
-	{
-		return builder {lhs} | rhs;
-	}
-
-	template
-	<
-		size_t N
-	>
-	friend constexpr auto operator|(const T (&lhs)[N], const text<T>& rhs) -> builder
-	{
-		return builder {lhs} | rhs;
-	}
-
-	template
-	<
-		size_t N
-	>
-	friend constexpr auto operator|(const text<T>& lhs, const char8_t (&rhs)[N]) -> builder requires (!std::is_same_v<T, char8_t>)
-	{
-		return builder {lhs} | text<char8_t> {rhs}.convert<T>();
-	}
-
-	template
-	<
-		size_t N
-	>
-	// reverse op overloading
-	friend constexpr auto operator|(const char8_t (&lhs)[N], const text<T>& rhs) -> builder requires (!std::is_same_v<T, char8_t>)
-	{
-		return builder {text<char8_t> {lhs}.convert<T>()} | rhs;
-	}
-	
-	template
-	<
-		size_t N
-	>
-	friend constexpr auto operator|(const text<T>& lhs, const char16_t (&rhs)[N]) -> builder requires (!std::is_same_v<T, char16_t>)
-	{
-		return builder {lhs} | text<char16_t> {rhs}.convert<T>();
-	}
-
-	template
-	<
-		size_t N
-	>
-	// reverse op overloading
-	friend constexpr auto operator|(const char16_t (&lhs)[N], const text<T>& rhs) -> builder requires (!std::is_same_v<T, char16_t>)
-	{
-		return builder {text<char16_t> {lhs}.convert<T>()} | rhs;
-	}
-
-	template
-	<
-		size_t N
-	>
-	friend constexpr auto operator|(const text<T>& lhs, const char32_t (&rhs)[N]) -> builder requires (!std::is_same_v<T, char32_t>)
-	{
-		return builder {lhs} | text<char32_t> {rhs}.convert<T>();
-	}
-
-	template
-	<
-		size_t N
-	>
-	// reverse op overloading
-	friend constexpr auto operator|(const char32_t (&lhs)[N], const text<T>& rhs) -> builder requires (!std::is_same_v<T, char32_t>)
-	{
-		return builder {text<char32_t> {lhs}.convert<T>()} | rhs;
-	}
-
 	//|------------|
 	//| lhs += rhs |
 	//|------------|
-
-	/*************<ptr & offset>**************/
-	#define BUFFER this->c_str() + this->size()
-	/*****************************************/
 
 	template
 	<
@@ -2780,7 +2663,6 @@ public:
 			{
 				this->capacity(total + 1);
 			}
-			assert(BUFFER != nullptr);
 
 			auto const N {rhs.size()};
 
@@ -2789,7 +2671,7 @@ public:
 				rhs.c_str() + 0,
 				rhs.c_str() + N,
 				// dest
-				BUFFER
+				this->c_str() + this->size()
 			);
 
 			this->size(total);
@@ -2826,14 +2708,13 @@ public:
 		{
 			this->capacity(total + 1);
 		}
-		assert(BUFFER != nullptr);
 
 		std::ranges::copy
 		(
 			rhs.head + 0,
 			rhs.tail + 0,
 			// dest
-			BUFFER
+			this->c_str() + this->size()
 		);
 
 		this->size(total);
@@ -2858,22 +2739,19 @@ public:
 		{
 			this->capacity(total + 1);
 		}
-		assert(BUFFER != nullptr);
 
 		std::ranges::copy
 		(
 			rhs + 0,
 			rhs + N,
 			// dest
-			BUFFER
+			this->c_str() + this->size()
 		);
 
 		this->size(total);
 
 		return *this;
 	}
-
-	#undef BUFFER
 
 	//|-----------|
 	//| lhs + rhs |
@@ -3178,13 +3056,119 @@ public:
 		return !(rhs == lhs);
 	}
 
+	//|-----------|
+	//| lhs | rhs |
+	//|-----------|
+
+	template
+	<
+		typename U
+	>
+	friend constexpr auto operator|(const text<T>& lhs, const text<U>& rhs) -> format
+	{
+		return format {lhs} | rhs;
+	}
+
+	template
+	<
+		size_t N
+	>
+	friend constexpr auto operator|(const text<T>& lhs, const slice& rhs) -> format
+	{
+		return format {lhs} | rhs;
+	}
+
+	template
+	<
+		size_t N
+	>
+	friend constexpr auto operator|(const slice& lhs, const text<T>& rhs) -> format
+	{
+		return format {lhs} | rhs;
+	}
+
+	template
+	<
+		size_t N
+	>
+	friend constexpr auto operator|(const text<T>& lhs, const T (&rhs)[N]) -> format
+	{
+		return format {lhs} | rhs;
+	}
+
+	template
+	<
+		size_t N
+	>
+	friend constexpr auto operator|(const T (&lhs)[N], const text<T>& rhs) -> format
+	{
+		return format {lhs} | rhs;
+	}
+
+	template
+	<
+		size_t N
+	>
+	friend constexpr auto operator|(const text<T>& lhs, const char8_t (&rhs)[N]) -> format requires (!std::is_same_v<T, char8_t>)
+	{
+		return format {lhs} | text<char8_t> {rhs}.convert<T>();
+	}
+
+	template
+	<
+		size_t N
+	>
+	// reverse op overloading
+	friend constexpr auto operator|(const char8_t (&lhs)[N], const text<T>& rhs) -> format requires (!std::is_same_v<T, char8_t>)
+	{
+		return format {text<char8_t> {lhs}.convert<T>()} | rhs;
+	}
+	
+	template
+	<
+		size_t N
+	>
+	friend constexpr auto operator|(const text<T>& lhs, const char16_t (&rhs)[N]) -> format requires (!std::is_same_v<T, char16_t>)
+	{
+		return format {lhs} | text<char16_t> {rhs}.convert<T>();
+	}
+
+	template
+	<
+		size_t N
+	>
+	// reverse op overloading
+	friend constexpr auto operator|(const char16_t (&lhs)[N], const text<T>& rhs) -> format requires (!std::is_same_v<T, char16_t>)
+	{
+		return format {text<char16_t> {lhs}.convert<T>()} | rhs;
+	}
+
+	template
+	<
+		size_t N
+	>
+	friend constexpr auto operator|(const text<T>& lhs, const char32_t (&rhs)[N]) -> format requires (!std::is_same_v<T, char32_t>)
+	{
+		return format {lhs} | text<char32_t> {rhs}.convert<T>();
+	}
+
+	template
+	<
+		size_t N
+	>
+	// reverse op overloading
+	friend constexpr auto operator|(const char32_t (&lhs)[N], const text<T>& rhs) -> format requires (!std::is_same_v<T, char32_t>)
+	{
+		return format {text<char32_t> {lhs}.convert<T>()} | rhs;
+	}
+
 	//|---------------------|
 	//| traits::iterable<T> |
 	//|---------------------|
 
 	inline constexpr auto begin() const -> iterator
 	{
-		return {this->c_str() + (0b00000000)};
+		return {/*****/ this->c_str() /*****/};
 	}
 
 	inline constexpr auto end() const -> iterator

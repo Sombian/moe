@@ -284,7 +284,7 @@ public:
 		(
 			os
 			<<
-			"\033[35m" // set color
+			"\033[30m" // set color
 			<<
 			token.src->path
 			<<

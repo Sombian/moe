@@ -23,18 +23,20 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 # setup sanitizer #
 #-----------------#
 
-check_cxx_compiler_flag("-fsanitize=address" ASAN_AD)
+if (NOT MINGW)
+	check_cxx_compiler_flag("-fsanitize=address" ASAN_AD)
 
-if (ASAN_AD)
-	add_link_options(-fsanitize=address)
-	add_compile_options(-fsanitize=address)
-endif()
+	if (ASAN_AD)
+		add_link_options(-fsanitize=address)
+		add_compile_options(-fsanitize=address)
+	endif()
 
-check_cxx_compiler_flag("-fsanitize=undefined" ASAN_UB)
+	check_cxx_compiler_flag("-fsanitize=undefined" ASAN_UB)
 
-if (ASAN_UB)
-	add_link_options(-fsanitize=undefined)
-	add_compile_options(-fsanitize=undefined)
+	if (ASAN_UB)
+		add_link_options(-fsanitize=undefined)
+		add_compile_options(-fsanitize=undefined)
+	endif()
 endif()
 
 #----------------#
