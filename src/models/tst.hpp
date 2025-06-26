@@ -165,10 +165,7 @@ public:
 	{
 		for (const auto& [first, second] : args)
 		{
-			if (first != nullptr) // short-circuit
-			{
-				this->operator[](utf8 {first}) = second;
-			}
+			this->operator[](utf8 {first}) = second;
 		}
 	}
 
@@ -177,10 +174,7 @@ public:
 	{
 		for (const auto& [first, second] : args)
 		{
-			if (first != nullptr) // short-circuit
-			{
-				this->operator[](utf16 {first}) = second;
-			}
+			this->operator[](utf16 {first}) = second;
 		}
 	}
 
@@ -189,10 +183,7 @@ public:
 	{
 		for (const auto& [first, second] : args)
 		{
-			if (first != nullptr) // short-circuit
-			{
-				this->operator[](utf32 {first}) = second;
-			}
+			this->operator[](utf32 {first}) = second;
 		}
 	}
 
@@ -264,10 +255,7 @@ private:
 		//| member function |
 		//|-----------------|
 
-		inline constexpr auto get() const -> std::optional<T> requires
-		(
-			std::is_class_v<T> ? !std::is_empty_v<T> : true
-		)
+		inline constexpr auto get() const -> std::optional<T>
 		{
 			return this->ptr ? this->ptr->data : std::nullopt;
 		}
@@ -345,7 +333,7 @@ public:
 		return {*this, nullptr};
 	}
 
-	inline constexpr auto view() -> cursor<decltype(*this)>
+	inline constexpr auto view()       -> cursor<decltype(*this)>
 	{
 		return {*this, nullptr};
 	}

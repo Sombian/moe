@@ -26,11 +26,11 @@ namespace // private
 		operator<=>(const props&) const = default;
 	};
 
-	constexpr const size_t BLOCK {2*2*2*2*2*2*2*2};
+	inline constexpr const size_t BLOCK {2*2*2*2*2*2*2*2};
 	//-----------------------------------------//
 	typedef std::array<uint16_t, BLOCK> block; //
 	//-----------------------------------------//
-	constexpr const size_t LIMIT {0x10FFFF / BLOCK};
+	inline constexpr const size_t LIMIT {0x10FFFF / BLOCK};
 }
 
 namespace // private

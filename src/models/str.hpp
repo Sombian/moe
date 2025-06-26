@@ -2650,18 +2650,13 @@ public:
 	>
 	inline constexpr auto operator+=(const text<U>& rhs) -> text<T>
 	{
-		const auto total
-		{
-			this->size()
-			+
-			rhs.size()
-		};
+		const auto MAX {this->size() + rhs.size()};
 
 		if constexpr (std::is_same_v<T, U>)
 		{
-			if (this->capacity() < total + 1)
+			if (this->capacity() < MAX + 1)
 			{
-				this->capacity(total + 1);
+				this->capacity(MAX + 1);
 			}
 
 			auto const N {rhs.size()};
@@ -2674,7 +2669,7 @@ public:
 				this->c_str() + this->size()
 			);
 
-			this->size(total);
+			this->size(MAX);
 
 			return *this;
 		}
@@ -2697,16 +2692,11 @@ public:
 
 	inline constexpr auto operator+=(const slice& rhs) -> text<T>
 	{
-		const auto total
-		{
-			this->size()
-			+
-			rhs.size()
-		};
+		const auto MAX {this->size() + rhs.size()};
 
-		if (this->capacity() < total + 1)
+		if (this->capacity() < MAX + 1)
 		{
-			this->capacity(total + 1);
+			this->capacity(MAX + 1);
 		}
 
 		std::ranges::copy
@@ -2717,7 +2707,7 @@ public:
 			this->c_str() + this->size()
 		);
 
-		this->size(total);
+		this->size(MAX);
 
 		return *this;
 	}
@@ -2728,16 +2718,11 @@ public:
 	>
 	inline constexpr auto operator+=(const T (&rhs)[N]) -> text<T>
 	{
-		const auto total
-		{
-			this->size()
-			+
-			N - 1 // :3
-		};
+		const auto MAX {this->size() + N - 1};
 
-		if (this->capacity() < total + 1)
+		if (this->capacity() < MAX + 1)
 		{
-			this->capacity(total + 1);
+			this->capacity(MAX + 1);
 		}
 
 		std::ranges::copy
@@ -2748,7 +2733,7 @@ public:
 			this->c_str() + this->size()
 		);
 
-		this->size(total);
+		this->size(MAX);
 
 		return *this;
 	}
