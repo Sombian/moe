@@ -15,8 +15,8 @@ namespace fs
 {
 	template
 	<
-		type::string A,
-		type::string B
+		model::text A,
+		model::text B
 	>
 	struct file
 	{
@@ -31,14 +31,16 @@ namespace fs
 
 	template
 	<
-		type::string T
+		model::text T
 	>
 	inline constexpr auto open(const T& path) -> std::optional
 	<
 		std::variant
 		<
-			file<T, utf8>,
-			file<T, utf16>,
+			file<T, utf8>
+			,
+			file<T, utf16>
+			,
 			file<T, utf32>
 		>
 	>
@@ -164,7 +166,7 @@ namespace fs
 
 			const auto write_native
 			{
-				[&]<typename unit>(text<unit>& str)
+				[&]<class unit>(text<unit>& str)
 				{
 					auto size {0};
 					unit code {0};
@@ -188,7 +190,7 @@ namespace fs
 
 			const auto write_foreign
 			{
-				[&]<typename unit>(text<unit>& str)
+				[&]<class unit>(text<unit>& str)
 				{
 					auto size {0};
 					unit code {0};
@@ -212,9 +214,9 @@ namespace fs
 
 			#define IS_BIG          \
 			(                       \
-				std::endian::native \
-				         !=         \
-				std::endian::little \
+			    std::endian::native \
+			             !=         \
+			    std::endian::little \
 			)                       \
 
 			switch (BOM)
@@ -336,30 +338,21 @@ namespace fs
 		return std::nullopt;
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto open(const char8_t (&path)[N])
 	{
 		return open(utf8 {path});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto open(const char16_t (&path)[N])
 	{
 		return open(utf16 {path});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto open(const char32_t (&path)[N])
 	{

@@ -20,8 +20,8 @@
 
 template
 <
-	type::string A,
-	type::string B
+	model::text A,
+	model::text B
 >
 class parser
 {
@@ -29,10 +29,10 @@ class parser
 
 	#define E(value) error<A, B> \
 	{                            \
-		this->x,                 \
-		this->y,                 \
-		*this,                   \
-		value,                   \
+	    this->x,                 \
+	    this->y,                 \
+	    *this,                   \
+	    value,                   \
 	}                            \
 	
 	uint16_t x {0};

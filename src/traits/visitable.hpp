@@ -8,13 +8,13 @@ namespace traits
 {
 	template
 	<
-		typename T
+		class T
 	>
 	struct visitable
 	{
 		template
 		<
-			typename V
+			class V
 		>
 		requires requires(V&& impl, T& crtp)
 		{
@@ -27,13 +27,13 @@ namespace traits
 
 		template
 		<
-			typename V
+			class V
 		>
 		requires requires(V&& impl, const T& crtp)
 		{
 			std::forward<V>(impl)(static_cast<const T&>(crtp));
 		}
-		inline constexpr auto accept(V&& impl) const
+		inline constexpr auto accept(const V&& impl) const
 		{
 			std::forward<V>(impl)(static_cast<const T&>(*this));
 		}
@@ -46,7 +46,7 @@ namespace traits
 
 template
 <
-	typename... L
+	class... L
 >
 struct visitor : L...
 {
@@ -60,7 +60,7 @@ struct visitor : L...
 
 template
 <
-	typename... L
+	class... L
 >
 visitor(L...) -> visitor<L...>;
 
@@ -70,7 +70,7 @@ visitor(L...) -> visitor<L...>;
 
 template
 <
-	typename L
+	class L
 >
 struct recurse
 {
@@ -78,7 +78,7 @@ struct recurse
 
 	template
 	<
-		typename... X
+		class... X
 	>
 	inline constexpr auto operator()(X&&... _) const
 	{
@@ -88,7 +88,7 @@ struct recurse
 
 template
 <
-	typename... L
+	class... L
 >
 recurse(L...) -> recurse<L...>;
 
@@ -98,12 +98,12 @@ recurse(L...) -> recurse<L...>;
 
 template
 <
-	typename    V,
-	typename... L
+	class    V,
+	class... L
 >
 requires requires(V&& target)
 {
-	[]<typename... L2>(visitor<L2...>&){}(target);
+	[]<class... L2>(visitor<L2...>&){}(target);
 }
 inline constexpr auto overrides(V&& target, L&&... lambda)
 {
@@ -151,12 +151,12 @@ inline constexpr auto overrides(V&& target, L&&... lambda)
 
 template
 <
-	typename    V,
-	typename... L
+	class    V,
+	class... L
 >
 requires requires(V&& target)
 {
-	[]<typename L2>(recurse<L2>&){}(target);
+	[]<class L2>(recurse<L2>&){}(target);
 }
 inline constexpr auto overrides(V&& target, L&&... lambda)
 {

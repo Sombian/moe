@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <deque>
 #include <vector>
 #include <memory>
 #include <ranges>
@@ -87,9 +88,12 @@ enum class op_r : uint8_t
 
 typedef std::variant
 <
-	std::unique_ptr<struct $fun>,
-	std::unique_ptr<struct $var>,
-	std::unique_ptr<struct $model>,
+	std::unique_ptr<struct $fun>
+	,
+	std::unique_ptr<struct $var>
+	,
+	std::unique_ptr<struct $model>
+	,
 	std::unique_ptr<struct $trait>
 >
 decl;
@@ -101,12 +105,18 @@ typedef std::unique_ptr<$trait> trait_t;
 
 typedef std::variant
 <
-	std::unique_ptr<struct $if>,
-	std::unique_ptr<struct $for>,
-	std::unique_ptr<struct $match>,
-	std::unique_ptr<struct $while>,
-	std::unique_ptr<struct $break>,
-	std::unique_ptr<struct $return>,
+	std::unique_ptr<struct $if>
+	,
+	std::unique_ptr<struct $for>
+	,
+	std::unique_ptr<struct $match>
+	,
+	std::unique_ptr<struct $while>
+	,
+	std::unique_ptr<struct $break>
+	,
+	std::unique_ptr<struct $return>
+	,
 	std::unique_ptr<struct $continue>
 >
 stmt;
@@ -121,12 +131,18 @@ typedef std::unique_ptr<$continue> continue_t;
 
 typedef std::variant
 <
-	std::unique_ptr<struct $unary>,
-	std::unique_ptr<struct $binary>,
-	std::unique_ptr<struct $literal>,
-	std::unique_ptr<struct $symbol>,
-	std::unique_ptr<struct $access>,
-	std::unique_ptr<struct $group>,
+	std::unique_ptr<struct $unary>
+	,
+	std::unique_ptr<struct $binary>
+	,
+	std::unique_ptr<struct $literal>
+	,
+	std::unique_ptr<struct $symbol>
+	,
+	std::unique_ptr<struct $access>
+	,
+	std::unique_ptr<struct $group>
+	,
 	std::unique_ptr<struct $call>
 >
 expr;
@@ -141,23 +157,43 @@ typedef std::unique_ptr<$call> call_t;
 
 typedef std::variant
 <
-	std::unique_ptr<struct $fun>,
-	std::unique_ptr<struct $var>,
-	std::unique_ptr<struct $model>,
-	std::unique_ptr<struct $trait>,
-	std::unique_ptr<struct $if>,
-	std::unique_ptr<struct $for>,
-	std::unique_ptr<struct $match>,
-	std::unique_ptr<struct $while>,
-	std::unique_ptr<struct $break>,
-	std::unique_ptr<struct $return>,
-	std::unique_ptr<struct $continue>,
-	std::unique_ptr<struct $unary>,
-	std::unique_ptr<struct $binary>,
-	std::unique_ptr<struct $literal>,
-	std::unique_ptr<struct $symbol>,
-	std::unique_ptr<struct $access>,
-	std::unique_ptr<struct $group>,
+	// decl
+	std::unique_ptr<struct $fun>
+	,
+	std::unique_ptr<struct $var>
+	,
+	std::unique_ptr<struct $model>
+	,
+	std::unique_ptr<struct $trait>
+	,
+	// smt
+	std::unique_ptr<struct $if>
+	,
+	std::unique_ptr<struct $for>
+	,
+	std::unique_ptr<struct $match>
+	,
+	std::unique_ptr<struct $while>
+	,
+	std::unique_ptr<struct $break>
+	,
+	std::unique_ptr<struct $return>
+	,
+	std::unique_ptr<struct $continue>
+	,
+	// expr
+	std::unique_ptr<struct $unary>
+	,
+	std::unique_ptr<struct $binary>
+	,
+	std::unique_ptr<struct $literal>
+	,
+	std::unique_ptr<struct $symbol>
+	,
+	std::unique_ptr<struct $access>
+	,
+	std::unique_ptr<struct $group>
+	,
 	std::unique_ptr<struct $call>
 >
 node;
@@ -449,8 +485,8 @@ struct $call : public span, public traits::visitable<$call>
 
 template
 <
-	typename A,
-	typename B
+	class A,
+	class B
 >
 inline constexpr auto is_l(const token<A, B>& tkn) -> bool
 {
@@ -460,7 +496,7 @@ inline constexpr auto is_l(const token<A, B>& tkn) -> bool
 		/*|---------------|*/\
 		case atom::K:        \
 		{                    \
-			return true;     \
+		    return true;     \
 		}                    \
 		/*|---------------|*/\
 	
@@ -483,8 +519,8 @@ inline constexpr auto is_l(const token<A, B>& tkn) -> bool
 
 template
 <
-	typename A,
-	typename B
+	class A,
+	class B
 >
 inline constexpr auto to_l(const token<A, B>& tkn) -> op_l
 {
@@ -494,7 +530,7 @@ inline constexpr auto to_l(const token<A, B>& tkn) -> op_l
 		/*|---------------|*/\
 		case atom::K:        \
 		{                    \
-			return op_l::K;  \
+		    return op_l::K;  \
 		}                    \
 		/*|---------------|*/\
 	
@@ -518,8 +554,8 @@ inline constexpr auto to_l(const token<A, B>& tkn) -> op_l
 
 template
 <
-	typename A,
-	typename B
+	class A,
+	class B
 >
 inline constexpr auto is_i(const token<A, B>& tkn) -> bool
 {
@@ -529,7 +565,7 @@ inline constexpr auto is_i(const token<A, B>& tkn) -> bool
 		/*|---------------|*/\
 		case atom::K:        \
 		{                    \
-			return true;     \
+		    return true;     \
 		}                    \
 		/*|---------------|*/\
 	
@@ -544,8 +580,8 @@ inline constexpr auto is_i(const token<A, B>& tkn) -> bool
 
 template
 <
-	typename A,
-	typename B
+	class A,
+	class B
 >
 inline constexpr auto to_i(const token<A, B>& tkn) -> op_i
 {
@@ -555,7 +591,7 @@ inline constexpr auto to_i(const token<A, B>& tkn) -> op_i
 		/*|---------------|*/\
 		case atom::K:        \
 		{                    \
-			return op_i::K;  \
+		    return op_i::K;  \
 		}                    \
 		/*|---------------|*/\
 	
@@ -571,8 +607,8 @@ inline constexpr auto to_i(const token<A, B>& tkn) -> op_i
 
 template
 <
-	typename A,
-	typename B
+	class A,
+	class B
 >
 inline constexpr auto is_r(const token<A, B>& tkn) -> bool
 {
@@ -582,7 +618,7 @@ inline constexpr auto is_r(const token<A, B>& tkn) -> bool
 		/*|---------------|*/\
 		case atom::K:        \
 		{                    \
-			return true;     \
+		    return true;     \
 		}                    \
 		/*|---------------|*/\
 	
@@ -597,8 +633,8 @@ inline constexpr auto is_r(const token<A, B>& tkn) -> bool
 
 template
 <
-	typename A,
-	typename B
+	class A,
+	class B
 >
 inline constexpr auto to_r(const token<A, B>& tkn) -> op_r
 {
@@ -608,7 +644,7 @@ inline constexpr auto to_r(const token<A, B>& tkn) -> op_r
 		/*|---------------|*/\
 		case atom::K:        \
 		{                    \
-			return op_r::K;  \
+		    return op_r::K;  \
 		}                    \
 		/*|---------------|*/\
 	
@@ -706,7 +742,7 @@ inline constexpr auto operator<<(std::ostream& os, const op_l value) -> std::ost
 		/*|---------------|*/\
 		case op_l::K:        \
 		{                    \
-			return os << #K; \
+		    return os << #K; \
 		}                    \
 		/*|---------------|*/\
 
@@ -736,7 +772,7 @@ inline constexpr auto operator<<(std::ostream& os, const op_i value) -> std::ost
 		/*|---------------|*/\
 		case op_i::K:        \
 		{                    \
-			return os << #K; \
+		    return os << #K; \
 		}                    \
 		/*|---------------|*/\
 
@@ -758,7 +794,7 @@ inline constexpr auto operator<<(std::ostream& os, const op_r value) -> std::ost
 		/*|---------------|*/\
 		case op_r::K:        \
 		{                    \
-			return os << #K; \
+		    return os << #K; \
 		}                    \
 		/*|---------------|*/\
 
@@ -774,14 +810,123 @@ inline constexpr auto operator<<(std::ostream& os, const op_r value) -> std::ost
 
 template
 <
-	type::string A,
-	type::string B
+	model::text A,
+	model::text B
 >
 class program
 {
 	//|-------<chore>-------|
 	typedef error<A, B> segf;
 	//|---------------------|
+
+	struct scope
+	{
+		std::deque<std::variant
+		<
+			std::pair<utf8, $fun*>
+			,
+			std::pair<utf8, $var*>
+			,
+			std::pair<utf8, $model*>
+			,
+			std::pair<utf8, $trait*>
+		>>
+		table; // <- allows shadowing
+		
+		only(scope*) upper {nullptr};
+		many(scope*) lower {/*^-^*/};
+
+		~scope()
+		{
+			for (auto&& node : this->lower)
+			{
+				delete node; // free memory
+			}
+		}
+
+		//|-----------------|
+		//| member function |
+		//|-----------------|
+
+		inline constexpr auto lookup_fun(utf8& name) -> $fun*
+		{
+			typedef std::pair<utf8, $fun*> P;
+
+			for (auto& _ : this->table)
+			{
+				if (std::holds_alternative<P>(_))
+				{
+					auto [key, value] {std::get<P>(_)};
+
+					if (key == name) { return value; }
+				}
+			}
+			return nullptr;
+		}
+
+		inline constexpr auto lookup_var(utf8& name) -> $var*
+		{
+			typedef std::pair<utf8, $var*> P;
+
+			for (auto& _ : this->table)
+			{
+				if (std::holds_alternative<P>(_))
+				{
+					auto [key, value] {std::get<P>(_)};
+
+					if (key == name) { return value; }
+				}
+			}
+			return nullptr;
+		}
+
+		inline constexpr auto lookup_model(utf8& name) -> $model*
+		{
+			typedef std::pair<utf8, $model*> P;
+
+			for (auto& _ : this->table)
+			{
+				if (std::holds_alternative<P>(_))
+				{
+					auto [key, value] {std::get<P>(_)};
+
+					if (key == name) { return value; }
+				}
+			}
+			return nullptr;
+		}
+
+		inline constexpr auto lookup_trait(utf8& name) -> $trait*
+		{
+			typedef std::pair<utf8, $trait*> P;
+
+			for (auto& _ : this->table)
+			{
+				if (std::holds_alternative<P>(_))
+				{
+					auto [key, value] {std::get<P>(_)};
+
+					if (key == name) { return value; }
+				}
+			}
+			return nullptr;
+		}
+	};
+
+	inline constexpr auto lint(llvm::LLVMContext& context, llvm::IRBuilder<>& builder, llvm::Module& module, std::map<utf8, llvm::Type*>& registry)
+	{
+		//|--------------|
+		//| step 1. scan |
+		//|--------------|
+
+		// TODO
+
+		//|----------------|
+		//| step 2. report |
+		//|----------------|
+
+		// TODO
+	}
 
 	inline constexpr auto bind(llvm::LLVMContext& context, llvm::IRBuilder<>& builder, llvm::Module& module, std::map<utf8, llvm::Type*>& registry)
 	{
@@ -835,21 +980,6 @@ class program
 		(this->entry);
 	}
 
-	inline constexpr auto lint(llvm::LLVMContext& context, llvm::IRBuilder<>& builder, llvm::Module& module, std::map<utf8, llvm::Type*>& registry)
-	{
-		//|--------------|
-		//| step 1. scan |
-		//|--------------|
-
-		// TODO
-
-		//|----------------|
-		//| step 2. report |
-		//|----------------|
-
-		// TODO
-	}
-
 public:
 
 	only(body) entry;
@@ -863,16 +993,15 @@ public:
 	COPY_ASSIGNMENT(program) = delete;
 	MOVE_ASSIGNMENT(program) = default;
 
+	//|-----------------|
+	//| member function |
+	//|-----------------|
+
 	inline constexpr auto compile()
 	{
 		#ifndef NDEBUG //---------|
 		std::cout << *this << '\n';
 		#endif //-----------------|
-
-		for (auto&& error : this->issue)
-		{
-			std::cout << error << '\n';
-		}
 
 		llvm::LLVMContext context {       };
 		llvm::IRBuilder<> builder {context};
@@ -898,35 +1027,40 @@ public:
 
 		registry[u8"none"] = llvm::Type::getVoidTy(context);
 
-		this->bind(context, builder, module, registry);
 		this->lint(context, builder, module, registry);
+		this->bind(context, builder, module, registry);
+		
+		for (auto&& error : this->issue)
+		{
+			std::cout << error << '\n';
+		}
 	}
 
 	static constexpr auto reflect()
 	{
 		return recurse{visitor
 		{
-			[=](auto& self, const only(decl)& ast) -> void
+			[](auto& self, const only(decl)& ast) -> void
 			{
 				std::visit([&](auto&& ptr) { ptr->accept(self); }, ast);
 			},
-			[=](auto& self, const only(stmt)& ast) -> void
+			[](auto& self, const only(stmt)& ast) -> void
 			{
 				std::visit([&](auto&& ptr) { ptr->accept(self); }, ast);
 			},
-			[=](auto& self, const only(expr)& ast) -> void
+			[](auto& self, const only(expr)& ast) -> void
 			{
 				std::visit([&](auto&& ptr) { ptr->accept(self); }, ast);
 			},
-			[=](auto& self, const only(node)& ast) -> void
+			[](auto& self, const only(node)& ast) -> void
 			{
 				std::visit([&](auto&& ptr) { ptr->accept(self); }, ast);
 			},
-			[=]<typename T>(auto& self, const many(T)& ast) -> void
+			[]<class T>(auto& self, const many(T)& ast) -> void
 			{
 				for (auto& node : ast) { self(node); }
 			},
-			[=]<typename T>(auto& self, const some(T)& ast) -> void
+			[]<class T>(auto& self, const some(T)& ast) -> void
 			{
 				if (/*⩊*/ ast /*⩊*/) { self(*ast); }
 			},
@@ -935,20 +1069,20 @@ public:
 			//| variant::decl |
 			//|---------------|
 
-			[=](auto& self, const $fun& ast) -> void
+			[](auto& self, const $fun& ast) -> void
 			{
 				self(ast.args);
 				self(ast.body);
 			},
-			[=](auto& self, const $var& ast) -> void
+			[](auto& self, const $var& ast) -> void
 			{
 				self(ast.init);
 			},
-			[=](auto& self, const $model& ast) -> void
+			[](auto& self, const $model& ast) -> void
 			{
 				self(ast.body);
 			},
-			[=](auto& self, const $trait& ast) -> void
+			[](auto& self, const $trait& ast) -> void
 			{
 				self(ast.body);
 			},
@@ -957,38 +1091,38 @@ public:
 			//| variant::stmt |
 			//|---------------|
 
-			[=](auto& self, const $if& ast) -> void
+			[](auto& self, const $if& ast) -> void
 			{
 				self(ast.cases);
 				self(ast.block);
 			},
-			[=](auto& self, const $for& ast) -> void
+			[](auto& self, const $for& ast) -> void
 			{
 				self(ast.setup);
 				self(ast.input);
 				self(ast.after);
 				self(ast.block);
 			},
-			[=](auto& self, const $match& ast) -> void
+			[](auto& self, const $match& ast) -> void
 			{
 				self(ast.input);
 				self(ast.cases);
 				self(ast.block);
 			},
-			[=](auto& self, const $while& ast) -> void
+			[](auto& self, const $while& ast) -> void
 			{
 				self(ast.input);
 				self(ast.block);
 			},
-			[=](auto& self, const $break& ast) -> void
+			[](auto& self, const $break& ast) -> void
 			{
 				// no inner ast
 			},
-			[=](auto& self, const $return& ast) -> void
+			[](auto& self, const $return& ast) -> void
 			{
 				self(ast.value);
 			},
-			[=](auto& self, const $continue& ast) -> void
+			[](auto& self, const $continue& ast) -> void
 			{
 				// no inner ast
 			},
@@ -997,32 +1131,32 @@ public:
 			//| variant::expr |
 			//|---------------|
 
-			[=](auto& self, const $unary& ast) -> void
+			[](auto& self, const $unary& ast) -> void
 			{
 				self(ast.rhs);
 			},
-			[=](auto& self, const $binary& ast) -> void
+			[](auto& self, const $binary& ast) -> void
 			{
 				self(ast.lhs);
 				self(ast.rhs);
 			},
-			[=](auto& self, const $literal& ast) -> void
+			[](auto& self, const $literal& ast) -> void
 			{
 				// no inner ast
 			},
-			[=](auto& self, const $symbol& ast) -> void
+			[](auto& self, const $symbol& ast) -> void
 			{
 				// no inner ast
 			},
-			[=](auto& self, const $access& ast) -> void
+			[](auto& self, const $access& ast) -> void
 			{
 				self(ast.expr);
 			},
-			[=](auto& self, const $group& ast) -> void
+			[](auto& self, const $group& ast) -> void
 			{
 				self(ast.expr);
 			},
-			[=](auto& self, const $call& ast) -> void
+			[](auto& self, const $call& ast) -> void
 			{
 				self(ast.args);
 				self(ast.self);
@@ -1036,27 +1170,32 @@ public:
 
 	friend constexpr auto operator<<(std::ostream& os, const program<A, B>& exe) -> std::ostream&
 	{
-		#define GAP                          \
-		{                                    \
-			for (size_t i {0}; i < tab; ++i) \
-			{                                \
-				/*T^T*/ os << "\t"; /*T^T*/  \
-			}                                \
-		}                                    \
+		#define GAP     \
+		for             \
+		(               \
+		    auto i {0}  \
+		    ;           \
+		    i < tab     \
+		    ;           \
+		    i = i + 1   \
+		)               \
+		{               \
+		    os << "\t"; \
+		}               \
 
 		#define START   \
 		{               \
-			os << "\n"; \
-			GAP; ++tab; \
-			os << "{{"; \
-			os << "\n"; \
+		    os << "\n"; \
+		    GAP; ++tab; \
+		    os << "{{"; \
+		    os << "\n"; \
 		}               \
 
 		#define CLOSE   \
 		{               \
-			--tab; GAP; \
-			os << "}}"; \
-			os << "\n"; \
+		    --tab; GAP; \
+		    os << "}}"; \
+		    os << "\n"; \
 		}               \
 
 		size_t tab {0};
@@ -1069,7 +1208,7 @@ public:
 			//| generic visitor |
 			//|-----------------|
 
-			[&]<typename T>(auto& self, const many(T)& ast) -> void
+			[&]<class T>(auto& self, const many(T)& ast) -> void
 			{
 				if (!ast.empty())
 				{
@@ -1090,7 +1229,7 @@ public:
 					os << "\033[36m" << "none" << "\033[0m\n";
 				}
 			},
-			[&]<typename T>(auto& self, const some(T)& ast) -> void
+			[&]<class T>(auto& self, const some(T)& ast) -> void
 			{
 				if (ast)
 				{

@@ -233,13 +233,13 @@ auto operator<<(std::ostream& os, const atom data) -> std::ostream&
 
 template
 <
-	type::string A,
-	type::string B
+	model::text A,
+	model::text B
 >
 struct token : public span
 {
 	// SFINE: use T::slice if T is a string impl, otherwise use T directly
-	typedef std::conditional_t<type::string_impl<B>, typename B::slice, B> view;
+	typedef std::conditional_t<model::text_impl<B>, class B::slice, B> view;
 
 	//|-----<file>-----|
 	fs::file<A, B>* src;

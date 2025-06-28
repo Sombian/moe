@@ -4,12 +4,9 @@
 
 namespace traits
 {
-	template
-	<
-		typename T
-	>
+	template<class T>
 	concept printable = requires(T self)
 	{
-		std::cout << self; // clear and concise!
+		std::cout << self; // this works :3
 	};
 }

@@ -35,9 +35,9 @@ namespace // private
 
 namespace // private
 {
-	inline constexpr auto UnicodeData(const type::string auto& name) -> std::set<uint32_t>
+	inline constexpr auto UnicodeData(const model::text auto& name) -> std::set<uint32_t>
 	{
-		static auto UnicodeData // <- cache the file
+		static auto UnicodeData // cache the file
 		{fs::open(u8"codegen/auto/UnicodeData.txt")};
 
 		std::set<uint32_t> result;
@@ -53,30 +53,21 @@ namespace // private
 		return result;
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto UnicodeData(const char8_t (&name)[N]) -> auto
 	{
 		return UnicodeData(utf8 {name});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto UnicodeData(const char16_t (&name)[N]) -> auto
 	{
 		return UnicodeData(utf16 {name});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto UnicodeData(const char32_t (&name)[N]) -> auto
 	{
@@ -86,9 +77,9 @@ namespace // private
 
 namespace // private
 {
-	inline constexpr auto CaseFolding(const type::string auto& name) -> std::set<uint32_t>
+	inline constexpr auto CaseFolding(const model::text auto& name) -> std::set<uint32_t>
 	{
-		static auto CaseFolding // <- cache the file
+		static auto CaseFolding // cache the file
 		{fs::open(u8"codegen/auto/CaseFolding.txt")};
 
 		std::set<uint32_t> result;
@@ -104,30 +95,21 @@ namespace // private
 		return result;
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto CaseFolding(const char8_t (&name)[N]) -> auto
 	{
 		return CaseFolding(utf8 {name});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto CaseFolding(const char16_t (&name)[N]) -> auto
 	{
 		return CaseFolding(utf16 {name});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto CaseFolding(const char32_t (&name)[N]) -> auto
 	{
@@ -137,9 +119,9 @@ namespace // private
 
 namespace // private
 {
-	inline constexpr auto CompositionExclusions(const type::string auto& name) -> std::set<uint32_t>
+	inline constexpr auto CompositionExclusions(const model::text auto& name) -> std::set<uint32_t>
 	{
-		static auto CompositionExclusions // <- cache the file
+		static auto CompositionExclusions // cache the file
 		{fs::open(u8"codegen/auto/CompositionExclusions.txt")};
 
 		std::set<uint32_t> result;
@@ -156,30 +138,21 @@ namespace // private
 		return result;
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto CompositionExclusions(const char8_t (&name)[N]) -> auto
 	{
 		return CompositionExclusions(utf8 {name});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto CompositionExclusions(const char16_t (&name)[N]) -> auto
 	{
 		return CompositionExclusions(utf16 {name});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto CompositionExclusions(const char32_t (&name)[N]) -> auto
 	{
@@ -189,9 +162,9 @@ namespace // private
 
 namespace // private
 {
-	inline constexpr auto DerivedCoreProperties(const type::string auto& name) -> std::set<uint32_t>
+	inline constexpr auto DerivedCoreProperties(const model::text auto& name) -> std::set<uint32_t>
 	{
-		static auto DerivedCoreProperties // <- cache the file
+		static auto DerivedCoreProperties // cache the file
 		{fs::open(u8"codegen/auto/DerivedCoreProperties.txt")};
 
 		std::set<uint32_t> result;
@@ -242,30 +215,21 @@ namespace // private
 		return result;
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto DerivedCoreProperties(const char8_t (&name)[N]) -> auto
 	{
 		return DerivedCoreProperties(utf8 {name});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto DerivedCoreProperties(const char16_t (&name)[N]) -> auto
 	{
 		return DerivedCoreProperties(utf16 {name});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto DerivedCoreProperties(const char32_t (&name)[N]) -> auto
 	{

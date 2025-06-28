@@ -19,8 +19,8 @@
 
 template
 <
-	type::string A,
-	type::string B
+	model::text A,
+	model::text B
 >
 class lexer
 {
@@ -36,22 +36,22 @@ class lexer
 
 	#define T(value) token<A, B> \
 	{                            \
-		this->x,                 \
-		this->y,                 \
-		*this,                   \
-		value,                   \
-		{                        \
-			this->ptr,           \
-			&this->it,           \
-		},                       \
+	    this->x,                 \
+	    this->y,                 \
+	    *this,                   \
+	    value,                   \
+	    {                        \
+	        this->ptr,           \
+	        &this->it,           \
+	    },                       \
 	}                            \
 
 	#define E(value) error<A, B> \
 	{                            \
-		this->x,                 \
-		this->y,                 \
-		*this,                   \
-		value,                   \
+	    this->x,                 \
+	    this->y,                 \
+	    *this,                   \
+	    value,                   \
 	}                            \
 
 	auto next() -> char32_t
@@ -519,11 +519,11 @@ private:
 			}
 			case utils::ordering::EQUAL:
 			{
-				return T(view.get().value_or(atom::SYMBOL));
+				return T(view.value().value_or(atom::SYMBOL));
 			}
 			case utils::ordering::GREATER:
 			{
-				return T(view.get().value_or(atom::SYMBOL));
+				return T(view.value().value_or(atom::SYMBOL));
 			}
 		}
 		assert(false && "-Wreturn-type");

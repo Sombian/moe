@@ -11,8 +11,8 @@
 
 template
 <
-	type::string A,
-	type::string B
+	model::text A,
+	model::text B
 >
 struct error : public span
 {
