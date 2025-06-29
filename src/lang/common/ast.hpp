@@ -214,7 +214,7 @@ typedef std::vector<node> body;
 //| variant::decl |
 //|---------------|
 
-struct $fun : public span, public traits::visitable<$fun>
+struct $fun : public span, public trait::visitable<$fun>
 {
 	//|---------|
 	bool is_pure;
@@ -233,7 +233,7 @@ struct $fun : public span, public traits::visitable<$fun>
 	MOVE_ASSIGNMENT($fun) = default;
 };
 
-struct $var : public span, public traits::visitable<$var>
+struct $var : public span, public trait::visitable<$var>
 {
 	//|----------|
 	bool is_const;
@@ -251,7 +251,7 @@ struct $var : public span, public traits::visitable<$var>
 	MOVE_ASSIGNMENT($var) = default;
 };
 
-struct $model : public span, public traits::visitable<$model>
+struct $model : public span, public trait::visitable<$model>
 {
 	only(utf8) name;
 	many($var) body;
@@ -265,7 +265,7 @@ struct $model : public span, public traits::visitable<$model>
 	MOVE_ASSIGNMENT($model) = default;
 };
 
-struct $trait : public span, public traits::visitable<$trait>
+struct $trait : public span, public trait::visitable<$trait>
 {
 	only(utf8) name;
 	many($fun) body;
@@ -283,7 +283,7 @@ struct $trait : public span, public traits::visitable<$trait>
 //| variant::stmt |
 //|---------------|
 
-struct $if : public span, public traits::visitable<$if>
+struct $if : public span, public trait::visitable<$if>
 {
 	many(expr) cases;
 	many(body) block;
@@ -297,7 +297,7 @@ struct $if : public span, public traits::visitable<$if>
 	MOVE_ASSIGNMENT($if) = default;
 };
 
-struct $for : public span, public traits::visitable<$for>
+struct $for : public span, public trait::visitable<$for>
 {
 	only(expr) setup;
 	only(expr) input;
@@ -313,7 +313,7 @@ struct $for : public span, public traits::visitable<$for>
 	MOVE_ASSIGNMENT($for) = default;
 };
 
-struct $match : public span, public traits::visitable<$match>
+struct $match : public span, public trait::visitable<$match>
 {
 	only(expr) input;
 	many(expr) cases;
@@ -328,7 +328,7 @@ struct $match : public span, public traits::visitable<$match>
 	MOVE_ASSIGNMENT($match) = default;
 };
 
-struct $while : public span, public traits::visitable<$while>
+struct $while : public span, public trait::visitable<$while>
 {
 	only(expr) input;
 	only(body) block;
@@ -342,7 +342,7 @@ struct $while : public span, public traits::visitable<$while>
 	MOVE_ASSIGNMENT($while) = default;
 };
 
-struct $break : public span, public traits::visitable<$break>
+struct $break : public span, public trait::visitable<$break>
 {
 	some(utf8) label;
 
@@ -355,7 +355,7 @@ struct $break : public span, public traits::visitable<$break>
 	MOVE_ASSIGNMENT($break) = default;
 };
 
-struct $return : public span, public traits::visitable<$return>
+struct $return : public span, public trait::visitable<$return>
 {
 	some(expr) value;
 
@@ -368,7 +368,7 @@ struct $return : public span, public traits::visitable<$return>
 	MOVE_ASSIGNMENT($return) = default;
 };
 
-struct $continue : public span, public traits::visitable<$continue>
+struct $continue : public span, public trait::visitable<$continue>
 {
 	some(utf8) label;
 
@@ -385,7 +385,7 @@ struct $continue : public span, public traits::visitable<$continue>
 //| variant::expr |
 //|---------------|
 
-struct $unary : public span, public traits::visitable<$unary>
+struct $unary : public span, public trait::visitable<$unary>
 {
 	only(op_l) opr;
 	only(expr) rhs;
@@ -399,7 +399,7 @@ struct $unary : public span, public traits::visitable<$unary>
 	MOVE_ASSIGNMENT($unary) = default;
 };
 
-struct $binary : public span, public traits::visitable<$binary>
+struct $binary : public span, public trait::visitable<$binary>
 {
 	only(op_i) opr;
 	only(expr) lhs;
@@ -414,7 +414,7 @@ struct $binary : public span, public traits::visitable<$binary>
 	MOVE_ASSIGNMENT($binary) = default;
 };
 
-struct $literal : public span, public traits::visitable<$literal>
+struct $literal : public span, public trait::visitable<$literal>
 {
 	only(data) type;
 	only(utf8) data;
@@ -428,7 +428,7 @@ struct $literal : public span, public traits::visitable<$literal>
 	MOVE_ASSIGNMENT($literal) = default;
 };
 
-struct $symbol : public span, public traits::visitable<$symbol>
+struct $symbol : public span, public trait::visitable<$symbol>
 {
 	only(utf8) name;
 
@@ -441,7 +441,7 @@ struct $symbol : public span, public traits::visitable<$symbol>
 	MOVE_ASSIGNMENT($symbol) = default;
 };
 
-struct $access : public span, public traits::visitable<$access>
+struct $access : public span, public trait::visitable<$access>
 {
 	only(op_r) type;
 	only(expr) expr;
@@ -456,7 +456,7 @@ struct $access : public span, public traits::visitable<$access>
 	MOVE_ASSIGNMENT($access) = default;
 };
 
-struct $group : public span, public traits::visitable<$group>
+struct $group : public span, public trait::visitable<$group>
 {
 	only(expr) expr;
 
@@ -469,7 +469,7 @@ struct $group : public span, public traits::visitable<$group>
 	MOVE_ASSIGNMENT($group) = default;
 };
 
-struct $call : public span, public traits::visitable<$call>
+struct $call : public span, public trait::visitable<$call>
 {
 	only(expr) self;
 	many(expr) args;
@@ -913,21 +913,6 @@ class program
 		}
 	};
 
-	inline constexpr auto lint(llvm::LLVMContext& context, llvm::IRBuilder<>& builder, llvm::Module& module, std::map<utf8, llvm::Type*>& registry)
-	{
-		//|--------------|
-		//| step 1. scan |
-		//|--------------|
-
-		// TODO
-
-		//|----------------|
-		//| step 2. report |
-		//|----------------|
-
-		// TODO
-	}
-
 	inline constexpr auto bind(llvm::LLVMContext& context, llvm::IRBuilder<>& builder, llvm::Module& module, std::map<utf8, llvm::Type*>& registry)
 	{
 		//|--------------|
@@ -980,6 +965,149 @@ class program
 		(this->entry);
 	}
 
+	inline constexpr auto lint(llvm::LLVMContext& context, llvm::IRBuilder<>& builder, llvm::Module& module, std::map<utf8, llvm::Type*>& registry)
+	{
+		//|--------------|
+		//| step 1. scan |
+		//|--------------|
+
+		scope root;
+
+		overrides
+		(
+			program::reflect(),
+
+			//|---------------|
+			//| variant::decl |
+			//|---------------|
+
+			[&](auto& self, const $fun& ast) -> void
+			{
+
+			},
+			[&](auto& self, const $var& ast) -> void
+			{
+				
+			},
+			[&](auto& self, const $model& ast) -> void
+			{
+				
+			},
+			[&](auto& self, const $trait& ast) -> void
+			{
+				
+			}
+		)
+		(this->entry);
+
+		//|----------------|
+		//| step 2. report |
+		//|----------------|
+
+		overrides
+		(
+			program::reflect(),
+
+			//|---------------|
+			//| variant::decl |
+			//|---------------|
+
+			[](auto& self, const $fun& ast) -> void
+			{
+				self(ast.args);
+				self(ast.body);
+			},
+			[](auto& self, const $var& ast) -> void
+			{
+				self(ast.init);
+			},
+			[](auto& self, const $model& ast) -> void
+			{
+				self(ast.body);
+			},
+			[](auto& self, const $trait& ast) -> void
+			{
+				self(ast.body);
+			},
+
+			//|---------------|
+			//| variant::stmt |
+			//|---------------|
+
+			[](auto& self, const $if& ast) -> void
+			{
+				self(ast.cases);
+				self(ast.block);
+			},
+			[](auto& self, const $for& ast) -> void
+			{
+				self(ast.setup);
+				self(ast.input);
+				self(ast.after);
+				self(ast.block);
+			},
+			[](auto& self, const $match& ast) -> void
+			{
+				self(ast.input);
+				self(ast.cases);
+				self(ast.block);
+			},
+			[](auto& self, const $while& ast) -> void
+			{
+				self(ast.input);
+				self(ast.block);
+			},
+			[](auto& self, const $break& ast) -> void
+			{
+				// no inner ast
+			},
+			[](auto& self, const $return& ast) -> void
+			{
+				self(ast.value);
+			},
+			[](auto& self, const $continue& ast) -> void
+			{
+				// no inner ast
+			},
+
+			//|---------------|
+			//| variant::expr |
+			//|---------------|
+
+			[](auto& self, const $unary& ast) -> void
+			{
+				self(ast.rhs);
+			},
+			[](auto& self, const $binary& ast) -> void
+			{
+				self(ast.lhs);
+				self(ast.rhs);
+			},
+			[](auto& self, const $literal& ast) -> void
+			{
+				// no inner ast
+			},
+			[](auto& self, const $symbol& ast) -> void
+			{
+				// no inner ast
+			},
+			[](auto& self, const $access& ast) -> void
+			{
+				self(ast.expr);
+			},
+			[](auto& self, const $group& ast) -> void
+			{
+				self(ast.expr);
+			},
+			[](auto& self, const $call& ast) -> void
+			{
+				self(ast.args);
+				self(ast.self);
+			}
+		)
+		(this->entry);
+	}
+
 public:
 
 	only(body) entry;
@@ -1027,8 +1155,8 @@ public:
 
 		registry[u8"none"] = llvm::Type::getVoidTy(context);
 
-		this->lint(context, builder, module, registry);
 		this->bind(context, builder, module, registry);
+		this->lint(context, builder, module, registry);
 		
 		for (auto&& error : this->issue)
 		{
@@ -1164,14 +1292,13 @@ public:
 		}};
 	}
 
-	//|----------------------|
-	//| traits::printable<T> |
-	//|----------------------|
+	//|---------------------|
+	//| trait::printable<T> |
+	//|---------------------|
 
 	friend constexpr auto operator<<(std::ostream& os, const program<A, B>& exe) -> std::ostream&
 	{
-		#define GAP     \
-		for             \
+		#define GAP for \
 		(               \
 		    auto i {0}  \
 		    ;           \
@@ -1221,7 +1348,9 @@ public:
 						//|-----------------|
 
 						if (++i < ast.size())
-						{ GAP; os << ":&:"; }
+						{
+							GAP; os << "&&";
+						}
 					}
 				}
 				else
@@ -1242,7 +1371,7 @@ public:
 					os << "\033[36m" << "none" << "\033[0m\n";
 				}
 			},
-			[&](auto& self, const traits::printable auto& ast) -> void
+			[&](auto& self, const trait::printable auto& ast) -> void
 			{
 				os << "\033[33m" << ast << "\033[0m\n";
 			},

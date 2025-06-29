@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-namespace traits
+namespace trait
 {
 	template<class T>
 	concept rule_of_5 =
@@ -26,19 +26,19 @@ namespace traits
 //| chore methods |
 //|---------------|
 
-#define COPY_CALL($type) friend void copy(const $type& from, $type& dest) noexcept
-#define SWAP_CALL($type) friend void swap($type& from, $type& dest) noexcept
+#define COPY_CALL($type) friend constexpr void copy(const $type& from, $type& dest) noexcept
+#define SWAP_CALL($type) friend constexpr void swap($type& from, $type& dest) noexcept
 
 //|-------------|
 //| constructor |
 //|-------------|
 
-#define COPY_CONSTRUCTOR($type) $type(const $type& other) noexcept
-#define MOVE_CONSTRUCTOR($type) $type($type&& other) noexcept
+#define COPY_CONSTRUCTOR($type) constexpr $type(const $type& other) noexcept
+#define MOVE_CONSTRUCTOR($type) constexpr $type($type&& other) noexcept
 
 //|------------|
 //| assignment |
 //|------------|
 
-#define COPY_ASSIGNMENT($type) auto operator=(const $type& rhs) noexcept -> $type&
-#define MOVE_ASSIGNMENT($type) auto operator=($type&& rhs) noexcept -> $type&
+#define COPY_ASSIGNMENT($type) inline constexpr auto operator=(const $type& rhs) noexcept -> $type&
+#define MOVE_ASSIGNMENT($type) inline constexpr auto operator=($type&& rhs) noexcept -> $type&

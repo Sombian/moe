@@ -29,25 +29,19 @@ namespace fs
 		}
 	};
 
-	template
-	<
-		model::text T
-	>
-	inline constexpr auto open(const T& path) -> std::optional
+	inline constexpr auto open(const model::text auto& path) -> std::optional
 	<
 		std::variant
 		<
-			file<T, utf8>
+			file<decltype(path), utf8>
 			,
-			file<T, utf16>
+			file<decltype(path), utf16>
 			,
-			file<T, utf32>
+			file<decltype(path), utf32>
 		>
 	>
 	{
 		auto sys {std::filesystem::path(path.c_str())};
-
-		std::cout << std::filesystem::current_path() << '\n';
 
 		if (std::ifstream ifs {sys, std::ios::binary})
 		{
@@ -224,30 +218,41 @@ namespace fs
 				case UTF8_STD:
 				case UTF8_BOM:
 				{
-					typedef char8_t unit;
+					typedef char8_t T;
 					
-					text<unit> data
-					{
-						(size / sizeof(unit))
+					text<T> data;
+					// allocate
+					data.capacity
+					(
+						(size / sizeof(T))
 						+
-						1 /*null-terminator*/
-					};
+						1 /* terminate */
+					);
 
 					write_native(data);
 
-					return file<T, decltype(data)>
-					{std::move(path), std::move(data)};
+					return file
+					<
+						decltype(path),
+						decltype(data)
+					>
+					{
+						std::move(path),
+						std::move(data)
+					};
 				}
 				case UTF16_BE:
 				{
-					typedef char16_t unit;
+					typedef char16_t T;
 
-					text<unit> data
-					{
-						(size / sizeof(unit))
+					text<T> data;
+					// allocate
+					data.capacity
+					(
+						(size / sizeof(T))
 						+
-						1 /*null-terminator*/
-					};
+						1 /* terminate */
+					);
 
 					if constexpr (IS_BIG)
 					{
@@ -257,19 +262,29 @@ namespace fs
 					{
 						write_foreign(data);
 					}
-					return file<T, decltype(data)>
-					{std::move(path), std::move(data)};
+
+					return file
+					<
+						decltype(path),
+						decltype(data)
+					>
+					{
+						std::move(path),
+						std::move(data)
+					};
 				}
 				case UTF16_LE:
 				{
-					typedef char16_t unit;
+					typedef char16_t T;
 
-					text<unit> data
-					{
-						(size / sizeof(unit))
+					text<T> data;
+					// allocate
+					data.capacity
+					(
+						(size / sizeof(T))
 						+
-						1 /*null-terminator*/
-					};
+						1 /* terminate */
+					);
 
 					if constexpr (!IS_BIG)
 					{
@@ -279,19 +294,29 @@ namespace fs
 					{
 						write_foreign(data);
 					}
-					return file<T, decltype(data)>
-					{std::move(path), std::move(data)};
+
+					return file
+					<
+						decltype(path),
+						decltype(data)
+					>
+					{
+						std::move(path),
+						std::move(data)
+					};
 				}
 				case UTF32_BE:
 				{
-					typedef char32_t unit;
+					typedef char32_t T;
 
-					text<unit> data
-					{
-						(size / sizeof(unit))
+					text<T> data;
+					// allocate
+					data.capacity
+					(
+						(size / sizeof(T))
 						+
-						1 /*null-terminator*/
-					};
+						1 /* terminate */
+					);
 
 					if constexpr (IS_BIG)
 					{
@@ -301,19 +326,29 @@ namespace fs
 					{
 						write_foreign(data);
 					}
-					return file<T, decltype(data)>
-					{std::move(path), std::move(data)};
+
+					return file
+					<
+						decltype(path),
+						decltype(data)
+					>
+					{
+						std::move(path),
+						std::move(data)
+					};
 				}
 				case UTF32_LE:
 				{
-					typedef char32_t unit;
+					typedef char32_t T;
 
-					text<unit> data
-					{
-						(size / sizeof(unit))
+					text<T> data;
+					// allocate
+					data.capacity
+					(
+						(size / sizeof(T))
 						+
-						1 /*null-terminator*/
-					};
+						1 /* terminate */
+					);
 					
 					if constexpr (!IS_BIG)
 					{
@@ -323,8 +358,16 @@ namespace fs
 					{
 						write_foreign(data);
 					}
-					return file<T, decltype(data)>
-					{std::move(path), std::move(data)};
+
+					return file
+					<
+						decltype(path),
+						decltype(data)
+					>
+					{
+						std::move(path),
+						std::move(data)
+					};
 				}
 			}
 			#undef IS_BIG

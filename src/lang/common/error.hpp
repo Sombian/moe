@@ -41,9 +41,9 @@ public:
 
 	friend constexpr auto operator!=(const error& lhs, const error& rhs) -> bool = default;
 
-	//|----------------------|
-	//| traits::printable<T> |
-	//|----------------------|
+	//|---------------------|
+	//| trait::printable<T> |
+	//|---------------------|
 
 	friend constexpr auto operator<<(std::ostream& os, const error& error) -> std::ostream&
 	{

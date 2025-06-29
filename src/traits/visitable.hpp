@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <utility>
 
-namespace traits
+namespace trait
 {
 	template
 	<

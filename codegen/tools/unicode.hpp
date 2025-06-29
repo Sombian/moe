@@ -55,23 +55,23 @@ namespace // private
 
 	template<size_t N>
 	// converting constructor
-	inline constexpr auto UnicodeData(const char8_t (&name)[N]) -> auto
+	inline constexpr auto UnicodeData(const char8_t (&str)[N]) -> auto
 	{
-		return UnicodeData(utf8 {name});
+		return UnicodeData(utf8 {str});
 	}
 
 	template<size_t N>
 	// converting constructor
-	inline constexpr auto UnicodeData(const char16_t (&name)[N]) -> auto
+	inline constexpr auto UnicodeData(const char16_t (&str)[N]) -> auto
 	{
-		return UnicodeData(utf16 {name});
+		return UnicodeData(utf16 {str});
 	}
 
 	template<size_t N>
 	// converting constructor
-	inline constexpr auto UnicodeData(const char32_t (&name)[N]) -> auto
+	inline constexpr auto UnicodeData(const char32_t (&str)[N]) -> auto
 	{
-		return UnicodeData(utf32 {name});
+		return UnicodeData(utf32 {str});
 	}
 }
 
@@ -97,23 +97,23 @@ namespace // private
 
 	template<size_t N>
 	// converting constructor
-	inline constexpr auto CaseFolding(const char8_t (&name)[N]) -> auto
+	inline constexpr auto CaseFolding(const char8_t (&str)[N]) -> auto
 	{
-		return CaseFolding(utf8 {name});
+		return CaseFolding(utf8 {str});
 	}
 
 	template<size_t N>
 	// converting constructor
-	inline constexpr auto CaseFolding(const char16_t (&name)[N]) -> auto
+	inline constexpr auto CaseFolding(const char16_t (&str)[N]) -> auto
 	{
-		return CaseFolding(utf16 {name});
+		return CaseFolding(utf16 {str});
 	}
 
 	template<size_t N>
 	// converting constructor
-	inline constexpr auto CaseFolding(const char32_t (&name)[N]) -> auto
+	inline constexpr auto CaseFolding(const char32_t (&str)[N]) -> auto
 	{
-		return CaseFolding(utf32 {name});
+		return CaseFolding(utf32 {str});
 	}
 }
 
@@ -140,23 +140,23 @@ namespace // private
 
 	template<size_t N>
 	// converting constructor
-	inline constexpr auto CompositionExclusions(const char8_t (&name)[N]) -> auto
+	inline constexpr auto CompositionExclusions(const char8_t (&str)[N]) -> auto
 	{
-		return CompositionExclusions(utf8 {name});
+		return CompositionExclusions(utf8 {str});
 	}
 
 	template<size_t N>
 	// converting constructor
-	inline constexpr auto CompositionExclusions(const char16_t (&name)[N]) -> auto
+	inline constexpr auto CompositionExclusions(const char16_t (&str)[N]) -> auto
 	{
-		return CompositionExclusions(utf16 {name});
+		return CompositionExclusions(utf16 {str});
 	}
 
 	template<size_t N>
 	// converting constructor
-	inline constexpr auto CompositionExclusions(const char32_t (&name)[N]) -> auto
+	inline constexpr auto CompositionExclusions(const char32_t (&str)[N]) -> auto
 	{
-		return CompositionExclusions(utf32 {name});
+		return CompositionExclusions(utf32 {str});
 	}
 }
 
@@ -175,7 +175,7 @@ namespace // private
 			{
 				for (const auto& line : file.lines())
 				{
-					if (15 < line.size() && line[0] != '#')
+					if (15 < line.length() && line[0] != '#')
 					{
 						if (line.find(name, 15) != SIZE_MAX)
 						{
@@ -217,23 +217,23 @@ namespace // private
 
 	template<size_t N>
 	// converting constructor
-	inline constexpr auto DerivedCoreProperties(const char8_t (&name)[N]) -> auto
+	inline constexpr auto DerivedCoreProperties(const char8_t (&str)[N]) -> auto
 	{
-		return DerivedCoreProperties(utf8 {name});
+		return DerivedCoreProperties(utf8 {str});
 	}
 
 	template<size_t N>
 	// converting constructor
-	inline constexpr auto DerivedCoreProperties(const char16_t (&name)[N]) -> auto
+	inline constexpr auto DerivedCoreProperties(const char16_t (&str)[N]) -> auto
 	{
-		return DerivedCoreProperties(utf16 {name});
+		return DerivedCoreProperties(utf16 {str});
 	}
 
 	template<size_t N>
 	// converting constructor
-	inline constexpr auto DerivedCoreProperties(const char32_t (&name)[N]) -> auto
+	inline constexpr auto DerivedCoreProperties(const char32_t (&str)[N]) -> auto
 	{
-		return DerivedCoreProperties(utf32 {name});
+		return DerivedCoreProperties(utf32 {str});
 	}
 }
 

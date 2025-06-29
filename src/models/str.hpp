@@ -312,7 +312,7 @@ private:
 							const auto old_l {this->src.size()};
 							const auto new_l {old_l + (b - a)};
 
-							if (this->src.capacity() < new_l + 1)
+							if (this->src.capacity() <= new_l)
 							{
 								this->src.capacity(new_l * 2);
 							}
@@ -770,8 +770,10 @@ public:
 		template<class U>
 		inline constexpr auto encode() const -> text<U>
 		{
-			text<U> str
-			{
+			text<U> str;
+			// allocate
+			str.capacity
+			(
 				[&]
 				{
 					size_t impl {0};
@@ -785,7 +787,7 @@ public:
 					return impl + 1;
 				}
 				()
-			};
+			);
 
 			auto ptr {str.c_str()};
 
@@ -819,13 +821,18 @@ public:
 		//| lhs.substr() |
 		//|--------------|
 
-		inline constexpr auto substr(const size_t start, const size_t count = SIZE_MAX) const -> slice
+		inline constexpr auto substr(const size_t start, size_t count = SIZE_MAX) const -> slice
 		{
+			//|-------------<clamp>-------------|
+			count = std::min(count, this->size());
+			//|---------------------------------|
+
 			const auto ptr {this->head};
+
 			// UTF-32
-			if constexpr (std::is_same_v<T, char32_t>) // short-circuit on UTF32
+			if constexpr (std::is_same_v<T, char32_t>)
 			{
-				return {ptr + start, ptr + std::min(start + count, this->size())};
+				return {&ptr[start], &ptr[start + count]};
 			}
 			// UTF-8/16
 			size_t a {0};
@@ -841,7 +848,7 @@ public:
 			{
 				b += codec::next(ptr + b);
 			}
-			return {ptr + a, ptr + b};
+			return {&ptr[a], &ptr[b]};
 		}
 
 		//|------------|
@@ -1414,9 +1421,9 @@ public:
 			return rhs != lhs;
 		}
 
-		//|---------------------|
-		//| traits::iterable<T> |
-		//|---------------------|
+		//|--------------------|
+		//| trait::iterable<T> |
+		//|--------------------|
 
 		inline constexpr auto begin() const -> iterator { return {this->head}; }
 		inline constexpr auto begin()       -> iterator { return {this->head}; }
@@ -1424,9 +1431,9 @@ public:
 		inline constexpr auto end() const -> iterator { return {this->tail}; }
 		inline constexpr auto end()       -> iterator { return {this->tail}; }
 
-		//|----------------------|
-		//| traits::printable<T> |
-		//|----------------------|
+		//|---------------------|
+		//| trait::printable<T> |
+		//|---------------------|
 
 		friend constexpr auto operator<<(std::ostream& os, const slice& str) -> std::ostream&
 		{
@@ -1524,9 +1531,11 @@ public:
 					this->args.emplace_back(U"%s");
 				}
 			}
-			// allocate str
-			text<T> result
-			{
+
+			text<T> str;
+			// allocate
+			str.capacity
+			(
 				[&]
 				{
 					size_t impl {0};
@@ -1537,17 +1546,18 @@ public:
 					return impl + 1;
 				}
 				()
-			};
+			);
+
 			// mix and join
 			for (size_t i {0}; i < args.size(); ++i)
 			{
-				result += this->atom[i]; // write
-				result += this->args[i]; // write
+				str += this->atom[i]; // write
+				str += this->args[i]; // write
 			}
 			// last fragment
-			result += this->atom.back();
+			str += this->atom.back();
 
-			return result;
+			return str;
 		}
 
 		//|-----------|
@@ -1607,7 +1617,7 @@ public:
 	{
 		const auto N {from.size()};
 
-		if (dest.capacity() < N + 1)
+		if (dest.capacity() <= N)
 		{
 			dest.capacity(N + 1);
 		}
@@ -1648,23 +1658,8 @@ public:
 		assert(this->mode() == tag::SMALL);
 	}
 
-	template
-	<
-		std::integral U
-	>
-	text(U value) : text()
-	{
-		this->capacity(value);
-	}
-
-	template
-	<
-		size_t N
-	>
-	requires
-	(
-		N <= MAX
-	)
+	template<size_t N>
+	requires (N <= MAX)
 	text(const T (&str)[N]) : text()
 	{
 		this->size(N);
@@ -1674,14 +1669,8 @@ public:
 		std::ranges::copy(str, str + N, this->small);
 	}
 
-	template
-	<
-		size_t N
-	>
-	requires
-	(
-		MAX < N
-	)
+	template<size_t N>
+	requires (MAX < N)
 	text(const T (&str)[N]) : text()
 	{
 		this->size(N);
@@ -1699,25 +1688,22 @@ public:
 			// copy meta
 			this->size(N);
 			// copy data
-			std::ranges::copy(str, str + N, this->c_str());
+			std::ranges::copy(str, str + N + 1, this->c_str());
 		}
 	}
 
-	template
-	<
-		class slice_t
-	>
-	requires requires (slice_t str)
+	template<class S>
+	requires requires (S str)
 	{
-		!std::is_same_v<slice_t, text<char8_t>>;
-		!std::is_same_v<slice_t, text<char16_t>>;
-		!std::is_same_v<slice_t, text<char32_t>>;
+		str.to_utf8(); // interface
+		str.to_utf16(); // interface
+		str.to_utf32(); // interface
 
-		{ str.to_utf8() } -> std::same_as<text<char8_t>>;
-		{ str.to_utf16() } -> std::same_as<text<char16_t>>;
-		{ str.to_utf32() } -> std::same_as<text<char32_t>>;
+		!std::is_same_v<S, text<char8_t>>;
+		!std::is_same_v<S, text<char16_t>>;
+		!std::is_same_v<S, text<char32_t>>;
 	}
-	text(const slice_t& str) : text()
+	text(const S& str) : text()
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
 		{
@@ -1776,21 +1762,18 @@ public:
 		return *this;
 	}
 
-	template
-	<
-		class slice_t
-	>
-	requires requires (slice_t str)
+	template<class S>
+	requires requires (S str)
 	{
-		!std::is_same_v<slice_t, text<char8_t>>;
-		!std::is_same_v<slice_t, text<char16_t>>;
-		!std::is_same_v<slice_t, text<char32_t>>;
+		str.to_utf8(); // interface
+		str.to_utf16(); // interface
+		str.to_utf32(); // interface
 
-		{ str.to_utf8() } -> std::same_as<text<char8_t>>;
-		{ str.to_utf16() } -> std::same_as<text<char16_t>>;
-		{ str.to_utf32() } -> std::same_as<text<char32_t>>;
+		!std::is_same_v<S, text<char8_t>>;
+		!std::is_same_v<S, text<char16_t>>;
+		!std::is_same_v<S, text<char32_t>>;
 	}
-	auto operator=(const slice_t& rhs) -> text&
+	inline constexpr auto operator=(const S& rhs) -> text&
 	{
 		if constexpr (std::is_same_v<T, char8_t>)
 		{
@@ -1807,23 +1790,9 @@ public:
 		return *this;
 	}
 
-	//|-------------------------------------------------------|-------|
-	//|                                                       |   ↓   |
-	//|---------------|-------|-------|-------|-------|-------|-------|
-	//| 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit |
-	//|-------|-------|-------|-------|-------|-------|-------|-------|
-
-	// getter
-	inline constexpr auto mode() const -> tag
-	{
-		return static_cast<tag>(this->bytes[RMB] & MSK);
-	}
-
-	//|-------------------------------------------------------|-------|
-	//|   ↓       ↓       ↓       ↓       ↓       ↓       ↓   |       |
-	//|---------------|-------|-------|-------|-------|-------|-------|
-	//| 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit |
-	//|-------|-------|-------|-------|-------|-------|-------|-------|
+	//|------------------|
+	//| member functions |
+	//|------------------|
 
 	inline constexpr auto c_str() const -> const T*
 	{
@@ -1855,6 +1824,24 @@ public:
 		return this->c_str();
 	}
 
+	//|-------------------------------------------------------|-------|
+	//|                                                       |   ↓   |
+	//|---------------|-------|-------|-------|-------|-------|-------|
+	//| 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit |
+	//|-------|-------|-------|-------|-------|-------|-------|-------|
+
+	// getter
+	inline constexpr auto mode() const -> tag
+	{
+		return static_cast<tag>(this->bytes[RMB] & MSK);
+	}
+
+	//|-------------------------------------------------------|-------|
+	//|   ↓       ↓       ↓       ↓       ↓       ↓       ↓   |       |
+	//|---------------|-------|-------|-------|-------|-------|-------|
+	//| 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit | 1 bit |
+	//|-------|-------|-------|-------|-------|-------|-------|-------|
+
 	// getter
 	inline constexpr auto size() const -> size_t
 	{
@@ -1885,7 +1872,7 @@ public:
 	// setter
 	inline constexpr auto size(const size_t value)
 	{
-		if (this->capacity() < value + 1)
+		if (this->capacity() <= value)
 		{
 			allocate:
 			auto data {new T[value + 1]};
@@ -1895,7 +1882,7 @@ public:
 				// S -> L
 				case tag::SMALL:
 				{
-					std::ranges::copy(this->small, data); /* no need to delete :3 */; break;
+					std::ranges::copy(this->small, data); /* cannot delete stack */; break;
 				}
 				// L -> L
 				case tag::LARGE:
@@ -2001,7 +1988,7 @@ public:
 				// S -> L
 				case tag::SMALL:
 				{
-					std::ranges::copy(this->small, data); /* no need to delete :3 */; break;
+					std::ranges::copy(this->small, data); /* cannot delete stack */; break;
 				}
 				// L -> L
 				case tag::LARGE:
@@ -2047,8 +2034,10 @@ public:
 		}
 		else // if (!std::is_same_v<T, U>)
 		{
-			text<U> str
-			{
+			text<U> str;
+			// allocate
+			str.capacity
+			(
 				[&]
 				{
 					size_t impl {0};
@@ -2062,7 +2051,8 @@ public:
 					return impl + 1;
 				}
 				()
-			};
+			);
+			
 			auto ptr {str.c_str()};
 
 			for (const auto code : *this)
@@ -2096,13 +2086,18 @@ public:
 	//| lhs.substr() |
 	//|--------------|
 
-	inline constexpr auto substr(const size_t start, const size_t count = SIZE_MAX) const -> slice
+	inline constexpr auto substr(const size_t start, size_t count = SIZE_MAX) const -> slice
 	{
+		//|-------------<clamp>-------------|
+		count = std::min(count, this->size());
+		//|---------------------------------|
+	
 		const auto ptr {this->c_str()};
+
 		// UTF-32
-		if constexpr (std::is_same_v<T, char32_t>) // short-circuit on UTF32
+		if constexpr (std::is_same_v<T, char32_t>)
 		{
-			return {ptr + start, ptr + std::min(start + count, this->size())};
+			return {&ptr[start], &ptr[start + count]};
 		}
 		// UTF-8/16
 		size_t a {0};
@@ -2118,7 +2113,7 @@ public:
 		{
 			b += codec::next(ptr + b);
 		}
-		return {ptr + a, ptr + b};
+		return {&ptr[a], &ptr[b]};
 	}
 
 	//|------------|
@@ -2298,20 +2293,22 @@ public:
 	{
 		if constexpr (std::is_same_v<T, U>)
 		{
-			//--------------------------------------------//
-			const T* LAST {this->c_str() + this->size()}; //
-			//--------------------------------------------//
+			//|----------------------------------------|
+			const T* END {this->c_str() + this->size()};
+			//|----------------------------------------|
+
 			std::vector<slice> result;
+
+			//|----------------------|
+			const auto N {str.size()};
+			//|----------------------|
 
 			const T* head {this->c_str()};
 			const T* tail {this->c_str()};
-			//-------------------------//
-			const auto N {str.size()}; //
-			//-------------------------//
 
-			while (tail < LAST)
+			while (tail < END)
 			{
-				if (head + N - 1 < LAST)
+				if (head + N - 1 < END)
 				{
 					size_t i {0};
 
@@ -2339,17 +2336,18 @@ public:
 				}
 			}
 			// rest of the slice
-			if (head <= LAST)
+			if (head <= END)
 			{
-				result.emplace_back(head, LAST);
+				result.emplace_back(head, END);
 			}
 			return result;
 		}
 		else // if (!std::is_same_v<T, U>)
 		{
-			//--------------------------------------------//
-			const T* LAST {this->c_str() + this->size()}; //
-			//--------------------------------------------//
+			//|----------------------------------------|
+			const T* END {this->c_str() + this->size()};
+			//|----------------------------------------|
+
 			std::vector<slice> result;
 
 			char32_t out {'\0'};
@@ -2357,7 +2355,7 @@ public:
 			const T* head {this->c_str()};
 			const T* tail {this->c_str()};
 
-			while (tail < LAST)
+			while (tail < END)
 			{
 				auto width {codec::next(tail)};
 				codec::decode(tail, out, width);
@@ -2371,7 +2369,7 @@ public:
 					// check match
 					for (const auto code : str)
 					{
-						if (LAST <= ptr)
+						if (END <= ptr)
 						{
 							break;
 						}
@@ -2399,9 +2397,9 @@ public:
 				tail += width;
 			}
 			// rest of the slice
-			if (head <= LAST)
+			if (head <= END)
 			{
-				result.emplace_back(head, LAST);
+				result.emplace_back(head, END);
 			}
 			return result;
 		}
@@ -2410,17 +2408,18 @@ public:
 	template<size_t N>
 	inline constexpr auto split(const T (&str)[N]) const -> std::vector<slice>
 	{
-		//--------------------------------------------//
-		const T* LAST {this->c_str() + this->size()}; //
-		//--------------------------------------------//
+		//|----------------------------------------|
+		const T* END {this->c_str() + this->size()};
+		//|----------------------------------------|
+
 		std::vector<slice> result;
 
 		const T* head {this->c_str()};
 		const T* tail {this->c_str()};
 
-		while (tail < LAST)
+		while (tail < END)
 		{
-			if (head + N - 1 < LAST)
+			if (head + N - 1 < END)
 			{
 				size_t i {0};
 
@@ -2447,18 +2446,19 @@ public:
 			}
 		}
 		// rest of the slice
-		if (head <= LAST)
+		if (head <= END)
 		{
-			result.emplace_back(head, LAST);
+			result.emplace_back(head, END);
 		}
 		return result;
 	}
 
 	inline constexpr auto split(const char32_t code) const -> std::vector<slice>
 	{
-		//--------------------------------------------//
-		const T* LAST {this->c_str() + this->size()}; //
-		//--------------------------------------------//
+		//|----------------------------------------|
+		const T* END {this->c_str() + this->size()};
+		//|----------------------------------------|
+	
 		std::vector<slice> result;
 
 		char32_t out {'\0'};
@@ -2466,7 +2466,7 @@ public:
 		const T* head {this->c_str()};
 		const T* tail {this->c_str()};
 
-		while (tail < LAST)
+		while (tail < END)
 		{
 			auto width {codec::next(tail)};
 			codec::decode(tail, out, width);
@@ -2481,9 +2481,9 @@ public:
 			tail += width;
 		}
 		// rest of the slice
-		if (head <= LAST)
+		if (head <= END)
 		{
-			result.emplace_back(head, LAST);
+			result.emplace_back(head, END);
 		}
 		return result;
 	}
@@ -2558,7 +2558,7 @@ public:
 
 		if constexpr (std::is_same_v<T, U>)
 		{
-			if (this->capacity() < MAX + 1)
+			if (this->capacity() <= MAX)
 			{
 				this->capacity(MAX + 1);
 			}
@@ -2599,7 +2599,7 @@ public:
 		const auto MAX {this->size() + rhs.size()};
 		//|--------------------------------------|
 
-		if (this->capacity() < MAX + 1)
+		if (this->capacity() <= MAX)
 		{
 			this->capacity(MAX + 1);
 		}
@@ -2623,7 +2623,7 @@ public:
 		const auto MAX {this->size() + N - 1};
 		//|----------------------------------|
 
-		if (this->capacity() < MAX + 1)
+		if (this->capacity() <= MAX)
 		{
 			this->capacity(MAX + 1);
 		}
@@ -2948,9 +2948,9 @@ public:
 		return format {text<char32_t> {lhs}.encode<T>()} | rhs;
 	}
 
-	//|---------------------|
-	//| traits::iterable<T> |
-	//|---------------------|
+	//|--------------------|
+	//| trait::iterable<T> |
+	//|--------------------|
 
 	inline constexpr auto begin() const -> iterator { return {&this->c_str()[0]}; }
 	inline constexpr auto begin()       -> iterator { return {&this->c_str()[0]}; }
@@ -2958,9 +2958,9 @@ public:
 	inline constexpr auto end() const -> iterator { return {&this->c_str()[this->size()]}; }
 	inline constexpr auto end()       -> iterator { return {&this->c_str()[this->size()]}; }
 
-	//|----------------------|
-	//| traits::printable<T> |
-	//|----------------------|
+	//|---------------------|
+	//| trait::printable<T> |
+	//|---------------------|
 
 	friend constexpr auto operator<<(std::ostream& os, const text<T>& str) -> std::ostream&
 	{
@@ -2985,37 +2985,37 @@ namespace model
 	concept text =
 	(
 		// text_impl
-		std::is_same_v<T, utf8>
+		std::is_same_v<std::remove_cvref_t<T>, utf8>
 		||
-		std::is_same_v<T, utf16>
+		std::is_same_v<std::remove_cvref_t<T>, utf16>
 		||
-		std::is_same_v<T, utf32>
+		std::is_same_v<std::remove_cvref_t<T>, utf32>
 		||
 		// text_view
-		std::is_same_v<T, utf8::slice>
+		std::is_same_v<std::remove_cvref_t<T>, utf8::slice>
 		||
-		std::is_same_v<T, utf16::slice>
+		std::is_same_v<std::remove_cvref_t<T>, utf16::slice>
 		||
-		std::is_same_v<T, utf32::slice>
+		std::is_same_v<std::remove_cvref_t<T>, utf32::slice>
 	);
 
 	template<class T>
 	concept text_impl =
 	(
-		std::is_same_v<T, utf8>
+		std::is_same_v<std::remove_cvref_t<T>, utf8>
 		||
-		std::is_same_v<T, utf16>
+		std::is_same_v<std::remove_cvref_t<T>, utf16>
 		||
-		std::is_same_v<T, utf32>
+		std::is_same_v<std::remove_cvref_t<T>, utf32>
 	);
 
 	template<class T>
 	concept text_view =
 	(
-		std::is_same_v<T, utf8::slice>
+		std::is_same_v<std::remove_cvref_t<T>, utf8::slice>
 		||
-		std::is_same_v<T, utf16::slice>
+		std::is_same_v<std::remove_cvref_t<T>, utf16::slice>
 		||
-		std::is_same_v<T, utf32::slice>
+		std::is_same_v<std::remove_cvref_t<T>, utf32::slice>
 	);
 }

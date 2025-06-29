@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-namespace traits
+namespace trait
 {
 	template<class T>
 	concept printable = requires(T self)

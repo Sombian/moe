@@ -274,9 +274,9 @@ public:
 		return lhs.type != rhs;
 	}
 
-	//|----------------------|
-	//| traits::printable<T> |
-	//|----------------------|
+	//|---------------------|
+	//| trait::printable<T> |
+	//|---------------------|
 
 	friend constexpr auto operator<<(std::ostream& os, const token& token) -> std::ostream&
 	{

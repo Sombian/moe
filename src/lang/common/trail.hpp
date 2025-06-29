@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deque>
+#include <cstddef>
 #include <numeric>
 
 class trail
@@ -18,7 +19,7 @@ class trail
 		//| member function |
 		//|-----------------|
 		
-		operator size_t() const
+		inline constexpr operator size_t() const
 		{
 			return this->data.back();
 		}
@@ -49,7 +50,7 @@ class trail
 		//| member function |
 		//|-----------------|
 
-		operator size_t() const
+		inline constexpr operator size_t() const
 		{
 			return this->data.size();
 		}
@@ -81,13 +82,13 @@ public:
 	//|-----------------|
 
 	// offset
-	operator size_t() const
+	inline constexpr auto o() const -> size_t
 	{
 		return std::reduce
 		(
 			this->data.begin(),
-			// begin ~ end
-			this->data.end()
+			this->data.end(),
+			0 // from RE:0
 		);
 	}
 
@@ -98,7 +99,7 @@ public:
 	}
 
 	// x = column
-	inline constexpr auto x() -> proxy_x
+	inline constexpr auto x()       -> proxy_x
 	{
 		return {this->data};
 	}
@@ -110,7 +111,7 @@ public:
 	}
 
 	// y = line
-	inline constexpr auto y() -> proxy_y
+	inline constexpr auto y()       -> proxy_y
 	{
 		return {this->data};
 	}
