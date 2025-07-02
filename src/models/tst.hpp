@@ -13,9 +13,10 @@
 
 #include "models/str.hpp"
 
+#include "utils/ordering.hpp"
+
 #include "traits/rule_of_5.hpp"
 
-#include "utils/ordering.hpp"
 
 //|--------------------------|
 //| TST(Ternary Search Tree) |
@@ -23,7 +24,7 @@
 
 template
 <
-	typename T
+	class T
 >
 class tst
 {
@@ -87,16 +88,20 @@ class tst
 		static constexpr auto factor(node* a) -> int8_t
 		{
 			if (a == nullptr) { return 0; }
+
 			auto left {node::height(a->left)};
 			auto right {node::height(a->right)};
-			return left - right; // delta
+
+			return left - right; // delta height
 		}
 
 		static constexpr auto height(node* a) -> int8_t
 		{
 			if (a == nullptr) { return 0; }
+
 			auto left {node::height(a->left)};
 			auto right {node::height(a->right)};
+
 			return std::max(left, right) + 1;
 		}
 
@@ -141,114 +146,19 @@ class tst
 
 	node* root; // unique_ptr..?
 
-public:
-
-	~tst()
-	{
-		delete this->root; // ok
-	}
-
 	template
 	<
-		type::string S
-	>
-	tst(std::initializer_list<std::pair<S&, T>> args = {})
-	{
-		for (const auto& [first, second] : args)
-		{
-			this->operator[](first) = second;
-		}
-	}
-
-	// converting constructor
-	tst(std::initializer_list<std::pair<const char8_t*, T>> args = {})
-	{
-		for (const auto& [first, second] : args)
-		{
-			if (first != nullptr) // short-circuit
-			{
-				this->operator[](utf8 {first}) = second;
-			}
-		}
-	}
-
-	// converting constructor
-	tst(std::initializer_list<std::pair<const char16_t*, T>> args = {})
-	{
-		for (const auto& [first, second] : args)
-		{
-			if (first != nullptr) // short-circuit
-			{
-				this->operator[](utf16 {first}) = second;
-			}
-		}
-	}
-
-	// converting constructor
-	tst(std::initializer_list<std::pair<const char32_t*, T>> args = {})
-	{
-		for (const auto& [first, second] : args)
-		{
-			if (first != nullptr) // short-circuit
-			{
-				this->operator[](utf32 {first}) = second;
-			}
-		}
-	}
-
-	COPY_CONSTRUCTOR(tst)
-	{
-		if (this != &other)
-		{
-			// TODO
-		}
-	}
-
-	MOVE_CONSTRUCTOR(tst)
-	{
-		if (this != &other)
-		{
-			// TODO
-		}
-	}
-
-	COPY_ASSIGNMENT(tst)
-	{
-		if (this != &rhs)
-		{
-			// TODO
-		}
-		return *this;
-	}
-
-	MOVE_ASSIGNMENT(tst)
-	{
-		if (this != &rhs)
-		{
-			// TODO
-		}
-		return *this;
-	}
-
-	//|-----------------|
-	//| member function |
-	//|-----------------|
-
-private:
-
-	template
-	<
-		typename S
+		class S
 	>
 	requires
 	(
-		std::is_same_v<S, tst<T>&>
-		||
 		std::is_same_v<S, const tst<T>&>
+		||
+		std::is_same_v<S,       tst<T>&>
 	)
 	class cursor
 	{
-		S src;
+		S     src;
 		node* ptr;
 
 	public:
@@ -264,10 +174,8 @@ private:
 		//| member function |
 		//|-----------------|
 
-		inline constexpr auto get() const -> std::optional<T> requires
-		(
-			std::is_class_v<T> ? !std::is_empty_v<T> : true
-		)
+		// getter
+		inline constexpr auto value() const -> std::optional<T>
 		{
 			return this->ptr ? this->ptr->data : std::nullopt;
 		}
@@ -284,7 +192,7 @@ private:
 
 		inline constexpr auto is_leaf() const -> bool
 		{
-			return ptr && !ptr->left && !ptr->middle && !ptr->right;
+			return this->ptr->middle == nullptr;
 		}
 
 		inline constexpr auto is_child() const -> bool
@@ -294,7 +202,7 @@ private:
 
 		inline constexpr auto is_parent() const -> bool
 		{
-			return ptr && (ptr->left || ptr->middle || ptr->right);
+			return this->ptr->middle != nullptr;
 		}
 
 		// incremental search
@@ -338,30 +246,16 @@ private:
 		}
 	};
 
-public:
-
-	inline constexpr auto view() const -> cursor<decltype(*this)>
-	{
-		return {*this, nullptr};
-	}
-
-	inline constexpr auto view() -> cursor<decltype(*this)>
-	{
-		return {*this, nullptr};
-	}
-
-private:
-
 	template
 	<
-		typename S,
-		type::string X
+		class       S,
+		model::text X
 	>
 	requires
 	(
-		std::is_same_v<S, tst<T>&>
-		||
 		std::is_same_v<S, const tst<T>&>
+		||
+		std::is_same_v<S,       tst<T>&>
 	)
 	class proxy
 	{
@@ -381,10 +275,8 @@ private:
 		//| member function |
 		//|-----------------|
 
-		operator bool() const&& requires
-		(
-			std::is_class_v<T> ? std::is_empty_v<T> : false
-		)
+		// getter
+		inline constexpr operator bool() const&& requires (std::is_class_v<T> ? std::is_empty_v<T> : false)
 		{
 			auto ptr {this->src.root};
 
@@ -426,10 +318,8 @@ private:
 			return ptr != nullptr;
 		}
 
-		operator std::optional<T>() const&& requires
-		(
-			std::is_class_v<T> ? !std::is_empty_v<T> : true
-		)
+		// getter
+		inline constexpr operator std::optional<T>() const&& requires (std::is_class_v<T> ? !std::is_empty_v<T> : true)
 		{
 			auto ptr {this->src.root};
 
@@ -472,10 +362,8 @@ private:
 			return ptr ? ptr->data : std::nullopt;
 		}
 
-		inline constexpr auto operator=(const T& value)&& -> proxy& requires
-		(
-			!std::is_const_v<std::remove_reference_t<S>>
-		)
+		// setter
+		inline constexpr auto operator=(const T& value)&& -> proxy& requires (!std::is_const_v<std::remove_reference_t<S>>)
 		{
 			auto ptr {&this->src.root};
 
@@ -535,88 +423,149 @@ private:
 
 public:
 
-	//|----------|
-	//| lhs[str] | -> const proxy
-	//|----------|
-
-	template
-	<
-		type::string S
-	>
-	inline constexpr auto operator[](const S& str) const -> proxy<decltype(*this), S>
+	~tst()
 	{
-		return {*this, str};
+		delete this->root; // ok
 	}
 
-	template
-	<
-		size_t N
-	>
-	// converting constructor
-	inline constexpr auto operator[](const char8_t (&str)[N]) const -> proxy<decltype(*this), utf8>
+	template<model::text S>
+	tst(std::initializer_list<std::pair<S&, T>> args = {})
 	{
-		return {*this, str};
+		for (const auto& [first, second] : args)
+		{
+			this->operator[](first) = second;
+		}
 	}
 
-	template
-	<
-		size_t N
-	>
 	// converting constructor
-	inline constexpr auto operator[](const char16_t (&str)[N]) const -> proxy<decltype(*this), utf16>
+	tst(std::initializer_list<std::pair<const char8_t*, T>> args = {})
 	{
-		return {*this, str};
+		for (const auto& [first, second] : args)
+		{
+			this->operator[](utf8 {first}) = second;
+		}
 	}
 
-	template
-	<
-		size_t N
-	>
 	// converting constructor
-	inline constexpr auto operator[](const char32_t (&str)[N]) const -> proxy<decltype(*this), utf32>
+	tst(std::initializer_list<std::pair<const char16_t*, T>> args = {})
 	{
-		return {*this, str};
+		for (const auto& [first, second] : args)
+		{
+			this->operator[](utf16 {first}) = second;
+		}
+	}
+
+	// converting constructor
+	tst(std::initializer_list<std::pair<const char32_t*, T>> args = {})
+	{
+		for (const auto& [first, second] : args)
+		{
+			this->operator[](utf32 {first}) = second;
+		}
+	}
+
+	COPY_CONSTRUCTOR(tst)
+	{
+		if (this != &other)
+		{
+			// TODO
+		}
+	}
+
+	MOVE_CONSTRUCTOR(tst)
+	{
+		if (this != &other)
+		{
+			// TODO
+		}
+	}
+
+	COPY_ASSIGNMENT(tst)
+	{
+		if (this != &rhs)
+		{
+			// TODO
+		}
+		return *this;
+	}
+
+	MOVE_ASSIGNMENT(tst)
+	{
+		if (this != &rhs)
+		{
+			// TODO
+		}
+		return *this;
+	}
+
+	//|-----------------|
+	//| member function |
+	//|-----------------|
+
+	inline constexpr auto view() const -> cursor<decltype(*this)>
+	{
+		return {*this, nullptr};
+	}
+
+	inline constexpr auto view()       -> cursor<decltype(*this)>
+	{
+		return {*this, nullptr};
 	}
 
 	//|----------|
 	//| lhs[str] | -> proxy
 	//|----------|
 
-	template
-	<
-		type::string S
-	>
-	inline constexpr auto operator[](const S& str) -> proxy<decltype(*this), S>
+	template<model::text S>
+	inline constexpr auto operator[](const S& str) const -> proxy<decltype(*this), S>
 	{
 		return {*this, str};
 	}
 
-	template
-	<
-		size_t N
-	>
-	// converting constructor
-	inline constexpr auto operator[](const char8_t (&str)[N]) -> proxy<decltype(*this), utf8>
+	template<model::text S>
+	inline constexpr auto operator[](const S& str)       -> proxy<decltype(*this), S>
 	{
 		return {*this, str};
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
-	inline constexpr auto operator[](const char16_t (&str)[N]) -> proxy<decltype(*this), utf16>
+	inline constexpr auto operator[](const char8_t (&str)[N]) const -> proxy<decltype(*this), utf8>
 	{
 		return {*this, str};
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
-	inline constexpr auto operator[](const char32_t (&str)[N]) -> proxy<decltype(*this), utf32>
+	inline constexpr auto operator[](const char8_t (&str)[N])       -> proxy<decltype(*this), utf8>
+	{
+		return {*this, str};
+	}
+
+	template<size_t N>
+	// converting constructor
+	inline constexpr auto operator[](const char16_t (&str)[N]) const -> proxy<decltype(*this), utf16>
+	{
+		return {*this, str};
+	}
+
+	template<size_t N>
+	// converting constructor
+	inline constexpr auto operator[](const char16_t (&str)[N])       -> proxy<decltype(*this), utf16>
+	{
+		return {*this, str};
+	}
+
+	template<size_t N>
+	// converting constructor
+	inline constexpr auto operator[](const char32_t (&str)[N]) const -> proxy<decltype(*this), utf32>
+	{
+		return {*this, str};
+	}
+
+	template<size_t N>
+	// converting constructor
+	inline constexpr auto operator[](const char32_t (&str)[N])       -> proxy<decltype(*this), utf32>
 	{
 		return {*this, str};
 	}

@@ -21,8 +21,8 @@ namespace utils
 	//| https://here-be-braces.com/fast-lookup-of-unicode-properties |
 	//|--------------------------------------------------------------|
 
-	inline constexpr auto props(const char32_t code) -> props
+	inline constexpr auto props(const char32_t code) -> decltype(auto)
 	{
-		return stage3[stage2[stage1[code >> 8] + (code & 0xFF)]];
+		return stage3[stage2[(stage1[code >> 8] << 8) | (code & 0xFF)]];
 	}
 }

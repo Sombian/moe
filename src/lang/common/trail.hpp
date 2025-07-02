@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deque>
+#include <cstddef>
 #include <numeric>
 
 class trail
@@ -18,18 +19,18 @@ class trail
 		//| member function |
 		//|-----------------|
 		
-		operator size_t() const
+		inline /*Ი︵𐑼*/ operator size_t() const
 		{
 			return this->data.back();
 		}
 
-		inline constexpr auto operator++() -> size_t
+		inline /*Ი︵𐑼*/ auto operator++() -> size_t
 		{
 			++this->data.back();
 			return this->data.back();
 		}
 
-		inline constexpr auto operator--() -> size_t
+		inline /*Ი︵𐑼*/ auto operator--() -> size_t
 		{
 			--this->data.back();
 			return this->data.back();
@@ -49,18 +50,18 @@ class trail
 		//| member function |
 		//|-----------------|
 
-		operator size_t() const
+		inline /*Ი︵𐑼*/ operator size_t() const
 		{
 			return this->data.size();
 		}
 
-		inline constexpr auto operator++() -> size_t
+		inline /*Ი︵𐑼*/ auto operator++() -> size_t
 		{
 			this->data.push_back(0);
 			return this->data.size();
 		}
 
-		inline constexpr auto operator--() -> size_t
+		inline /*Ი︵𐑼*/ auto operator--() -> size_t
 		{
 			this->data.pop_back();
 			return this->data.size();
@@ -80,37 +81,32 @@ public:
 	//| member function |
 	//|-----------------|
 
-	// offset
-	operator size_t() const
+	inline constexpr auto o() const -> size_t
 	{
 		return std::reduce
 		(
 			this->data.begin(),
-			// begin ~ end
-			this->data.end()
+			this->data.end(),
+			0 // from RE:0
 		);
 	}
 
-	// x = column
-	inline constexpr auto x() const -> size_t
+	inline /*Ი︵𐑼*/ auto x() const -> size_t
 	{
 		return this->data.back();
 	}
 
-	// x = column
-	inline constexpr auto x() -> proxy_x
+	inline /*Ი︵𐑼*/ auto x()       -> proxy_x
 	{
 		return {this->data};
 	}
 
-	// y = line
-	inline constexpr auto y() const -> size_t
+	inline /*Ი︵𐑼*/ auto y() const -> size_t
 	{
 		return this->data.size();
 	}
 
-	// y = line
-	inline constexpr auto y() -> proxy_y
+	inline /*Ი︵𐑼*/ auto y()       -> proxy_y
 	{
 		return {this->data};
 	}

@@ -14,8 +14,8 @@ namespace utils
 
 	template
 	<
-		typename T,
-		typename U
+		class T,
+		class U
 	>
 	requires requires(T a, U b)
 	{

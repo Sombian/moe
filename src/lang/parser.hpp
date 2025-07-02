@@ -20,8 +20,8 @@
 
 template
 <
-	type::string A,
-	type::string B
+	model::text A,
+	model::text B
 >
 class parser
 {
@@ -29,10 +29,10 @@ class parser
 
 	#define E(value) error<A, B> \
 	{                            \
-		this->x,                 \
-		this->y,                 \
-		*this,                   \
-		value,                   \
+	    this->x,                 \
+	    this->y,                 \
+	    *this,                   \
+	    value,                   \
 	}                            \
 	
 	uint16_t x {0};
@@ -102,7 +102,7 @@ class parser
 			}
 			if constexpr (std::is_same_v<T, error<A, B>>)
 			{
-				throw /*|*/arg;/*|*/
+				throw arg; // rawr!
 			}
 			return false;
 		},
@@ -231,6 +231,7 @@ private:
 			}
 		}
 		close:
+		return;
 	}
 
 	//|--------------|
@@ -1802,14 +1803,14 @@ private:
 					this->next();
 
 					//|----------<update>----------|
+					ast.type = type::BOOL;
 					ast.data = std::move(tkn->data);
-					ast.type = std::move(data::BOOL);
 					//|----------------------------|
 
 					return std::make_unique
 					<decltype(ast)>(std::move(ast));
 				}
-				case atom::CHAR:
+				case atom::CODE:
 				{
 					$literal ast;
 
@@ -1819,8 +1820,8 @@ private:
 					this->next();
 
 					//|----------<update>----------|
+					ast.type = type::CODE;
 					ast.data = std::move(tkn->data);
-					ast.type = std::move(data::CODE);
 					//|----------------------------|
 
 					return std::make_unique
@@ -1836,8 +1837,8 @@ private:
 					this->next();
 
 					//|----------<update>----------|
+					ast.type = type::TEXT;
 					ast.data = std::move(tkn->data);
-					ast.type = std::move(data::UTF8);
 					//|----------------------------|
 
 					return std::make_unique
@@ -1853,8 +1854,8 @@ private:
 					this->next();
 
 					//|----------<update>----------|
+					ast.type = type::F32;
 					ast.data = std::move(tkn->data);
-					ast.type = std::move(data::F32);
 					//|----------------------------|
 
 					return std::make_unique
@@ -1873,8 +1874,8 @@ private:
 					this->next();
 
 					//|----------<update>----------|
+					ast.type = type::I32;
 					ast.data = std::move(tkn->data);
-					ast.type = std::move(data::I32);
 					//|----------------------------|
 
 					return std::make_unique

@@ -18,13 +18,19 @@
 
 #include "models/str.hpp"
 
-#include "utils/convert.hpp"
-
 #include "traits/printable.hpp"
 #include "traits/rule_of_5.hpp"
 #include "traits/visitable.hpp"
 
-enum class data : uint8_t
+#ifndef _MSC_VER
+	#include "llvm/IR/LLVMContext.h"
+	#include "llvm/IR/IRBuilder.h"
+	#include "llvm/IR/Constants.h"
+	#include "llvm/IR/Module.h"
+	#include "llvm/IR/Type.h"
+#endif //MSC_VER
+
+enum class type : uint8_t
 {
 	//|----------------|
 	//| signed integer |
@@ -48,15 +54,11 @@ enum class data : uint8_t
 	//|------------------|
 	//| other data types |
 	//|------------------|
-	CODE,
 	BOOL,
 	WORD,
-	//|-----------------|
-	//| string storages |
-	//|-----------------|
-	UTF8,
-	UTF16,
-	UTF32,
+	CODE,
+	TEXT,
+	NONE,
 };
 
 // lhs(prefix) operator
@@ -94,11 +96,6 @@ typedef std::variant
 >
 decl;
 
-typedef std::unique_ptr<$fun> fun_t;
-typedef std::unique_ptr<$var> var_t;
-typedef std::unique_ptr<$model> model_t;
-typedef std::unique_ptr<$trait> trait_t;
-
 typedef std::variant
 <
 	std::unique_ptr<struct $if>,
@@ -110,14 +107,6 @@ typedef std::variant
 	std::unique_ptr<struct $continue>
 >
 stmt;
-
-typedef std::unique_ptr<$if> if_t;
-typedef std::unique_ptr<$for> for_t;
-typedef std::unique_ptr<$match> match_t;
-typedef std::unique_ptr<$while> while_t;
-typedef std::unique_ptr<$break> break_t;
-typedef std::unique_ptr<$return> return_t;
-typedef std::unique_ptr<$continue> continue_t;
 
 typedef std::variant
 <
@@ -131,20 +120,14 @@ typedef std::variant
 >
 expr;
 
-typedef std::unique_ptr<$unary> unary_t;
-typedef std::unique_ptr<$binary> binary_t;
-typedef std::unique_ptr<$literal> literal_t;
-typedef std::unique_ptr<$symbol> symbol_t;
-typedef std::unique_ptr<$access> access_t;
-typedef std::unique_ptr<$group> group_t;
-typedef std::unique_ptr<$call> call_t;
-
 typedef std::variant
 <
+	// decl
 	std::unique_ptr<struct $fun>,
 	std::unique_ptr<struct $var>,
 	std::unique_ptr<struct $model>,
 	std::unique_ptr<struct $trait>,
+	// smt
 	std::unique_ptr<struct $if>,
 	std::unique_ptr<struct $for>,
 	std::unique_ptr<struct $match>,
@@ -152,6 +135,7 @@ typedef std::variant
 	std::unique_ptr<struct $break>,
 	std::unique_ptr<struct $return>,
 	std::unique_ptr<struct $continue>,
+	// expr
 	std::unique_ptr<struct $unary>,
 	std::unique_ptr<struct $binary>,
 	std::unique_ptr<struct $literal>,
@@ -162,23 +146,19 @@ typedef std::variant
 >
 node;
 
-#define only(T)        T        
-#define many(T) std::vector<T>  
-#define some(T) std::optional<T>
+                /**\------------------\**/
+#define only(T) /**/         T        /**/
+#define many(T) /**/  std::vector<T>  /**/
+#define some(T) /**/ std::optional<T> /**/
+                /**\------------------\**/
 
 typedef std::vector<node> body;
-
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
 
 //|---------------|
 //| variant::decl |
 //|---------------|
 
-struct $fun : public span, public traits::visitable<$fun>
+struct $fun : public span, public trait::visitable<$fun>
 {
 	//|---------|
 	bool is_pure;
@@ -197,7 +177,7 @@ struct $fun : public span, public traits::visitable<$fun>
 	MOVE_ASSIGNMENT($fun) = default;
 };
 
-struct $var : public span, public traits::visitable<$var>
+struct $var : public span, public trait::visitable<$var>
 {
 	//|----------|
 	bool is_const;
@@ -215,7 +195,7 @@ struct $var : public span, public traits::visitable<$var>
 	MOVE_ASSIGNMENT($var) = default;
 };
 
-struct $model : public span, public traits::visitable<$model>
+struct $model : public span, public trait::visitable<$model>
 {
 	only(utf8) name;
 	many($var) body;
@@ -229,7 +209,7 @@ struct $model : public span, public traits::visitable<$model>
 	MOVE_ASSIGNMENT($model) = default;
 };
 
-struct $trait : public span, public traits::visitable<$trait>
+struct $trait : public span, public trait::visitable<$trait>
 {
 	only(utf8) name;
 	many($fun) body;
@@ -247,7 +227,7 @@ struct $trait : public span, public traits::visitable<$trait>
 //| variant::stmt |
 //|---------------|
 
-struct $if : public span, public traits::visitable<$if>
+struct $if : public span, public trait::visitable<$if>
 {
 	many(expr) cases;
 	many(body) block;
@@ -261,7 +241,7 @@ struct $if : public span, public traits::visitable<$if>
 	MOVE_ASSIGNMENT($if) = default;
 };
 
-struct $for : public span, public traits::visitable<$for>
+struct $for : public span, public trait::visitable<$for>
 {
 	only(expr) setup;
 	only(expr) input;
@@ -277,7 +257,7 @@ struct $for : public span, public traits::visitable<$for>
 	MOVE_ASSIGNMENT($for) = default;
 };
 
-struct $match : public span, public traits::visitable<$match>
+struct $match : public span, public trait::visitable<$match>
 {
 	only(expr) input;
 	many(expr) cases;
@@ -292,7 +272,7 @@ struct $match : public span, public traits::visitable<$match>
 	MOVE_ASSIGNMENT($match) = default;
 };
 
-struct $while : public span, public traits::visitable<$while>
+struct $while : public span, public trait::visitable<$while>
 {
 	only(expr) input;
 	only(body) block;
@@ -306,7 +286,7 @@ struct $while : public span, public traits::visitable<$while>
 	MOVE_ASSIGNMENT($while) = default;
 };
 
-struct $break : public span, public traits::visitable<$break>
+struct $break : public span, public trait::visitable<$break>
 {
 	some(utf8) label;
 
@@ -319,7 +299,7 @@ struct $break : public span, public traits::visitable<$break>
 	MOVE_ASSIGNMENT($break) = default;
 };
 
-struct $return : public span, public traits::visitable<$return>
+struct $return : public span, public trait::visitable<$return>
 {
 	some(expr) value;
 
@@ -332,7 +312,7 @@ struct $return : public span, public traits::visitable<$return>
 	MOVE_ASSIGNMENT($return) = default;
 };
 
-struct $continue : public span, public traits::visitable<$continue>
+struct $continue : public span, public trait::visitable<$continue>
 {
 	some(utf8) label;
 
@@ -349,7 +329,7 @@ struct $continue : public span, public traits::visitable<$continue>
 //| variant::expr |
 //|---------------|
 
-struct $unary : public span, public traits::visitable<$unary>
+struct $unary : public span, public trait::visitable<$unary>
 {
 	only(op_l) opr;
 	only(expr) rhs;
@@ -363,7 +343,7 @@ struct $unary : public span, public traits::visitable<$unary>
 	MOVE_ASSIGNMENT($unary) = default;
 };
 
-struct $binary : public span, public traits::visitable<$binary>
+struct $binary : public span, public trait::visitable<$binary>
 {
 	only(op_i) opr;
 	only(expr) lhs;
@@ -378,9 +358,9 @@ struct $binary : public span, public traits::visitable<$binary>
 	MOVE_ASSIGNMENT($binary) = default;
 };
 
-struct $literal : public span, public traits::visitable<$literal>
+struct $literal : public span, public trait::visitable<$literal>
 {
-	only(data) type;
+	only(type) type;
 	only(utf8) data;
 
 	COPY_CONSTRUCTOR($literal) = delete;
@@ -392,7 +372,7 @@ struct $literal : public span, public traits::visitable<$literal>
 	MOVE_ASSIGNMENT($literal) = default;
 };
 
-struct $symbol : public span, public traits::visitable<$symbol>
+struct $symbol : public span, public trait::visitable<$symbol>
 {
 	only(utf8) name;
 
@@ -405,7 +385,7 @@ struct $symbol : public span, public traits::visitable<$symbol>
 	MOVE_ASSIGNMENT($symbol) = default;
 };
 
-struct $access : public span, public traits::visitable<$access>
+struct $access : public span, public trait::visitable<$access>
 {
 	only(op_r) type;
 	only(expr) expr;
@@ -420,7 +400,7 @@ struct $access : public span, public traits::visitable<$access>
 	MOVE_ASSIGNMENT($access) = default;
 };
 
-struct $group : public span, public traits::visitable<$group>
+struct $group : public span, public trait::visitable<$group>
 {
 	only(expr) expr;
 
@@ -433,7 +413,7 @@ struct $group : public span, public traits::visitable<$group>
 	MOVE_ASSIGNMENT($group) = default;
 };
 
-struct $call : public span, public traits::visitable<$call>
+struct $call : public span, public trait::visitable<$call>
 {
 	only(expr) self;
 	many(expr) args;
@@ -449,20 +429,18 @@ struct $call : public span, public traits::visitable<$call>
 
 template
 <
-	typename A,
-	typename B
+	class A,
+	class B
 >
 inline constexpr auto is_l(const token<A, B>& tkn) -> bool
 {
 	switch (tkn.type)
 	{
-		#define macro(K, V)  \
-		/*|---------------|*/\
-		case atom::K:        \
-		{                    \
-			return true;     \
-		}                    \
-		/*|---------------|*/\
+		#define macro(K, V) \
+		case atom::K:       \
+		{                   \
+		    return true;    \
+		}                   \
 	
 		case atom::ADD:
 		{
@@ -483,20 +461,18 @@ inline constexpr auto is_l(const token<A, B>& tkn) -> bool
 
 template
 <
-	typename A,
-	typename B
+	class A,
+	class B
 >
 inline constexpr auto to_l(const token<A, B>& tkn) -> op_l
 {
 	switch (tkn.type)
 	{
-		#define macro(K, V)  \
-		/*|---------------|*/\
-		case atom::K:        \
-		{                    \
-			return op_l::K;  \
-		}                    \
-		/*|---------------|*/\
+		#define macro(K, V) \
+		case atom::K:       \
+		{                   \
+		    return op_l::K; \
+		}                   \
 	
 		case atom::ADD:
 		{
@@ -518,20 +494,18 @@ inline constexpr auto to_l(const token<A, B>& tkn) -> op_l
 
 template
 <
-	typename A,
-	typename B
+	class A,
+	class B
 >
 inline constexpr auto is_i(const token<A, B>& tkn) -> bool
 {
 	switch (tkn.type)
 	{
-		#define macro(K, V)  \
-		/*|---------------|*/\
-		case atom::K:        \
-		{                    \
-			return true;     \
-		}                    \
-		/*|---------------|*/\
+		#define macro(K, V) \
+		case atom::K:       \
+		{                   \
+		    return true;    \
+		}                   \
 	
 		operator_i(macro)
 		#undef macro
@@ -544,20 +518,18 @@ inline constexpr auto is_i(const token<A, B>& tkn) -> bool
 
 template
 <
-	typename A,
-	typename B
+	class A,
+	class B
 >
 inline constexpr auto to_i(const token<A, B>& tkn) -> op_i
 {
 	switch (tkn.type)
 	{
-		#define macro(K, V)  \
-		/*|---------------|*/\
-		case atom::K:        \
-		{                    \
-			return op_i::K;  \
-		}                    \
-		/*|---------------|*/\
+		#define macro(K, V) \
+		case atom::K:       \
+		{                   \
+		    return op_i::K; \
+		}                   \
 	
 		operator_i(macro)
 		#undef macro
@@ -571,20 +543,18 @@ inline constexpr auto to_i(const token<A, B>& tkn) -> op_i
 
 template
 <
-	typename A,
-	typename B
+	class A,
+	class B
 >
 inline constexpr auto is_r(const token<A, B>& tkn) -> bool
 {
 	switch (tkn.type)
 	{
-		#define macro(K, V)  \
-		/*|---------------|*/\
-		case atom::K:        \
-		{                    \
-			return true;     \
-		}                    \
-		/*|---------------|*/\
+		#define macro(K, V) \
+		case atom::K:       \
+		{                   \
+		    return true;    \
+		}                   \
 	
 		operator_r(macro)
 		#undef macro
@@ -597,20 +567,18 @@ inline constexpr auto is_r(const token<A, B>& tkn) -> bool
 
 template
 <
-	typename A,
-	typename B
+	class A,
+	class B
 >
 inline constexpr auto to_r(const token<A, B>& tkn) -> op_r
 {
 	switch (tkn.type)
 	{
-		#define macro(K, V)  \
-		/*|---------------|*/\
-		case atom::K:        \
-		{                    \
-			return op_r::K;  \
-		}                    \
-		/*|---------------|*/\
+		#define macro(K, V) \
+		case atom::K:       \
+		{                   \
+		    return op_r::K; \
+		}                   \
 	
 		operator_r(macro)
 		#undef macro
@@ -622,73 +590,61 @@ inline constexpr auto to_r(const token<A, B>& tkn) -> op_r
 	}
 }
 
-inline constexpr auto operator<<(std::ostream& os, const data value) -> std::ostream&
+inline constexpr auto operator<<(std::ostream& os, const type value) -> std::ostream&
 {
 	switch (value)
 	{
-		case data::I8:
+		case type::I8:
 		{
 			return os << "i8";
 		}
-		case data::I16:
+		case type::I16:
 		{
 			return os << "i16";
 		}
-		case data::I32:
+		case type::I32:
 		{
 			return os << "i32";
 		}
-		case data::I64:
+		case type::I64:
 		{
 			return os << "i64";
 		}
-		case data::U8:
+		case type::U8:
 		{
 			return os << "u8";
 		}
-		case data::U16:
+		case type::U16:
 		{
 			return os << "u16";
 		}
-		case data::U32:
+		case type::U32:
 		{
 			return os << "u32";
 		}
-		case data::U64:
+		case type::U64:
 		{
 			return os << "u64";
 		}
-		case data::F32:
+		case type::F32:
 		{
 			return os << "f32";
 		}
-		case data::F64:
+		case type::F64:
 		{
 			return os << "f64";
 		}
-		case data::CODE:
+		case type::CODE:
 		{
 			return os << "code";
 		}
-		case data::BOOL:
+		case type::BOOL:
 		{
 			return os << "bool";
 		}
-		case data::WORD:
+		case type::WORD:
 		{
 			return os << "word";
-		}
-		case data::UTF8:
-		{
-			return os << "utf8";
-		}
-		case data::UTF16:
-		{
-			return os << "utf16";
-		}
-		case data::UTF32:
-		{
-			return os << "utf32";
 		}
 		default:
 		{
@@ -703,12 +659,10 @@ inline constexpr auto operator<<(std::ostream& os, const op_l value) -> std::ost
 	switch (value)
 	{
 		#define macro(K, V)  \
-		/*|---------------|*/\
 		case op_l::K:        \
 		{                    \
-			return os << #K; \
+		    return os << #K; \
 		}                    \
-		/*|---------------|*/\
 
 		case op_l::ADD:
 		{
@@ -733,12 +687,10 @@ inline constexpr auto operator<<(std::ostream& os, const op_i value) -> std::ost
 	switch (value)
 	{
 		#define macro(K, V)  \
-		/*|---------------|*/\
 		case op_i::K:        \
 		{                    \
-			return os << #K; \
+		    return os << #K; \
 		}                    \
-		/*|---------------|*/\
 
 		operator_i(macro)
 		#undef macro
@@ -755,12 +707,10 @@ inline constexpr auto operator<<(std::ostream& os, const op_r value) -> std::ost
 	switch (value)
 	{
 		#define macro(K, V)  \
-		/*|---------------|*/\
 		case op_r::K:        \
 		{                    \
-			return os << #K; \
+		    return os << #K; \
 		}                    \
-		/*|---------------|*/\
 
 		operator_r(macro)
 		#undef macro
@@ -774,14 +724,12 @@ inline constexpr auto operator<<(std::ostream& os, const op_r value) -> std::ost
 
 template
 <
-	type::string A,
-	type::string B
+	model::text A,
+	model::text B
 >
 struct program
 {
-	//|-------<chore>-------|
 	typedef error<A, B> segf;
-	//|---------------------|
 
 	only(body) entry;
 	many(segf) issue;
@@ -794,152 +742,240 @@ struct program
 	COPY_ASSIGNMENT(program) = delete;
 	MOVE_ASSIGNMENT(program) = default;
 
+	//|-----------------|
+	//| member function |
+	//|-----------------|
+
 	inline constexpr auto compile()
 	{
-		#ifndef NDEBUG //--------------|
-		program::printer()(this->entry);
-		#endif //----------------------|
-
-		for (auto&& error : this->issue)
+		#ifndef NDEBUG //---------|
+		std::cout << *this << '\n';
+		#endif //-----------------|
+		
+		for (auto& error : this->issue)
 		{
 			std::cout << error << '\n';
 		}
 
-		llvm::LLVMContext context {       };
-		llvm::IRBuilder<> builder {context};
+		#ifndef _MSC_VER
+		{
+			llvm::LLVMContext context {       };
+			llvm::IRBuilder<> builder {context};
 
-		//|----------<lookup table>--------|
-		std::map<utf8, llvm::Type*> registry;
-		//|--------------------------------|
+			//|-------------<table>-------------|
+			std::map<utf8, llvm::Type*> registry;
+			//|---------------------------------|
 
-		llvm::Module module {"main", context};
+			llvm::Module module {"main", context};
 
-		registry[u8"i8"] = llvm::Type::getInt8Ty(context);
-		registry[u8"i16"] = llvm::Type::getInt16Ty(context);
-		registry[u8"i32"] = llvm::Type::getInt32Ty(context);
-		registry[u8"i64"] = llvm::Type::getInt64Ty(context);
+			registry[u8"i8"] = llvm::Type::getInt8Ty(context);
+			registry[u8"i8*"] = llvm::Type::getInt8Ty(context)->getPointerTo();
+			registry[u8"i16"] = llvm::Type::getInt16Ty(context);
+			registry[u8"i16*"] = llvm::Type::getInt8Ty(context)->getPointerTo();
+			registry[u8"i32"] = llvm::Type::getInt32Ty(context);
+			registry[u8"i32*"] = llvm::Type::getInt8Ty(context)->getPointerTo();
+			registry[u8"i64"] = llvm::Type::getInt64Ty(context);
+			registry[u8"i64*"] = llvm::Type::getInt8Ty(context)->getPointerTo();
 
-		registry[u8"f32"] = llvm::Type::getFloatTy(context);
-		registry[u8"f64"] = llvm::Type::getDoubleTy(context);
+			registry[u8"f32"] = llvm::Type::getFloatTy(context);
+			registry[u8"f32*"] = llvm::Type::getFloatTy(context)->getPointerTo();
+			registry[u8"f64"] = llvm::Type::getDoubleTy(context);
+			registry[u8"f64*"] = llvm::Type::getDoubleTy(context)->getPointerTo();
 
-		registry[u8"u8"] = llvm::Type::getInt8Ty(context);
-		registry[u8"u16"] = llvm::Type::getInt16Ty(context);
-		registry[u8"u32"] = llvm::Type::getInt32Ty(context);
-		registry[u8"u64"] = llvm::Type::getInt64Ty(context);
+			registry[u8"u8"] = llvm::Type::getInt8Ty(context);
+			registry[u8"u8*"] = llvm::Type::getInt8Ty(context)->getPointerTo();
+			registry[u8"u16"] = llvm::Type::getInt16Ty(context);
+			registry[u8"u16*"] = llvm::Type::getInt16Ty(context)->getPointerTo();
+			registry[u8"u32"] = llvm::Type::getInt32Ty(context);
+			registry[u8"u32*"] = llvm::Type::getInt32Ty(context)->getPointerTo();
+			registry[u8"u64"] = llvm::Type::getInt64Ty(context);
+			registry[u8"u64*"] = llvm::Type::getInt64Ty(context)->getPointerTo();
 
-		registry[u8"none"] = llvm::Type::getVoidTy(context);
+			registry[u8"bool"] = llvm::Type::getInt1Ty(context);
+			registry[u8"bool*"] = llvm::Type::getInt1Ty(context)->getPointerTo();
+			registry[u8"code"] = llvm::Type::getInt32Ty(context);
+			registry[u8"code*"] = llvm::Type::getInt32Ty(context)->getPointerTo();
+			registry[u8"none"] = llvm::Type::getVoidTy(context);
+			registry[u8"none*"] = llvm::Type::getVoidTy(context)->getPointerTo();
 
-		program::bind(*this, context, builder, module, registry);
-		program::lint(*this, context, builder, module, registry);
-	}
-
-private:
-
-	static constexpr auto bind(program<A, B>& exe, llvm::LLVMContext& context, llvm::IRBuilder<>& builder, llvm::Module& module, std::map<utf8, llvm::Type*>& registry)
-	{
-		//|--------------|
-		//| step 1. decl |
-		//|--------------|
-
-		overrides
-		(
-			program::reflect(),
-
-			[&](auto& self, const $model& ast) -> void
+			// get size of 1 WORD
+			switch (sizeof(void*) * 8)
 			{
-				registry[ast.name] = llvm::StructType::create
-				(
-					//|-------------------------------------------|
-					                    context,
-					//|-------------------------------------------|
-					reinterpret_cast<const char*>(ast.name.c_str())
-				);
+				case 16: { registry[u8"word"] = llvm::Type::getInt16Ty(context); break; }
+				case 32: { registry[u8"word"] = llvm::Type::getInt32Ty(context); break; }
+				case 64: { registry[u8"word"] = llvm::Type::getInt64Ty(context); break; }
 			}
-		)
-		(exe.entry);
 
-		//|----------------|
-		//| step 2. define |
-		//|----------------|
+			//|--------------|
+			//| step 1. decl |
+			//|--------------|
 
-		overrides
-		(
-			program::reflect(),
+			overrides
+			(
+				program::reflect(),
 
-			[&](auto& self, const $model& ast) -> void
-			{
-				llvm::cast<llvm::StructType>(registry[ast.name])->setBody
-				(
+				[&](auto& self, const $model& ast) -> void
+				{
+					registry[ast.name] = llvm::StructType::create
 					(
-						//|-----------------------------------------|
-						                    ast.body
-						//|-----------------------------------------|
-						| std::views::transform([&](const $var& node)
+						context, ast.name.operator const char*()
+					);
+				}
+			)
+			(this->entry);
+
+			overrides
+			(
+				program::reflect(),
+
+				[&](auto& self, const $fun& ast) -> void
+				{
+					llvm::Function::Create
+					(
+						llvm::FunctionType::get
+						(
+							registry[ast.type],
+							(
+								/**\-------------------------------------\**/
+								/**/                ast.args             /**/
+								/**\-------------------------------------\**/
+								| std::views::transform([&](const $var& node)
+								{
+									assert(registry.contains(node.type));
+									return registry[node.type]; // exist
+								})
+								| std::ranges::to<std::vector<llvm::Type*>>()
+							),
+							false // is_varags
+						),
+						llvm::Function::ExternalLinkage,
+						ast.name.operator const char*(),
+						/**\------------------------\**/
+						/**/         module         /**/
+						/**\------------------------\**/
+					);
+				}
+			)
+			(this->entry);
+
+			//|----------------|
+			//| step 2. define |
+			//|----------------|
+
+			overrides
+			(
+				program::reflect(),
+
+				[&](auto& self, const $model& ast) -> void
+				{
+					llvm::cast<llvm::StructType>(registry[ast.name])->setBody
+					(
+						(
+							/**\-------------------------------------\**/
+							/**/               ast.body              /**/
+							/**\-------------------------------------\**/
+							| std::views::transform([&](const $var& node)
+							{
+								assert(registry.contains(node.type));
+								return registry[node.type]; // exist
+							})
+							| std::ranges::to<std::vector<llvm::Type*>>()
+						),
+						false // is_packed
+					);
+				}
+			)
+			(this->entry);
+
+			overrides
+			(
+				program::reflect(),
+
+				[&](auto& self, const $fun& ast) -> void
+				{
+					auto* fun {module.getFunction(ast.name.operator const char*())};
+					assert(fun != nullptr); // sanity check
+					auto* blk {llvm::BasicBlock::Create(context, "__entry__", fun)};
+					assert(blk != nullptr); // sanity check
+
+					//|------------------<table>------------------|
+					std::vector<std::map<utf8, llvm::Value*>> scope;
+					//|-------------------------------------------|
+
+					              /**\-----------------------\**/
+					#define ENTER /**/ scope.emplace_back(); /**/
+					#define LEAVE /**/   scope.pop_back();   /**/
+					              /**\-----------------------\**/
+					
+					builder.SetInsertPoint(blk);
+
+					ENTER
+					{
+						for (auto [i, e] : std::views::enumerate(fun->args()))
 						{
-							return registry[node.type];
-						})
-						| std::ranges::to<std::vector<llvm::Type*>>()
-					),
-					false
-				);
-			}
-		)
-		(exe.entry);
-	}
+							e.setName(ast.args[i].name.operator const char*());
+							/**\------------------------------------------\**/
+							/**/   scope.back()[ast.args[i].name] = &e;   /**/
+							/**\------------------------------------------\**/
+						}
+					}
+					LEAVE
+				}
+			)
+			(this->entry);
 
-	static constexpr auto lint(program<A, B>& exe, llvm::LLVMContext& context, llvm::IRBuilder<>& builder, llvm::Module& module, std::map<utf8, llvm::Type*>& registry)
-	{
-		//|--------------|
-		//| step 1. scan |
-		//|--------------|
-
-		// TODO
-
-		//|----------------|
-		//| step 2. report |
-		//|----------------|
-
-		// TODO
+			module.print(llvm::outs(), nullptr);
+		}
+		#endif //MSC_VER
 	}
 
 	static constexpr auto reflect()
 	{
-		return anchor{visitor
+		return recurse{visitor
 		{
-			//|-------------------------------------------<double dispatch>-------------------------------------------|
-			[=](auto& self, const only(decl)& ast) -> void { std::visit([&](auto&& ptr) { ptr->accept(self); }, ast); },
-			[=](auto& self, const only(stmt)& ast) -> void { std::visit([&](auto&& ptr) { ptr->accept(self); }, ast); },
-			[=](auto& self, const only(expr)& ast) -> void { std::visit([&](auto&& ptr) { ptr->accept(self); }, ast); },
-			[=](auto& self, const only(node)& ast) -> void { std::visit([&](auto&& ptr) { ptr->accept(self); }, ast); },
-			//|-------------------------------------------------------------------------------------------------------|
-
-			[=]<typename T>(auto& self, const many(T)& ast) -> void
+			[](auto& self, const only(decl)& ast) -> void
+			{
+				std::visit([&](auto&& ptr) { ptr->accept(self); }, ast);
+			},
+			[](auto& self, const only(stmt)& ast) -> void
+			{
+				std::visit([&](auto&& ptr) { ptr->accept(self); }, ast);
+			},
+			[](auto& self, const only(expr)& ast) -> void
+			{
+				std::visit([&](auto&& ptr) { ptr->accept(self); }, ast);
+			},
+			[](auto& self, const only(node)& ast) -> void
+			{
+				std::visit([&](auto&& ptr) { ptr->accept(self); }, ast);
+			},
+			[]<class T>(auto& self, const many(T)& ast) -> void
 			{
 				for (auto& node : ast) { self(node); }
 			},
-			[=]<typename T>(auto& self, const some(T)& ast) -> void
+			[]<class T>(auto& self, const some(T)& ast) -> void
 			{
-				if (/*⩊*/ ast /*⩊*/ ) { self(*ast); }
+				if (/*&&*/ ast /*&&*/) { self(*ast); }
 			},
 
 			//|---------------|
 			//| variant::decl |
 			//|---------------|
 
-			[=](auto& self, const $fun& ast) -> void
+			[](auto& self, const $fun& ast) -> void
 			{
 				self(ast.args);
 				self(ast.body);
 			},
-			[=](auto& self, const $var& ast) -> void
+			[](auto& self, const $var& ast) -> void
 			{
 				self(ast.init);
 			},
-			[=](auto& self, const $model& ast) -> void
+			[](auto& self, const $model& ast) -> void
 			{
 				self(ast.body);
 			},
-			[=](auto& self, const $trait& ast) -> void
+			[](auto& self, const $trait& ast) -> void
 			{
 				self(ast.body);
 			},
@@ -948,38 +984,38 @@ private:
 			//| variant::stmt |
 			//|---------------|
 
-			[=](auto& self, const $if& ast) -> void
+			[](auto& self, const $if& ast) -> void
 			{
 				self(ast.cases);
 				self(ast.block);
 			},
-			[=](auto& self, const $for& ast) -> void
+			[](auto& self, const $for& ast) -> void
 			{
 				self(ast.setup);
 				self(ast.input);
 				self(ast.after);
 				self(ast.block);
 			},
-			[=](auto& self, const $match& ast) -> void
+			[](auto& self, const $match& ast) -> void
 			{
 				self(ast.input);
 				self(ast.cases);
 				self(ast.block);
 			},
-			[=](auto& self, const $while& ast) -> void
+			[](auto& self, const $while& ast) -> void
 			{
 				self(ast.input);
 				self(ast.block);
 			},
-			[=](auto& self, const $break& ast) -> void
+			[](auto& self, const $break& ast) -> void
 			{
 				// no inner ast
 			},
-			[=](auto& self, const $return& ast) -> void
+			[](auto& self, const $return& ast) -> void
 			{
 				self(ast.value);
 			},
-			[=](auto& self, const $continue& ast) -> void
+			[](auto& self, const $continue& ast) -> void
 			{
 				// no inner ast
 			},
@@ -988,32 +1024,32 @@ private:
 			//| variant::expr |
 			//|---------------|
 
-			[=](auto& self, const $unary& ast) -> void
+			[](auto& self, const $unary& ast) -> void
 			{
 				self(ast.rhs);
 			},
-			[=](auto& self, const $binary& ast) -> void
+			[](auto& self, const $binary& ast) -> void
 			{
 				self(ast.lhs);
 				self(ast.rhs);
 			},
-			[=](auto& self, const $literal& ast) -> void
+			[](auto& self, const $literal& ast) -> void
 			{
 				// no inner ast
 			},
-			[=](auto& self, const $symbol& ast) -> void
+			[](auto& self, const $symbol& ast) -> void
 			{
 				// no inner ast
 			},
-			[=](auto& self, const $access& ast) -> void
+			[](auto& self, const $access& ast) -> void
 			{
 				self(ast.expr);
 			},
-			[=](auto& self, const $group& ast) -> void
+			[](auto& self, const $group& ast) -> void
 			{
 				self(ast.expr);
 			},
-			[=](auto& self, const $call& ast) -> void
+			[](auto& self, const $call& ast) -> void
 			{
 				self(ast.args);
 				self(ast.self);
@@ -1021,131 +1057,142 @@ private:
 		}};
 	}
 
-	static constexpr auto printer()
+	//|---------------------|
+	//| trait::printable<T> |
+	//|---------------------|
+
+	friend constexpr auto operator<<(std::ostream& os, const program<A, B>& exe) -> std::ostream&
 	{
-		//|--------------<state>--------------|
-		auto tab {std::make_shared<size_t>(0)};
-		//|-----------------------------------|
+		#define GAP for \
+		(               \
+		    auto i {0}  \
+		    ;           \
+		    i < tab     \
+		    ;           \
+		    i = i + 1   \
+		)               \
+		{               \
+		    os << "\t"; \
+		}               \
 
-		#define GAP                           \
-		{                                     \
-			for (size_t i {0}; i < *tab; ++i) \
-			{/*⩊*/ std::cout << "\t"; /*⩊*/} \
-		}                                     \
+		#define START   \
+		{               \
+		    os << "\n"; \
+		    GAP; ++tab; \
+		    os << "{{"; \
+		    os << "\n"; \
+		}               \
 
-		#define START          /*|---------|*/\
-		{                      /*| lorem.. |*/\
-			std::cout << "\n"; /*| ..ipsum |*/\
-			GAP; ++(*tab);     /*| lorem.. |*/\
-			std::cout << "{{"; /*| ..ipsum |*/\
-			std::cout << "\n"; /*| lorem.. |*/\
-		}                      /*|---------|*/\
+		#define CLOSE   \
+		{               \
+		    --tab; GAP; \
+		    os << "}}"; \
+		    os << "\n"; \
+		}               \
 
-		#define CLOSE          /*|---------|*/\
-		{                      /*| lorem.. |*/\
-			--(*tab); GAP;     /*| ..ipsum |*/\
-			std::cout << "}}"; /*| lorem.. |*/\
-			std::cout << "\n"; /*| ..ipsum |*/\
-		}                      /*|---------|*/\
+		size_t tab {0};
 
-		return anchor{visitor
-		{
-			//|-------------------------------------------<double dispatch>-------------------------------------------|
-			[=](auto& self, const only(decl)& ast) -> void { std::visit([&](auto&& ptr) { ptr->accept(self); }, ast); },
-			[=](auto& self, const only(stmt)& ast) -> void { std::visit([&](auto&& ptr) { ptr->accept(self); }, ast); },
-			[=](auto& self, const only(expr)& ast) -> void { std::visit([&](auto&& ptr) { ptr->accept(self); }, ast); },
-			[=](auto& self, const only(node)& ast) -> void { std::visit([&](auto&& ptr) { ptr->accept(self); }, ast); },
-			//|-------------------------------------------------------------------------------------------------------|
+		overrides
+		(
+			program::reflect(),
 
-			[=](auto&, const traits::printable auto& ast) -> void
-			{
-				std::cout << "\033[33m" << ast << "\033[0m\n";
-			},
-			[=]<typename T>(auto& self, const many(T)& ast) -> void
+			//|-----------------|
+			//| generic visitor |
+			//|-----------------|
+
+			[&]<class T>(auto& self, const many(T)& ast) -> void
 			{
 				if (!ast.empty())
 				{
-					size_t count {0};
+					size_t i {0};
 
-					for (const auto& node : ast)
+					for (auto& node : ast)
 					{
-						self(node); // <- recurse
+						//|----<recurse>----|
+						      self(node);
+						//|-----------------|
 
-						if (++count < ast.size())
+						if (++i < ast.size())
 						{
-							GAP; std::cout << "&&";
+							GAP; os << "&&";
 						}
 					}
 				}
 				else
 				{
-					std::cout << "\033[36m" << "none" << "\033[0m\n";
+					os << "\033[36m" << "none" << "\033[0m\n";
 				}
 			},
-			[=]<typename T>(auto& self, const some(T)& ast) -> void
+			[&]<class T>(auto& self, const some(T)& ast) -> void
 			{
 				if (ast)
 				{
-					self(*ast); // <- unwrap std::optional & recurse
+					//|----<recurse>----|
+					      self(*ast);
+					//|-----------------|
 				}
 				else
 				{
-					std::cout << "\033[36m" << "none" << "\033[0m\n";
+					os << "\033[36m" << "none" << "\033[0m\n";
 				}
+			},
+			[&](auto& self, const trait::printable auto& ast) -> void
+			{
+				os << "\033[33m" << ast << "\033[0m\n";
 			},
 
 			//|---------------|
 			//| variant::decl |
 			//|---------------|
 
-			[=](auto& self, const $fun& ast) -> void
+			[&](auto& self, const $fun& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "fun" << "\033[0m\n";
-					//|---------------------------------------|
-					GAP; std::cout << "name: "; self(ast.name);
-					GAP; std::cout << "args: "; self(ast.args);
-					GAP; std::cout << "type: "; self(ast.type);
-					GAP; std::cout << "body: "; self(ast.body);
-					//|---------------------------------------|
+					GAP; os << "\033[36m" << "fun" << "\033[0m\n";
+					//|--------------------------------|
+					GAP; os << "name: "; self(ast.name);
+					GAP; os << "args: "; self(ast.args);
+					GAP; os << "type: "; self(ast.type);
+					GAP; os << "body: "; self(ast.body);
+					//|--------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $var& ast) -> void
+			[&](auto& self, const $var& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "var" << "\033[0m\n";
-					//|---------------------------------------|
-					GAP; std::cout << "name: "; self(ast.name);
-					GAP; std::cout << "type: "; self(ast.type);
-					GAP; std::cout << "init: "; self(ast.init);
-					//|---------------------------------------|
+					GAP; os << "\033[36m" << "var" << "\033[0m\n";
+					//|--------------------------------|
+					GAP; os << "name: "; self(ast.name);
+					GAP; os << "type: "; self(ast.type);
+					GAP; os << "init: "; self(ast.init);
+					//|--------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $model& ast) -> void
+			[&](auto& self, const $model& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "model" << "\033[0m\n";
-					//|---------------------------------------|
-					GAP; std::cout << "name: "; self(ast.name);
-					GAP; std::cout << "type: "; self(ast.body);
-					//|---------------------------------------|
+					GAP; os << "\033[36m" << "model" << "\033[0m\n";
+					//|--------------------------------|
+					GAP; os << "name: "; self(ast.name);
+					GAP; os << "type: "; self(ast.body);
+					//|--------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $trait& ast) -> void
+			[&](auto& self, const $trait& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "trait" << "\033[0m\n";
-					//|---------------------------------------|
-					GAP; std::cout << "name: "; self(ast.name);
-					GAP; std::cout << "type: "; self(ast.body);
-					//|---------------------------------------|
+					GAP; os << "\033[36m" << "trait" << "\033[0m\n";
+					//|--------------------------------|
+					GAP; os << "name: "; self(ast.name);
+					GAP; os << "type: "; self(ast.body);
+					//|--------------------------------|
 				}
 				CLOSE;
 			},
@@ -1154,87 +1201,87 @@ private:
 			//| variant::stmt |
 			//|---------------|
 
-			[=](auto& self, const $if& ast) -> void
+			[&](auto& self, const $if& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "if" << "\033[0m\n";
-					//|-----------------------------------------|
-					GAP; std::cout << "block: "; self(ast.block);
-					GAP; std::cout << "cases: "; self(ast.cases);
-					//|-----------------------------------------|
+					GAP; os << "\033[36m" << "if" << "\033[0m\n";
+					//|----------------------------------|
+					GAP; os << "block: "; self(ast.block);
+					GAP; os << "cases: "; self(ast.cases);
+					//|----------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $for& ast) -> void
+			[&](auto& self, const $for& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "for" << "\033[0m\n";
-					//|-----------------------------------------|
-					GAP; std::cout << "setup: "; self(ast.setup);
-					GAP; std::cout << "input: "; self(ast.input);
-					GAP; std::cout << "after: "; self(ast.after);
-					GAP; std::cout << "block: "; self(ast.block);
-					//|-----------------------------------------|
+					GAP; os << "\033[36m" << "for" << "\033[0m\n";
+					//|----------------------------------|
+					GAP; os << "setup: "; self(ast.setup);
+					GAP; os << "input: "; self(ast.input);
+					GAP; os << "after: "; self(ast.after);
+					GAP; os << "block: "; self(ast.block);
+					//|----------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $match& ast) -> void
+			[&](auto& self, const $match& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "match" << "\033[0m\n";
-					//|-----------------------------------------|
-					GAP; std::cout << "input: "; self(ast.input);
-					GAP; std::cout << "block: "; self(ast.block);
-					GAP; std::cout << "cases: "; self(ast.cases);
-					//|-----------------------------------------|
+					GAP; os << "\033[36m" << "match" << "\033[0m\n";
+					//|----------------------------------|
+					GAP; os << "input: "; self(ast.input);
+					GAP; os << "block: "; self(ast.block);
+					GAP; os << "cases: "; self(ast.cases);
+					//|----------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $while& ast) -> void
+			[&](auto& self, const $while& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "while" << "\033[0m\n";
-					//|-----------------------------------------|
-					GAP; std::cout << "input: "; self(ast.input);
-					GAP; std::cout << "block: "; self(ast.block);
-					//|-----------------------------------------|
+					GAP; os << "\033[36m" << "while" << "\033[0m\n";
+					//|----------------------------------|
+					GAP; os << "input: "; self(ast.input);
+					GAP; os << "block: "; self(ast.block);
+					//|----------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $break& ast) -> void
+			[&](auto& self, const $break& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "break" << "\033[0m\n";
-					//|-----------------------------------------|
-					GAP; std::cout << "label: "; self(ast.label);
-					//|-----------------------------------------|
+					GAP; os << "\033[36m" << "break" << "\033[0m\n";
+					//|----------------------------------|
+					GAP; os << "label: "; self(ast.label);
+					//|----------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $return& ast) -> void
+			[&](auto& self, const $return& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "return" << "\033[0m\n";
-					//|-----------------------------------------|
-					GAP; std::cout << "value: "; self(ast.value);
-					//|-----------------------------------------|
+					GAP; os << "\033[36m" << "return" << "\033[0m\n";
+					//|----------------------------------|
+					GAP; os << "value: "; self(ast.value);
+					//|----------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $continue& ast) -> void
+			[&](auto& self, const $continue& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "continue" << "\033[0m\n";
-					//|-----------------------------------------|
-					GAP; std::cout << "label: "; self(ast.label);
-					//|-----------------------------------------|
+					GAP; os << "\033[36m" << "continue" << "\033[0m\n";
+					//|----------------------------------|
+					GAP; os << "label: "; self(ast.label);
+					//|----------------------------------|
 				}
 				CLOSE;
 			},
@@ -1243,94 +1290,94 @@ private:
 			//| variant::expr |
 			//|---------------|
 
-			[=](auto& self, const $unary& ast) -> void
+			[&](auto& self, const $unary& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "unary" << "\033[0m\n";
-					//|-------------------------------------|
-					GAP; std::cout << "opr: "; self(ast.opr);
-					GAP; std::cout << "rhs: "; self(ast.rhs);
-					//|-------------------------------------|
+					GAP; os << "\033[36m" << "unary" << "\033[0m\n";
+					//|------------------------------|
+					GAP; os << "opr: "; self(ast.opr);
+					GAP; os << "rhs: "; self(ast.rhs);
+					//|------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $binary& ast) -> void
+			[&](auto& self, const $binary& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "binary" << "\033[0m\n";
-					//|-------------------------------------|
-					GAP; std::cout << "opr: "; self(ast.opr);
-					GAP; std::cout << "lhs: "; self(ast.lhs);
-					GAP; std::cout << "rhs: "; self(ast.rhs);
-					//|-------------------------------------|
+					GAP; os << "\033[36m" << "binary" << "\033[0m\n";
+					//|------------------------------|
+					GAP; os << "opr: "; self(ast.opr);
+					GAP; os << "lhs: "; self(ast.lhs);
+					GAP; os << "rhs: "; self(ast.rhs);
+					//|------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $literal& ast) -> void
+			[&](auto& self, const $literal& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "literal" << "\033[0m\n";
-					//|---------------------------------------|
-					GAP; std::cout << "type: "; self(ast.type);
-					GAP; std::cout << "data: "; self(ast.data);
-					//|---------------------------------------|
+					GAP; os << "\033[36m" << "literal" << "\033[0m\n";
+					//|--------------------------------|
+					GAP; os << "type: "; self(ast.type);
+					GAP; os << "data: "; self(ast.data);
+					//|--------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $symbol& ast) -> void
+			[&](auto& self, const $symbol& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "symbol" << "\033[0m\n";
-					//|---------------------------------------|
-					GAP; std::cout << "name: "; self(ast.name);
-					//|---------------------------------------|
+					GAP; os << "\033[36m" << "symbol" << "\033[0m\n";
+					//|--------------------------------|
+					GAP; os << "name: "; self(ast.name);
+					//|--------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $access& ast) -> void
+			[&](auto& self, const $access& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "access" << "\033[0m\n";
-					//|---------------------------------------|
-					GAP; std::cout << "expr: "; self(ast.expr);
-					GAP; std::cout << "type: "; self(ast.type);
-					GAP; std::cout << "name: "; self(ast.name);
-					//|---------------------------------------|
+					GAP; os << "\033[36m" << "access" << "\033[0m\n";
+					//|--------------------------------|
+					GAP; os << "expr: "; self(ast.expr);
+					GAP; os << "type: "; self(ast.type);
+					GAP; os << "name: "; self(ast.name);
+					//|--------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $group& ast) -> void
+			[&](auto& self, const $group& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "group" << "\033[0m\n";
-					//|---------------------------------------|
-					GAP; std::cout << "expr: "; self(ast.expr);
-					//|---------------------------------------|
+					GAP; os << "\033[36m" << "group" << "\033[0m\n";
+					//|--------------------------------|
+					GAP; os << "expr: "; self(ast.expr);
+					//|--------------------------------|
 				}
 				CLOSE;
 			},
-			[=](auto& self, const $call& ast) -> void
+			[&](auto& self, const $call& ast) -> void
 			{
 				START;
 				{
-					GAP; std::cout << "\033[36m" << "call" << "\033[0m\n";
-					//|---------------------------------------|
-					GAP; std::cout << "self: "; self(ast.self);
-					GAP; std::cout << "args: "; self(ast.args);
-					//|---------------------------------------|
+					GAP; os << "\033[36m" << "call" << "\033[0m\n";
+					//|--------------------------------|
+					GAP; os << "self: "; self(ast.self);
+					GAP; os << "args: "; self(ast.args);
+					//|--------------------------------|
 				}
 				CLOSE;
 			}
-		}};
+		)
+		(exe.entry);
 
-		#undef START
-		#undef CLOSE
+		return os;
 	}
 };
 

@@ -45,7 +45,7 @@ namespace utils
 	//| string to integer |
 	//|-------------------|
 
-	inline constexpr auto stoi(const type::string auto& str, const uint8_t radix = 10) -> int64_t
+	inline constexpr auto stoi(const model::text auto& str, const uint8_t radix = 10) -> int64_t
 	{
 		assert(2 <= radix && radix <= 36);
 
@@ -78,30 +78,21 @@ namespace utils
 		}
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto stoi(const char8_t (&str)[N], const uint8_t radix = 10) -> auto
 	{
 		return stoi(utf8 {str}, radix);
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto stoi(const char16_t (&str)[N], const uint8_t radix = 10) -> auto
 	{
 		return stoi(utf16 {str}, radix);
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto stoi(const char32_t (&str)[N], const uint8_t radix = 10) -> auto
 	{
@@ -112,7 +103,7 @@ namespace utils
 	//| string to float |
 	//|-----------------|
 
-	inline constexpr auto stof(const type::string auto& str) -> double
+	inline constexpr auto stof(const model::text auto& str) -> double
 	{
 		auto it {str.begin()};
 		auto ie {str.end()};
@@ -170,30 +161,21 @@ namespace utils
 		}
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto stof(const char8_t (&str)[N]) -> auto
 	{
 		return stof(utf8 {str});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto stof(const char16_t (&str)[N]) -> auto
 	{
 		return stof(utf16 {str});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto stof(const char32_t (&str)[N]) -> auto
 	{

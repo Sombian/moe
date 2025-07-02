@@ -7,7 +7,7 @@
 
 auto main() -> int
 {
-	utf8 path {u8"./samples/main.moe"};
+	utf8 path {u8"./tests/main.moe"};
 
 	#ifdef _MSC_VER
 	{

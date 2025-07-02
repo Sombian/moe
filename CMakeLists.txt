@@ -13,7 +13,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_link_options(-fuse-ld=lld)
-add_compile_options(-Wno-switch)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -23,7 +22,10 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 # setup sanitizer #
 #-----------------#
 
-if (NOT MINGW)
+if (MSVC)
+	add_link_options(/fsanitize=address /utf-8)
+	add_link_options(/fsanitize=address /utf-8)
+elseif (NOT MINGW)
 	check_cxx_compiler_flag("-fsanitize=address" ASAN_AD)
 
 	if (ASAN_AD)
@@ -40,75 +42,63 @@ if (NOT MINGW)
 endif()
 
 #----------------#
-# configure LLVM #
+# configure: moe #
 #----------------#
 
-find_package(LLVM REQUIRED CONFIG)
-add_definitions(${LLVM_DEFINITIONS})
-include_directories(${LLVM_INCLUDE_DIRS})
+add_executable(moe
+	src/main.cpp
+)
+
+target_include_directories(moe
+	PUBLIC
+		${CMAKE_SOURCE_DIR}/src
+)
 
 #------------------#
 # configure: tools #
 #------------------#
 
 add_executable(tools
-	codegen/main.cpp
-)
-
-target_link_libraries(tools
-	LLVMCore
-	LLVMSupport
-	LLVMIRReader
+	tools/main.cpp
 )
 
 target_include_directories(tools
 	PUBLIC
 		${CMAKE_SOURCE_DIR}/src
-	PRIVATE
-		${CMAKE_SOURCE_DIR}/externs
 )
 
-#--------------------#
-# configure: project #
-#--------------------#
+#-----------#
+# setup CWD #
+#-----------#
 
-add_executable(${PROJECT_NAME}
-	src/main.cpp
-)
+set_property(TARGET moe PROPERTY
+DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
-target_link_libraries(${PROJECT_NAME}
-	LLVMCore
-	LLVMSupport
-	LLVMIRReader
-)
+set_property(TARGET tools PROPERTY
+DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
-target_include_directories(${PROJECT_NAME}
-	PUBLIC
-		${CMAKE_SOURCE_DIR}/src
-	PRIVATE
-		${CMAKE_SOURCE_DIR}/externs
-)
+#------------#
+# setup LLVM #
+#------------#
 
-#----------------#
-# code generator #
-#----------------#
+if (NOT MSVC)
+	# https://llvm.org/docs/CMake.html
+	find_package(LLVM REQUIRED CONFIG)
+	add_definitions(${LLVM_DEFINITIONS})
+	include_directories(${LLVM_INCLUDE_DIRS})
 
-# file(DOWNLOAD
-# 	https://www.unicode.org/Public/UNIDATA/UnicodeData.txt
-# 	${CMAKE_SOURCE_DIR}/scripts/auto/UnicodeData.txt SHOW_PROGRESS
-# )
-# file(DOWNLOAD
-# 	https://www.unicode.org/Public/UNIDATA/CaseFolding.txt
-# 	${CMAKE_SOURCE_DIR}/scripts/auto/CaseFolding.txt SHOW_PROGRESS
-# )
-# file(DOWNLOAD
-# 	https://www.unicode.org/Public/UNIDATA/CompositionExclusions.txt
-# 	${CMAKE_SOURCE_DIR}/scripts/auto/CompositionExclusions.txt SHOW_PROGRESS
-# )
-# file(DOWNLOAD
-# 	https://www.unicode.org/Public/UNIDATA/DerivedCoreProperties.txt
-# 	${CMAKE_SOURCE_DIR}/scripts/auto/DerivedCoreProperties.txt SHOW_PROGRESS
-# )
+	target_link_libraries(moe
+		LLVMCore LLVMSupport LLVMIRReader
+	)
+
+	target_link_libraries(tools
+		LLVMCore LLVMSupport LLVMIRReader
+	)
+endif()
+
+#--------------#
+# auto codegen #
+#--------------#
 
 add_custom_command(WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 	DEPENDS

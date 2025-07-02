@@ -1,82 +1,19 @@
 # decl
 
 ```bnf
-decl ::= fun
-       | pure_fun
-       | var
-       | const_var
+decl ::= pure_fun | fun
+       | cnst_var | var
        | model
        | trait
 
-fun ::= "fun"
-        symbol
-        "("
-        param?
-        ")"
-        block
+pure_fun ::= "fun!" symbol "(" param? ")" block
+fun      ::= "fun" symbol "(" param? ")" block
 
-pure_fun ::= "fun!"
-             symbol
-             "("
-             param?
-             ")"
-             block
+cnst_var ::= "let!" symbol ":" symbol "=" expr ";"
+var      ::= "let" symbol ":" symbol ( "=" expr )? ";"
 
-var ::= "let"
-        symbol
-        ":"
-        symbol
-        (
-        	"="
-        	expr
-        )?
-        ";"
-
-const_var ::= "let!"
-              symbol
-              ":"
-              symbol
-              "="
-              expr
-              ";"
-
-model ::= "model"
-          symbol
-          "{"
-          (
-          	symbol
-          	":"
-          	symbol
-          	(
-          		"="
-          		expr
-          	)?
-          	";"
-          )*
-          "}"
-
-trait ::= "trait"
-          symbol
-          "{"
-          (
-          	(
-          		"fun"
-          		|
-          		"fun!"
-          	)
-          	symbol
-          	"("
-          	param?
-          	")"
-          	":"
-          	symbol
-          	(
-          		block
-          		|
-          		";"
-          	)
-          )*
-          "}"
+model    ::= "model" symbol "{" ( var | cnst_var )* "}"
+trait    ::= "trait" symbol "{" ( fun | pure_fun )* "}"
 
 ...
 
@@ -138,13 +75,7 @@ continue ::= "continue"
 
 ...
 
-block ::= "{"
-          (
-          	expr ";"
-          	|
-          	stmt
-          )*
-          "}"
+block ::= "{" ( expr ";" | stmt )* "}"
 ```
 
 # expr
@@ -176,13 +107,13 @@ symbol ::= XID_Start
 
 access ::= expr
            (
-           	"."
-           	|
-           	"?."
-           	|
-           	"!."
-           	|
-           	"::"
+                "."
+                |
+                "?."
+                |
+                "!."
+                |
+                "::"
            )
            symbol
 
@@ -319,24 +250,9 @@ pre_op ::= "@"
 
 expr_01 ::= primary
             (
-            	(
-              	(
-              		"."
-              		|
-              		"?."
-              		|
-              		"!."
-              		|
-              		"::"
-              	)
-              	symbol
-              )
-            	|
-            	(
-              	"("
-              	args?
-              	")"
-              )
+                post_op symbol
+                |
+                "(" args? ")"
             )*
 
 post_op ::= "."

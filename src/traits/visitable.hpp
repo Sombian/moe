@@ -1,20 +1,20 @@
 #pragma once
 
 #include <tuple>
-#include <utility>
 #include <cstddef>
+#include <utility>
 
-namespace traits
+namespace trait
 {
 	template
 	<
-		typename T
+		class T
 	>
 	struct visitable
 	{
 		template
 		<
-			typename V
+			class V
 		>
 		requires requires(V&& impl, T& crtp)
 		{
@@ -27,13 +27,13 @@ namespace traits
 
 		template
 		<
-			typename V
+			class V
 		>
 		requires requires(V&& impl, const T& crtp)
 		{
 			std::forward<V>(impl)(static_cast<const T&>(crtp));
 		}
-		inline constexpr auto accept(V&& impl) const
+		inline constexpr auto accept(const V&& impl) const
 		{
 			std::forward<V>(impl)(static_cast<const T&>(*this));
 		}
@@ -46,23 +46,23 @@ namespace traits
 
 template
 <
-	typename... Fs
+	class... L
 >
-struct visitor : Fs...
+struct visitor : L...
 {
-	using Fs::operator()...;
+	using L::operator()...;
 
-	inline constexpr void operator()(auto&) const
+	inline constexpr auto operator()(auto&& _) const
 	{
-		static_assert(false, "unsupported type");
+		static_assert(false, "missing handle");
 	}
 };
 
 template
 <
-	typename... Fs
+	class... L
 >
-visitor(Fs...) -> visitor<Fs...>;
+visitor(L...) -> visitor<L...>;
 
 //|-----------|
 //| fix-point |
@@ -70,53 +70,27 @@ visitor(Fs...) -> visitor<Fs...>;
 
 template
 <
-	typename Fs
+	class L
 >
-struct anchor
+struct recurse
 {
-	Fs f;
+	L f;
 
 	template
 	<
-		typename... X
+		class... X
 	>
-	inline constexpr auto operator()(X&&... x)
+	inline constexpr auto operator()(X&&... _) const
 	{
-		return f(*this, std::forward<X>(x)...);
+		return f(*this, std::forward<X>(_)...);
 	}
 };
-template
-<
-	typename... Fs
->
-anchor(Fs...) -> anchor<Fs...>;
-
-//|-----------|
-//| fix point |
-//|-----------|
 
 template
 <
-	typename Fs
+	class... L
 >
-struct combine
-{
-	Fs f;
-
-	template
-	<
-		typename... X
-	>
-	inline constexpr auto operator()(X&&... x)
-	{
-		return f(*this, std::forward<X>(x)...);
-	}
-};
-template
-<
-	typename... Fs
->
-combine(Fs...) -> combine<Fs...>;
+recurse(L...) -> recurse<L...>;
 
 //|-----------------|
 //| helper function |
@@ -124,93 +98,109 @@ combine(Fs...) -> combine<Fs...>;
 
 template
 <
-	typename    V,
-	typename... L
+	class    V,
+	class... L
 >
-requires requires(V&& base)
+requires requires(V&& target)
 {
-	[]<typename... Fs>(visitor<Fs...>&){}(base);
+	[]<class... L2>(visitor<L2...>&){}(target);
 }
-inline constexpr auto overrides(V&& base, L&&... lambda)
+inline constexpr auto overrides(V&& target, L&&... lambda)
 {
 	auto handles {std::make_tuple(std::forward<L>(lambda)...)};
 
-	return [&](auto&&... args)
+	return [target, handles = std::move(handles)](auto&&... args) -> void
 	{
-		auto iterate // dispatcher
+		auto match // dispatcher
 		{
-			[&]<size_t N = 0>(auto& recurse)
+			[&]<size_t N = 0>(auto& impl)
 			{
 				if constexpr (N < sizeof...(L))
 				{
+					//|-------------<nth lambda>-------------|
 					const auto& handle {std::get<N>(handles)};
+					//|--------------------------------------|
 
 					if constexpr (requires { handle(args...); })
 					{
 						// invoke the handler with current set of args
-						handle(std::forward<decltype(args)>(args)...);
+						return handle(std::forward<decltype(args)>(args)...);
 					}
 					else
 					{
-						// recursively try the next handle in the tuple
-						recurse.template operator()<N + 1>(recurse);
+						return impl.template operator()<N + 1>(impl);
 					}
 				}
 				else
 				{
-					// if no override matches, fallback to base
-					base(std::forward<decltype(args)>(args)...);
+					if constexpr (requires { target(args...); })
+					{
+						// if no override matches, fallback to base
+						return target(std::forward<decltype(args)>(args)...);
+					}
+					else
+					{
+						static_assert(false, "missing base handle");
+					}
 				}
 			}
 		};
-		return iterate.template operator()<0>(iterate);
+		return match.template operator()<0>(match);
 	};
 }
 
 template
 <
-	typename    V,
-	typename... L
+	class    V,
+	class... L
 >
-requires requires(V&& base)
+requires requires(V&& target)
 {
-	[]<typename Fs>(anchor<Fs>&){}(base);
+	[]<class L2>(recurse<L2>&){}(target);
 }
-inline constexpr auto overrides(V&& base, L&&... lambda)
+inline constexpr auto overrides(V&& target, L&&... lambda)
 {
 	auto handles {std::make_tuple(std::forward<L>(lambda)...)};
 
-	return anchor
+	return recurse
 	{
-		[&](auto& self, auto&&... args) -> void
+		[target, handles = std::move(handles)](auto& self, auto&&... args) -> void
 		{
-			auto iterate // dispatcher
+			auto match // dispatcher
 			{
-				[&]<size_t N = 0>(auto& recurse)
+				[&]<size_t N = 0>(auto& impl)
 				{
 					if constexpr (N < sizeof...(L))
 					{
+						//|-------------<nth lambda>-------------|
 						const auto& handle {std::get<N>(handles)};
+						//|--------------------------------------|
 
 						if constexpr (requires { handle(self, args...); })
 						{
 							// invoke the handler with current set of args
-							handle(self, std::forward<decltype(args)>(args)...);
+							return handle(self, std::forward<decltype(args)>(args)...);
 						}
 						else
 						{
-							// recursively try the next handle in the tuple
-							recurse.template operator()<N + 1>(recurse);
+							return impl.template operator()<N + 1>(impl);
 						}
 					}
 					else
 					{
-						// if no override matches, fallback to base
-						base.f(self, std::forward<decltype(args)>(args)...);
+						if constexpr (requires { target.f(self, args...); })
+						{
+							// if no override matches, fallback to base
+							return target.f(self, std::forward<decltype(args)>(args)...);
+						}
+						else
+						{
+							static_assert(false, "missing proper handle");
+						}
 					}
 				}
 			};
-			iterate.template operator()<0>(iterate);
+			return match.template operator()<0>(match);
 		}
 	};
 }

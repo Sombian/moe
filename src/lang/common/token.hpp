@@ -187,7 +187,7 @@ namespace lang
 	/*|--------|*/          \
 	/*| string |*/          \
 	/*|--------|*/          \
-	macro(CHAR, nullptr)    \
+	macro(CODE, nullptr)    \
 	macro(TEXT, nullptr)    \
 
 }
@@ -233,13 +233,13 @@ auto operator<<(std::ostream& os, const atom data) -> std::ostream&
 
 template
 <
-	type::string A,
-	type::string B
+	model::text A,
+	model::text B
 >
 struct token : public span
 {
 	// SFINE: use T::slice if T is a string impl, otherwise use T directly
-	typedef std::conditional_t<type::string_impl<B>, typename B::slice, B> view;
+	typedef std::conditional_t<model::text_impl<B>, class B::slice, B> view;
 
 	//|-----<file>-----|
 	fs::file<A, B>* src;
@@ -274,9 +274,9 @@ public:
 		return lhs.type != rhs;
 	}
 
-	//|----------------------|
-	//| traits::printable<T> |
-	//|----------------------|
+	//|---------------------|
+	//| trait::printable<T> |
+	//|---------------------|
 
 	friend constexpr auto operator<<(std::ostream& os, const token& token) -> std::ostream&
 	{
@@ -284,7 +284,7 @@ public:
 		(
 			os
 			<<
-			"\033[30m" // set color
+			"\033[36m" // set color
 			<<
 			token.src->path
 			<<
@@ -292,7 +292,7 @@ public:
 			<<
 			std::setfill('0') << std::setw(2) << token.y + 0
 			<<
-			","
+			":"
 			<<
 			std::setfill('0') << std::setw(2) << token.x + 1
 			<<

@@ -15,8 +15,8 @@ namespace fs
 {
 	template
 	<
-		type::string A,
-		type::string B
+		model::text A,
+		model::text B
 	>
 	struct file
 	{
@@ -29,29 +29,25 @@ namespace fs
 		}
 	};
 
-	template
-	<
-		type::string T
-	>
-	inline constexpr auto open(const T& path) -> std::optional
+	inline constexpr auto open(const model::text auto& path) -> std::optional
 	<
 		std::variant
 		<
-			file<T, utf8>,
-			file<T, utf16>,
-			file<T, utf32>
+			file<decltype(path), utf8>
+			,
+			file<decltype(path), utf16>
+			,
+			file<decltype(path), utf32>
 		>
 	>
 	{
 		auto sys {std::filesystem::path(path.c_str())};
 
-		std::cout << std::filesystem::current_path() << '\n';
-
 		if (std::ifstream ifs {sys, std::ios::binary})
 		{
-			#ifndef NDEBUG //-------------------------|
-			std::cout << (u8"[✓] '%s'" | path) << '\n';
-			#endif //---------------------------------|
+			#ifndef NDEBUG //-----------------------|
+			std::cout << (u8"[✓] %s" | path) << '\n';
+			#endif //-------------------------------|
 
 			enum encoding : uint8_t
 			{
@@ -155,16 +151,15 @@ namespace fs
 			ifs.seekg(0, std::ios::end);
 			size = ifs.tellg() - size;
 			// to the BOM
-			ifs.clear(); // <- important
 			ifs.seekg(off, std::ios::beg);
 
 			//|------------------------|
 			//| step 3. read file data |
 			//|------------------------|
 
-			const auto write_native
+			static const auto write_native
 			{
-				[&]<typename unit>(text<unit>& str)
+				[&]<class unit>(text<unit>& str)
 				{
 					auto size {0};
 					unit code {0};
@@ -186,9 +181,9 @@ namespace fs
 				}
 			};
 
-			const auto write_foreign
+			static const auto write_foreign
 			{
-				[&]<typename unit>(text<unit>& str)
+				[&]<class unit>(text<unit>& str)
 				{
 					auto size {0};
 					unit code {0};
@@ -212,9 +207,9 @@ namespace fs
 
 			#define IS_BIG          \
 			(                       \
-				std::endian::native \
-				         !=         \
-				std::endian::little \
+			    std::endian::native \
+			             !=         \
+			    std::endian::little \
 			)                       \
 
 			switch (BOM)
@@ -222,30 +217,41 @@ namespace fs
 				case UTF8_STD:
 				case UTF8_BOM:
 				{
-					typedef char8_t unit;
+					typedef char8_t T;
 					
-					text<unit> data
-					{
-						(size / sizeof(unit))
+					text<T> data;
+					// allocate
+					data.capacity
+					(
+						(size / sizeof(T))
 						+
-						1 /*null-terminator*/
-					};
+						1 /* terminate */
+					);
 
 					write_native(data);
 
-					return file<T, decltype(data)>
-					{std::move(path), std::move(data)};
+					return file
+					<
+						decltype(path),
+						decltype(data)
+					>
+					{
+						std::move(path),
+						std::move(data)
+					};
 				}
 				case UTF16_BE:
 				{
-					typedef char16_t unit;
+					typedef char16_t T;
 
-					text<unit> data
-					{
-						(size / sizeof(unit))
+					text<T> data;
+					// allocate
+					data.capacity
+					(
+						(size / sizeof(T))
 						+
-						1 /*null-terminator*/
-					};
+						1 /* terminate */
+					);
 
 					if constexpr (IS_BIG)
 					{
@@ -255,19 +261,29 @@ namespace fs
 					{
 						write_foreign(data);
 					}
-					return file<T, decltype(data)>
-					{std::move(path), std::move(data)};
+
+					return file
+					<
+						decltype(path),
+						decltype(data)
+					>
+					{
+						std::move(path),
+						std::move(data)
+					};
 				}
 				case UTF16_LE:
 				{
-					typedef char16_t unit;
+					typedef char16_t T;
 
-					text<unit> data
-					{
-						(size / sizeof(unit))
+					text<T> data;
+					// allocate
+					data.capacity
+					(
+						(size / sizeof(T))
 						+
-						1 /*null-terminator*/
-					};
+						1 /* terminate */
+					);
 
 					if constexpr (!IS_BIG)
 					{
@@ -277,19 +293,29 @@ namespace fs
 					{
 						write_foreign(data);
 					}
-					return file<T, decltype(data)>
-					{std::move(path), std::move(data)};
+
+					return file
+					<
+						decltype(path),
+						decltype(data)
+					>
+					{
+						std::move(path),
+						std::move(data)
+					};
 				}
 				case UTF32_BE:
 				{
-					typedef char32_t unit;
+					typedef char32_t T;
 
-					text<unit> data
-					{
-						(size / sizeof(unit))
+					text<T> data;
+					// allocate
+					data.capacity
+					(
+						(size / sizeof(T))
 						+
-						1 /*null-terminator*/
-					};
+						1 /* terminate */
+					);
 
 					if constexpr (IS_BIG)
 					{
@@ -299,19 +325,29 @@ namespace fs
 					{
 						write_foreign(data);
 					}
-					return file<T, decltype(data)>
-					{std::move(path), std::move(data)};
+
+					return file
+					<
+						decltype(path),
+						decltype(data)
+					>
+					{
+						std::move(path),
+						std::move(data)
+					};
 				}
 				case UTF32_LE:
 				{
-					typedef char32_t unit;
+					typedef char32_t T;
 
-					text<unit> data
-					{
-						(size / sizeof(unit))
+					text<T> data;
+					// allocate
+					data.capacity
+					(
+						(size / sizeof(T))
 						+
-						1 /*null-terminator*/
-					};
+						1 /* terminate */
+					);
 					
 					if constexpr (!IS_BIG)
 					{
@@ -321,45 +357,44 @@ namespace fs
 					{
 						write_foreign(data);
 					}
-					return file<T, decltype(data)>
-					{std::move(path), std::move(data)};
+
+					return file
+					<
+						decltype(path),
+						decltype(data)
+					>
+					{
+						std::move(path),
+						std::move(data)
+					};
 				}
 			}
 			#undef IS_BIG
 		}
 		else
 		{
-			#ifndef NDEBUG //-------------------------|
-			std::cout << (u8"[✗] '%s'" | path) << '\n';
-			#endif //---------------------------------|
+			#ifndef NDEBUG //-----------------------|
+			std::cout << (u8"[✗] %s" | path) << '\n';
+			#endif //-------------------------------|
 		}
 		return std::nullopt;
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto open(const char8_t (&path)[N])
 	{
 		return open(utf8 {path});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto open(const char16_t (&path)[N])
 	{
 		return open(utf16 {path});
 	}
 
-	template
-	<
-		size_t N
-	>
+	template<size_t N>
 	// converting constructor
 	inline constexpr auto open(const char32_t (&path)[N])
 	{

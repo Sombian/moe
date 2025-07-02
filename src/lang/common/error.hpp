@@ -11,8 +11,8 @@
 
 template
 <
-	type::string A,
-	type::string B
+	model::text A,
+	model::text B
 >
 struct error : public span
 {
@@ -41,9 +41,9 @@ public:
 
 	friend constexpr auto operator!=(const error& lhs, const error& rhs) -> bool = default;
 
-	//|----------------------|
-	//| traits::printable<T> |
-	//|----------------------|
+	//|---------------------|
+	//| trait::printable<T> |
+	//|---------------------|
 
 	friend constexpr auto operator<<(std::ostream& os, const error& error) -> std::ostream&
 	{
@@ -59,7 +59,7 @@ public:
 			<<
 			std::setfill('0') << std::setw(2) << error.y + 0
 			<<
-			","
+			":"
 			<<
 			std::setfill('0') << std::setw(2) << error.x + 1
 			<<

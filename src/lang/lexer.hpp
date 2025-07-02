@@ -19,8 +19,8 @@
 
 template
 <
-	type::string A,
-	type::string B
+	model::text A,
+	model::text B
 >
 class lexer
 {
@@ -36,25 +36,25 @@ class lexer
 
 	#define T(value) token<A, B> \
 	{                            \
-		this->x,                 \
-		this->y,                 \
-		*this,                   \
-		value,                   \
-		{                        \
-			this->ptr,           \
-			&this->it,           \
-		},                       \
+	    this->x,                 \
+	    this->y,                 \
+	    *this,                   \
+	    value,                   \
+	    {                        \
+	        this->ptr,           \
+	        &this->it,           \
+	    },                       \
 	}                            \
 
 	#define E(value) error<A, B> \
 	{                            \
-		this->x,                 \
-		this->y,                 \
-		*this,                   \
-		value,                   \
+	    this->x,                 \
+	    this->y,                 \
+	    *this,                   \
+	    value,                   \
 	}                            \
 
-	auto next() -> char32_t
+	inline constexpr auto next() -> char32_t
 	{
 		//|------------------|
 		this->out = *this->it;
@@ -77,7 +77,7 @@ class lexer
 		return this->out;
 	}
 
-	auto back() -> char32_t
+	inline constexpr auto back() -> char32_t
 	{
 		--this->it;
 		//|------------------|
@@ -254,7 +254,7 @@ private:
 		{
 			return E(u8"[lexer] incomplete code literal");
 		}
-		return T(atom::CHAR);
+		return T(atom::CODE);
 	}
 
 	inline constexpr auto scan_N_code() -> decltype(this->pull())
@@ -475,35 +475,35 @@ private:
 		auto view {TBL.view()};
 
 		// counter
-		auto t_len {view[this->out] ? 1 : 0};
+		auto tkn_l {view[this->out] ? 1 : 0};
 		auto props {utils::props(this->out)};
-		auto s_len {props.XID_Start ? 1 : 0};
+		auto sym_l {props.XID_Start ? 1 : 0};
 
 		// infinite loop fix
-		if (t_len == 0 && s_len == 0)
+		if (tkn_l == 0 && sym_l == 0)
 		{
 			return E(u8"[lexer] expects XID_Start");
 		}
 
 		// skip unnecessary iteration
-		if (!(s_len != 0 && view.is_leaf()))
+		if (!(sym_l == 0 && view.is_leaf()))
 		{
 			for (size_t i {1}; this->next(); ++i)
 			{
 				props = utils::props(this->out);
 				
 				// token check
-				if (t_len == i && view[this->out])
+				if (tkn_l == i && view[this->out])
 				{
-					++t_len;
+					++tkn_l;
 				}
 				// symbol check
-				if (s_len == i && props.XID_Continue)
+				if (sym_l == i && props.XID_Continue)
 				{
-					++s_len;
+					++sym_l;
 				}
 				// if both fails
-				if (t_len != i + 1 && s_len != i + 1)
+				if (tkn_l != i + 1 && sym_l != i + 1)
 				{
 					this->back();
 					break;
@@ -511,7 +511,7 @@ private:
 			}
 		}
 
-		switch (utils::cmp(t_len, s_len))
+		switch (utils::cmp(tkn_l, sym_l))
 		{
 			case utils::ordering::LESS:
 			{
@@ -519,11 +519,11 @@ private:
 			}
 			case utils::ordering::EQUAL:
 			{
-				return T(view.get().value_or(atom::SYMBOL));
+				return T(view.value().value_or(atom::SYMBOL));
 			}
 			case utils::ordering::GREATER:
 			{
-				return T(view.get().value_or(atom::SYMBOL));
+				return T(view.value().value_or(atom::SYMBOL));
 			}
 		}
 		assert(false && "-Wreturn-type");
