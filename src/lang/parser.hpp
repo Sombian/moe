@@ -4,11 +4,10 @@
 #include <memory>
 #include <cassert>
 #include <cstdint>
-#include <utility>
 #include <variant>
+#include <utility>
 #include <optional>
 #include <iostream>
-#include <functional>
 #include <type_traits>
 
 #include "./lexer.hpp"
@@ -20,8 +19,8 @@
 
 template
 <
-	model::text A,
-	model::text B
+	class A,
+	class B
 >
 class parser
 {
@@ -171,36 +170,34 @@ public:
 		{
 			try
 			{
-				if (auto out {this->decl_t()})
+				if (auto out {this->$decl()})
 				{
-					//|-----------------<insert>-----------------|
-					std::visit([&](auto&& _)
+					std::visit([&](auto&& ptr)
 					{
-						this->exe.entry.emplace_back(std::move(_));
+						this->exe.body.emplace_back(std::forward<decltype(ptr)>(ptr));
 					},
-					std::move(out.value()));
-					//|------------------------------------------|
+					std::move(*out)); // unwrap
 					continue;
 				}
-				if (auto out {this->stmt_t()})
+				if (auto out {this->$stmt()})
 				{
-					//|-----------------<insert>-----------------|
-					std::visit([&](auto&& _)
+					std::visit([&](auto&& ptr)
 					{
-						this->exe.entry.emplace_back(std::move(_));
+						this->exe.body.emplace_back(std::forward<decltype(ptr)>(ptr));
 					},
-					std::move(out.value()));
-					//|------------------------------------------|
+					std::move(*out)); // unwrap
 					continue;
 				}
-				throw E(u8"[parser] unknown decl/stmt");
+				throw E(u8"unknown decl/stmt");
 			}
 			catch (error<A, B>& out)
 			{
-				//|----------------<insert>----------------|
-				this->exe.issue.emplace_back(std::move(out));
-				//|----------------------------------------|
-				this->sync(); // ...nothing to do here...
+				// diagnostics
+				this->exe.lint
+				.emplace_back
+					(out);
+				// recovery
+				this->sync();
 			}
 		}
 		return std::move(this->exe);
@@ -234,11 +231,7 @@ private:
 		return;
 	}
 
-	//|--------------|
-	//| declarations |
-	//|--------------|
-
-	inline constexpr auto decl_t() -> std::optional<decl>
+	inline constexpr auto $decl() -> std::optional<decl>
 	{
 		try
 		{
@@ -246,21 +239,21 @@ private:
 			{
 				switch (tkn->type)
 				{
-					case atom::FUN:
-					{
-						return this->decl_fun();
-					}
-					case atom::FUN$:
-					{
-						return this->decl_fun$();
-					}
 					case atom::LET:
 					{
-						return this->decl_var();
+						return this->decl_var(false);
 					}
 					case atom::LET$:
 					{
-						return this->decl_var$();
+						return this->decl_var(true);
+					}
+					case atom::FUN:
+					{
+						return this->decl_fun(false);
+					}
+					case atom::FUN$:
+					{
+						return this->decl_fun(true);
 					}
 					case atom::MODEL:
 					{
@@ -271,183 +264,199 @@ private:
 						return this->decl_trait();
 					}
 				}
-				return std::nullopt;
 			}
+			return std::nullopt;
 		}
 		catch (error<A, B>& out)
 		{
-			//|----------------<insert>----------------|
-			this->exe.issue.emplace_back(std::move(out));
-			//|----------------------------------------|
-			this->sync(); return this->decl_t();
+			// diagnostics
+			this->exe.lint
+			.emplace_back
+				(out);
+			// recovery
+			this->sync();
 		}
-		assert(false && "-Wreturn-type");
+		return this->$decl();
 	}
 
-	inline constexpr auto decl_fun() -> decltype(this->decl_t())
+	inline constexpr auto decl_var(const bool only) -> decl
 	{
-		$fun ast;
-
-		ast.x = this->x;
-		ast.y = this->y;
+		auto ast {std::make_unique<var_decl>()};
 		
+		ast->x = this->x;
+		ast->y = this->y;
+
 		this->next();
 
-		//|----<update>----|
-		ast.is_pure = false;
-		//|----------------|
+		ast->only = only;
 
 		if (this->peek(atom::SYMBOL))
 		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
+			ast->name = // move
+			this->peek()->data;
 
 			this->next();
-
-			//|---------<update>---------|
-			ast.name = std::move(tkn.data);
-			//|--------------------------|
 		}
-		else throw E(u8"[parser] expects 'ƒ'");
-	
-		if (this->peek(atom::L_PAREN))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects '('");
-
-		start:
-		if (this->peek(atom::SYMBOL))
-		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
-
-			this->next();
-			
-			$var arg;
-
-			//|---------<update>---------|
-			arg.name = std::move(tkn.data);
-			//|--------------------------|
-
-			if (this->peek(atom::COLON))
-			{
-				this->next();
-			}
-			else throw E(u8"[parser] expects ':'");
-
-			if (this->peek(atom::SYMBOL))
-			{
-				//|----------<copy>----------|
-				const auto tkn {*this->peek()};
-				//|--------------------------|
-
-				this->next();
-
-				//|---------<update>---------|
-				arg.type = std::move(tkn.data);
-				//|--------------------------|
-			}
-			else throw E(u8"[parser] expects 'ƒ'");
-
-			if (this->peek(atom::ASSIGN))
-			{
-				this->next();
-
-				//|--------------<catch>--------------|
-				arg.init = *this->expr_t().or_else([&]
-					-> decltype(this->expr_t())
-				{throw E(u8"[parser] invalid expr");});
-				//|-----------------------------------|
-			}
-			// else throw E(u8"[parser] expects '='");
-
-			//|-------------<insert>-------------|
-			ast.args.emplace_back(std::move(arg));
-			//|----------------------------------|
-			
-			if (this->peek(atom::COMMA))
-			{
-				this->next();
-				goto start;
-			}
-			// else throw E(u8"[parser] expects ','";)
-		}
-
-		if (this->peek(atom::R_PAREN))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects ')'");
+		else throw E(u8"expects 'ƒ'");
 
 		if (this->peek(atom::COLON))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ':'");
+		else throw E(u8"expects ':'");
 
 		if (this->peek(atom::SYMBOL))
 		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
+			ast->type = // move
+			this->peek()->data;
+
+			this->next();
+		}
+		else throw E(u8"expects 'ƒ'");
+
+		if (this->peek(atom::ASSIGN))
+		{
+			this->next();
+
+			if (auto out {this->$expr()})
+			{
+				ast->init = std::move(out);
+			}
+			else throw E(u8"invalid expr");
+		}
+		// else throw u8"must init";
+
+		if (this->peek(atom::S_COLON))
+		{
+			this->next();
+		}
+		else throw E(u8"expects ';'");
+
+		return ast;
+	}
+
+	inline constexpr auto decl_fun(const bool pure) -> decl
+	{
+		auto ast {std::make_unique<fun_decl>()};
+
+		ast->x = this->x;
+		ast->y = this->y;
+		
+		this->next();
+
+		ast->pure = pure;
+
+		if (this->peek(atom::SYMBOL))
+		{
+			ast->name = // move
+			this->peek()->data;
+
+			this->next();
+		}
+		else throw E(u8"expects 'ƒ'");
+	
+		if (this->peek(atom::L_PAREN))
+		{
+			this->next();
+		}
+		else throw E(u8"expects '('");
+
+		_start_:
+		// fresh construct
+		fun_decl::data data;
+
+		if (this->peek(atom::SYMBOL))
+		{
+			data.name = // move
+			this->peek()->data;
 
 			this->next();
 
-			//|---------<update>---------|
-			ast.type = std::move(tkn.data);
-			//|--------------------------|
+			if (this->peek(atom::COLON))
+			{
+				this->next();
+			}
+			else throw E(u8"expects ':'");
+
+			if (this->peek(atom::SYMBOL))
+			{
+				data.type = // move
+				this->peek()->data;
+
+				this->next();
+			}
+			else throw E(u8"expects 'ƒ'");
+
+			ast->args.emplace_back(data);
+			
+			if (this->peek(atom::COMMA))
+			{
+				this->next();
+				goto _start_;
+			}
 		}
-		else throw E(u8"[parser] expects 'ƒ'");
+		// else throw E(u8"expects 'ƒ'");
+
+		if (this->peek(atom::R_PAREN))
+		{
+			this->next();
+		}
+		else throw E(u8"expects ')'");
+
+		if (this->peek(atom::COLON))
+		{
+			this->next();
+		}
+		else throw E(u8"expects ':'");
+
+		if (this->peek(atom::SYMBOL))
+		{
+			ast->type = // move
+			this->peek()->data;
+
+			this->next();
+		}
+		else throw E(u8"expects 'ƒ'");
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '{'");
+		else throw E(u8"expects '{'");
 
 		while (true)
 		{
-			if (auto out {this->stmt_t()})
+			if (auto out {this->$decl()})
 			{
-				//|-------------<insert>-------------|
-				std::visit([&](auto&& _)
+				std::visit([&](auto&& ptr)
 				{
-					ast.body.emplace_back(std::move(_));
+					ast->body.emplace_back(std::forward<decltype(ptr)>(ptr));
 				},
-				std::move(out.value()));
-				//|----------------------------------|
+				std::move(*out)); // unwrap
 				continue;
 			}
-			if (auto out {this->decl_t()})
+			if (auto out {this->$stmt()})
 			{
-				//|-------------<insert>-------------|
-				std::visit([&](auto&& _)
+				std::visit([&](auto&& ptr)
 				{
-					ast.body.emplace_back(std::move(_));
+					ast->body.emplace_back(std::forward<decltype(ptr)>(ptr));
 				},
-				std::move(out.value()));
-				//|----------------------------------|
+				std::move(*out)); // unwrap
 				continue;
 			}
-			if (auto out {this->expr_t()})
+			if (auto out {this->$expr()})
 			{
-				//|-------------<insert>-------------|
-				std::visit([&](auto&& _)
-				{
-					ast.body.emplace_back(std::move(_));
-				},
-				std::move(out.value()));
-				//|----------------------------------|
-	
 				if (this->peek(atom::S_COLON))
 				{
 					this->next();
 				}
-				else throw E(u8"[parser] expects ';'");
-				// again..!
+				else throw E(u8"expects ';'");
+
+				std::visit([&](auto&& ptr)
+				{
+					ast->body.emplace_back(std::forward<decltype(ptr)>(ptr));
+				},
+				std::move(*out)); // unwrap
 				continue;
 			}
 			break;
@@ -457,475 +466,120 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '}'");
+		else throw E(u8"expects '}'");
 
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
+		return ast;
 	}
 
-	inline constexpr auto decl_fun$() -> decltype(this->decl_t())
+	inline constexpr auto decl_model() -> decl
 	{
-		$fun ast;
-
-		ast.x = this->x;
-		ast.y = this->y;
+		auto ast {std::make_unique<model_decl>()};
 		
+		ast->x = this->x;
+		ast->y = this->y;
+
 		this->next();
 
-		//|---<update>---|
-		ast.is_pure = true;
-		//|---------------|
-
 		if (this->peek(atom::SYMBOL))
 		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
+			ast->name = // move
+			this->peek()->data;
 
 			this->next();
-
-			//|---------<update>---------|
-			ast.name = std::move(tkn.data);
-			//|--------------------------|
 		}
-		else throw E(u8"[parser] expects 'ƒ'");
-	
-		if (this->peek(atom::L_PAREN))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects '('");
-
-		start:
-		if (this->peek(atom::SYMBOL))
-		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
-
-			this->next();
-			
-			$var arg;
-
-			//|---------<update>---------|
-			arg.name = std::move(tkn.data);
-			//|--------------------------|
-
-			if (this->peek(atom::COLON))
-			{
-				this->next();
-			}
-			else throw E(u8"[parser] expects ':'");
-
-			if (this->peek(atom::SYMBOL))
-			{
-				//|----------<copy>----------|
-				const auto tkn {*this->peek()};
-				//|--------------------------|
-
-				this->next();
-
-				//|---------<update>---------|
-				arg.type = std::move(tkn.data);
-				//|--------------------------|
-			}
-			else throw E(u8"[parser] expects 'ƒ'");
-
-			if (this->peek(atom::ASSIGN))
-			{
-				this->next();
-
-				//|--------------<catch>--------------|
-				arg.init = *this->expr_t().or_else([&]
-					-> decltype(this->expr_t())
-				{throw E(u8"[parser] invalid expr");});
-				//|-----------------------------------|
-			}
-			// else throw E(u8"[parser] expects '='");
-
-			//|-------------<insert>-------------|
-			ast.args.emplace_back(std::move(arg));
-			//|----------------------------------|
-			
-			if (this->peek(atom::COMMA))
-			{
-				this->next();
-				goto start;
-			}
-			// else throw E(u8"[parser] expects ','";)
-		}
-
-		if (this->peek(atom::R_PAREN))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects ')'");
-
-		if (this->peek(atom::COLON))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects ':'");
-
-		if (this->peek(atom::SYMBOL))
-		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
-
-			this->next();
-
-			//|---------<update>---------|
-			ast.type = std::move(tkn.data);
-			//|--------------------------|
-		}
-		else throw E(u8"[parser] expects 'ƒ'");
+		else throw E(u8"expects 'ƒ'");
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '{'");
+		else throw E(u8"expects '{'");
 
-		while (true)
-		{
-			if (auto out {this->stmt_t()})
-			{
-				//|-------------<insert>-------------|
-				std::visit([&](auto&& _)
-				{
-					ast.body.emplace_back(std::move(_));
-				},
-				std::move(out.value()));
-				//|----------------------------------|
-				continue;
-			}
-			if (auto out {this->decl_t()})
-			{
-				//|-------------<insert>-------------|
-				std::visit([&](auto&& _)
-				{
-					ast.body.emplace_back(std::move(_));
-				},
-				std::move(out.value()));
-				//|----------------------------------|
-				continue;
-			}
-			if (auto out {this->expr_t()})
-			{
-				//|-------------<insert>-------------|
-				std::visit([&](auto&& _)
-				{
-					ast.body.emplace_back(std::move(_));
-				},
-				std::move(out.value()));
-				//|----------------------------------|
-	
-				if (this->peek(atom::S_COLON))
-				{
-					this->next();
-				}
-				else throw E(u8"[parser] expects ';'");
-				// again..!
-				continue;
-			}
-			break;
-		}
-
-		if (this->peek(atom::R_BRACE))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects '}'");
-
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
-	}
-
-	inline constexpr auto decl_var() -> decltype(this->decl_t())
-	{
-		$var ast;
-		
-		ast.x = this->x;
-		ast.y = this->y;
-
-		this->next();
-
-		//|----<update>----|
-		ast.is_const = false;
-		//|----------------|
+		_start_:
+		// fresh construct
+		model_decl::data data;
 
 		if (this->peek(atom::SYMBOL))
 		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
+			data.name = // move
+			this->peek()->data;
 
 			this->next();
-
-			//|---------<update>---------|
-			ast.name = std::move(tkn.data);
-			//|--------------------------|
-		}
-		else throw E(u8"[parser] expects 'ƒ'");
-
-		if (this->peek(atom::COLON))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects ':'");
-
-		if (this->peek(atom::SYMBOL))
-		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
-
-			this->next();
-
-			//|---------<update>---------|
-			ast.type = std::move(tkn.data);
-			//|--------------------------|
-		}
-		else throw E(u8"[parser] expects 'ƒ'");
-
-		if (this->peek(atom::ASSIGN))
-		{
-			this->next();
-
-			//|--------------<catch>--------------|
-			ast.init = *this->expr_t().or_else([&]
-				-> decltype(this->expr_t())
-			{throw E(u8"[parser] invalid expr");});
-			//|-----------------------------------|
-		}
-		// else throw u8"[parser] must init";
-
-		if (this->peek(atom::S_COLON))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects ';'");
-
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
-	}
-
-	inline constexpr auto decl_var$() -> decltype(this->decl_t())
-	{
-		$var ast;
-		
-		ast.x = this->x;
-		ast.y = this->y;
-
-		this->next();
-
-		//|----<update>----|
-		ast.is_const = true;
-		//|----------------|
-
-		if (this->peek(atom::SYMBOL))
-		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
-
-			this->next();
-
-			//|---------<update>---------|
-			ast.name = std::move(tkn.data);
-			//|--------------------------|
-		}
-		else throw E(u8"[parser] expects 'ƒ'");
-
-		if (this->peek(atom::COLON))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects ':'");
-
-		if (this->peek(atom::SYMBOL))
-		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
-
-			this->next();
-
-			//|---------<update>---------|
-			ast.type = std::move(tkn.data);
-			//|--------------------------|
-		}
-		else throw E(u8"[parser] expects 'ƒ'");
-
-		if (this->peek(atom::ASSIGN))
-		{
-			this->next();
-
-			//|--------------<catch>--------------|
-			ast.init = *this->expr_t().or_else([&]
-				-> decltype(this->expr_t())
-			{throw E(u8"[parser] invalid expr");});
-			//|-----------------------------------|
-		}
-		else throw E(u8"[parser] must init");
-
-		if (this->peek(atom::S_COLON))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects ';'");
-
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
-	}
-
-	inline constexpr auto decl_model() -> decltype(this->decl_t())
-	{
-		$model ast;
-		
-		ast.x = this->x;
-		ast.y = this->y;
-
-		this->next();
-
-		if (this->peek(atom::SYMBOL))
-		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
-
-			this->next();
-
-			//|---------<update>---------|
-			ast.name = std::move(tkn.data);
-			//|--------------------------|
-		}
-		else throw E(u8"[parser] expects 'ƒ'");
-
-		if (this->peek(atom::L_BRACE))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects '{'");
-
-		// <body>
-		while (this->peek(atom::SYMBOL))
-		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
-
-			this->next();
-			
-			$var arg;
-
-			//|---------<update>---------|
-			arg.name = std::move(tkn.data);
-			//|--------------------------|
 
 			if (this->peek(atom::COLON))
 			{
 				this->next();
 			}
-			else throw E(u8"[parser] expects ':'");
+			else throw E(u8"expects ':'");
 
 			if (this->peek(atom::SYMBOL))
 			{
-				//|----------<copy>----------|
-				const auto tkn {*this->peek()};
-				//|--------------------------|
+				data.type = // move
+				this->peek()->data;
 
 				this->next();
-
-				//|---------<update>---------|
-				arg.type = std::move(tkn.data);
-				//|--------------------------|
 			}
-			else throw E(u8"[parser] expects 'ƒ'");
-
-			if (this->peek(atom::ASSIGN))
-			{
-				this->next();
-
-				//|--------------<catch>--------------|
-				arg.init = *this->expr_t().or_else([&]
-					-> decltype(this->expr_t())
-				{throw E(u8"[parser] invalid expr");});
-				//|-----------------------------------|
-			}
-			// else throw E(u8"[parser] expects '='");
+			else throw E(u8"expects 'ƒ'");
 
 			if (this->peek(atom::S_COLON))
 			{
 				this->next();
 			}
-			else throw E(u8"[parser] expects ';'");
+			else throw E(u8"expects ';'");
 
-			//|-------------<insert>-------------|
-			ast.body.emplace_back(std::move(arg));
-			//|----------------------------------|
+			//|--------------<insert>--------------|
+			ast->body.emplace_back(std::move(data));
+			//|------------------------------------|
+			
+			goto _start_;
 		}
+		// else throw E(u8"expects 'ƒ'");
 
 		if (this->peek(atom::R_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '}'");
+		else throw E(u8"expects '}'");
 
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
+		return ast;
 	}
 
-	inline constexpr auto decl_trait() -> decltype(this->decl_t())
+	inline constexpr auto decl_trait() -> decl
 	{
-		$trait ast;
+		auto ast {std::make_unique<trait_decl>()};
 		
-		ast.x = this->x;
-		ast.y = this->y;
+		ast->x = this->x;
+		ast->y = this->y;
 
 		this->next();
 
 		if (this->peek(atom::SYMBOL))
 		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
+			ast->name = // move
+			this->peek()->data;
 
 			this->next();
-
-			//|---------<update>---------|
-			ast.name = std::move(tkn.data);
-			//|--------------------------|
 		}
-		else throw E(u8"[parser] expects 'ƒ'");
+		else throw E(u8"expects 'ƒ'");
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '{'");
+		else throw E(u8"expects '{'");
 
-		while (true)
-		{
-			break;
-		}
+		// TODO
 
 		if (this->peek(atom::R_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '}'");
+		else throw E(u8"expects '}'");
 
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
+		return ast;
 	}
 
-	//|------------|
-	//| statements |
-	//|------------|
-
-	inline constexpr auto stmt_t() -> std::optional<stmt>
+	inline constexpr auto $stmt() -> std::optional<stmt>
 	{
 		try
 		{
@@ -949,6 +603,10 @@ private:
 					{
 						return this->stmt_while();
 					}
+					case atom::L_PAREN:
+					{
+						return this->stmt_block();
+					}
 					case atom::BREAK:
 					{
 						return this->stmt_break();
@@ -959,129 +617,85 @@ private:
 					}
 					case atom::CONTINUE:
 					{
-						return this->stmt_continue();
+						return this->stmt_iterate();
 					}
 				}
-				return std::nullopt;
 			}
+			return std::nullopt;
 		}
 		catch (error<A, B>& out)
 		{
-			//|----------------<insert>----------------|
-			this->exe.issue.emplace_back(std::move(out));
-			//|----------------------------------------|
-			this->sync(); return this->stmt_t();
+			// diagnostics
+			this->exe.lint
+			.emplace_back
+				(out);
+			// recovery
+			this->sync();
 		}
-		assert(false && "-Wreturn-type");
+		return this->$stmt();
 	}
 
-	inline constexpr auto stmt_if() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_if() -> stmt
 	{
-		$if ast;
+		auto ast {std::make_unique<if_stmt>()};
 
-		ast.x = this->x;
-		ast.y = this->y;
+		ast->x = this->x;
+		ast->y = this->y;
 		
 		this->next();
 
-		expr expr;
-		body body;
-		
-		else_if:
+		_case_:
+		// fresh construct
+		if_stmt::flow data;
+
 		if (this->peek(atom::L_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '('");
+		else throw E(u8"expects '('");
 
-		//|--------------<catch>--------------|
-			expr = {*this->expr_t().or_else([&]
-			-> decltype(this->expr_t())
-		{throw E(u8"[parser] invalid expr");})};
-		//|-----------------------------------|
-
-		//|--------------<insert>--------------|
-		ast.cases.emplace_back(std::move(expr));
-		//|------------------------------------|
+		if (auto out {this->$expr()})
+		{
+			data._if_ = std::move(*out);
+		}
+		else throw E(u8"invalid expr");
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ')'");
+		else throw E(u8"expects ')'");
 
-		if_block:
-		if (this->peek(atom::L_BRACE))
+		_else_:
+		if (auto out {this->$stmt()})
 		{
-			this->next();
+			data.then = std::move(*out);
 		}
-		else throw E(u8"[parser] expects '{'");
-
-		// <block>
-		while (true)
-		{
-			if (auto out {this->stmt_t()})
-			{
-				//|-----------<insert>-----------|
-				std::visit([&](auto&& _)
-				{
-					body.emplace_back(std::move(_));
-				},
-				std::move(out.value()));
-				//|------------------------------|
-				continue;
-			}
-			if (auto out {this->expr_t()})
-			{
-				//|-----------<insert>-----------|
-				std::visit([&](auto&& _)
-				{
-					body.emplace_back(std::move(_));
-				},
-				std::move(out.value()));
-				//|------------------------------|
-
-				if (this->peek(atom::S_COLON))
-				{
-					this->next();
-				}
-				else throw E(u8"[parser] expects ';'");
-				// again..!
-				continue;
-			}
-			break;
-		}
+		else throw E(u8"invalid stmt");
 
 		//|--------------<insert>--------------|
-		ast.block.emplace_back(std::move(body));
+		ast->body.emplace_back(std::move(data));
 		//|------------------------------------|
-
-		if (this->peek(atom::R_BRACE))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects '}'");
 
 		if (this->peek(atom::ELSE))
 		{
 			if (this->next(atom::IF))
 			{
 				this->next();
-				goto else_if;
+				goto _else_;
 			}
-			goto if_block;
+			goto _case_;
 		}
-
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
+ 
+		return ast;
 	}
 
-	inline constexpr auto stmt_for() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_for() -> stmt
 	{
-		$for ast;
+		auto ast {std::make_unique<for_stmt>()};
 
-		ast.x = this->x;
-		ast.y = this->y;
+		ast->x = this->x;
+		ast->y = this->y;
 		
 		this->next();
 
@@ -1089,235 +703,140 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '('");
+		else throw E(u8"expects '('");
 
-		//|--------------<catch>--------------|
-		ast.setup = *this->expr_t().or_else([&]
-			-> decltype(this->expr_t())
-		{throw E(u8"[parser] invalid expr");});
-		//|-----------------------------------|
+		if (auto out {this->$expr()})
+		{
+			ast->init = std::move(*out);
+		}
+		else throw E(u8"invalid expr");
 
 		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ';'");
+		else throw E(u8"expects ';'");
 
-		//|--------------<catch>--------------|
-		ast.input = *this->expr_t().or_else([&]
-			-> decltype(this->expr_t())
-		{throw E(u8"[parser] invalid expr");});
-		//|-----------------------------------|
+		if (auto out {this->$expr()})
+		{
+			ast->_if_ = std::move(*out);
+		}
+		else throw E(u8"invalid expr");
 
 		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ';'");
+		else throw E(u8"expects ';'");
 
-		//|--------------<catch>--------------|
-		ast.after = *this->expr_t().or_else([&]
-			-> decltype(this->expr_t())
-		{throw E(u8"[parser] invalid expr");});
-		//|-----------------------------------|
+		if (auto out {this->$expr()})
+		{
+			ast->task = std::move(*out);
+		}
+		else throw E(u8"invalid expr");
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ')'");
+		else throw E(u8"expects ')'");
 
-		if (this->peek(atom::L_BRACE))
+		if (auto out {this->$stmt()})
 		{
-			this->next();
+			ast->body = std::move(*out);
 		}
-		else throw E(u8"[parser] expects '{'");
+		else throw E(u8"invalid stmt");
 
-		// <block>
-		while (true)
-		{
-			if (auto out {this->stmt_t()})
-			{
-				//|--------------<insert>--------------|
-				std::visit([&](auto&& _)
-				{
-					ast.block.emplace_back(std::move(_));
-				},
-				std::move(out.value()));
-				//|------------------------------------|
-				continue;
-			}
-			if (auto out {this->expr_t()})
-			{
-				//|--------------<insert>--------------|
-				std::visit([&](auto&& _)
-				{
-					ast.block.emplace_back(std::move(_));
-				},
-				std::move(out.value()));
-				//|------------------------------------|
-
-				if (this->peek(atom::S_COLON))
-				{
-					this->next();
-				}
-				else throw E(u8"[parser] expects ';'");
-				// again..!
-				continue;
-			}
-			break;
-		}
-
-		if (this->peek(atom::R_BRACE))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects '}'");
-
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
+		return ast;
 	}
 
-	inline constexpr auto stmt_match() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_match() -> stmt
 	{
-		$match ast;
+		auto ast {std::make_unique<match_stmt>()};
 
-		ast.x = this->x;
-		ast.y = this->y;
+		ast->x = this->x;
+		ast->y = this->y;
 		
 		this->next();
-
-		expr expr;
-		body body;
 
 		if (this->peek(atom::L_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '('");
+		else throw E(u8"expects '('");
 
-		//|--------------<catch>--------------|
-		ast.input = *this->expr_t().or_else([&]
-			-> decltype(this->expr_t())
-		{throw E(u8"[parser] invalid expr");});
-		//|-----------------------------------|
+		if (auto out {this->$expr()})
+		{
+			ast->data = std::move(*out);
+		}
+		else throw E(u8"invalid expr");
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ')'");
+		else throw E(u8"expects ')'");
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '{'");
+		else throw E(u8"expects '{'");
 
-		if (this->peek(atom::CASE))
+		_case_:
+		// fresh construct
+		match_stmt::flow data;
+
+		if (auto out {this->$expr()})
 		{
-			this->next();
+			data._if_ = std::move(*out);
 		}
-		else throw E(u8"[parser] expects 'case'");
+		else throw E(u8"invalid expr");
 
-		case_block:
-		//|--------------<catch>--------------|
-			expr = *this->expr_t().or_else([&]
-			-> decltype(this->expr_t())
-		{throw E(u8"[parser] invalid expr");});
-		//|-----------------------------------|
-
-		//|--------------<insert>--------------|
-		ast.cases.emplace_back(std::move(expr));
-		//|------------------------------------|
-
-		else_block:
 		if (this->peek(atom::COLON))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ':'");
+		else throw E(u8"expects ':'");
 
-		if (this->peek(atom::L_BRACE))
+		_else_:
+
+		if (auto out {this->$stmt()})
 		{
-			this->next();
+			data.then = std::move(*out);
 		}
-		else throw E(u8"[parser] expects '{'");
-
-		// <block>
-		while (true)
-		{
-			if (auto out {this->stmt_t()})
-			{
-				//|-----------<insert>-----------|
-				std::visit([&](auto&& _)
-				{
-					body.emplace_back(std::move(_));
-				},
-				std::move(out.value()));
-				//|------------------------------|
-				continue;
-			}
-			if (auto out {this->expr_t()})
-			{
-				//|-----------<insert>-----------|
-				std::visit([&](auto&& _)
-				{
-					body.emplace_back(std::move(_));
-				},
-				std::move(out.value()));
-				//|------------------------------|
-
-				if (this->peek(atom::S_COLON))
-				{
-					this->next();
-				}
-				else throw E(u8"[parser] expects ';'");
-				// again..!
-				continue;
-			}
-			break;
-		}
+		else throw E(u8"invalid stmt");
 
 		//|--------------<insert>--------------|
-		ast.block.emplace_back(std::move(body));
+		ast->body.emplace_back(std::move(data));
 		//|------------------------------------|
 
-		if (this->peek(atom::R_BRACE))
-		{
-			this->next();
-		}
-		else throw E(u8"[parser] expects '}'");
-
-		// check if theres more...
 		if (this->peek(atom::CASE))
 		{
 			this->next();
-			goto case_block;
+			goto _case_;
 		}
-		// check if theres more...
 		if (this->peek(atom::ELSE))
 		{
 			this->next();
-			goto else_block;
+			goto _else_;
 		}
 
 		if (this->peek(atom::R_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '}'");
+		else throw E(u8"expects '}'");
 
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
+		return ast;
 	}
 
-	inline constexpr auto stmt_while() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_while() -> stmt
 	{
-		$while ast;
+		auto ast {std::make_unique<while_stmt>()};
 
-		ast.x = this->x;
-		ast.y = this->y;
+		ast->x = this->x;
+		ast->y = this->y;
 		
 		this->next();
 
@@ -1325,562 +844,564 @@ private:
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '('");
+		else throw E(u8"expects '('");
 
-		//|--------------<catch>--------------|
-		ast.input = *this->expr_t().or_else([&]
-			-> decltype(this->expr_t())
-		{throw E(u8"[parser] invalid expr");});
-		//|-----------------------------------|
+		if (auto out {this->$expr()})
+		{
+			ast->_if_ = std::move(*out);
+		}
+		else throw E(u8"invalid expr");
 
 		if (this->peek(atom::R_PAREN))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ')'");
+		else throw E(u8"expects ')'");
+
+		if (auto out {this->$stmt()})
+		{
+			ast->body = std::move(*out);
+		}
+		else throw E(u8"invalid stmt");
+
+		return ast;
+	}
+
+	inline constexpr auto stmt_block() -> stmt
+	{
+		auto ast {std::make_unique<block_stmt>()};
+
+		ast->x = this->x;
+		ast->y = this->y;
+		
+		this->next();
 
 		if (this->peek(atom::L_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '{'");
+		else throw E(u8"expects '{'");
 
-		// <block>
 		while (true)
 		{
-			if (auto out {this->stmt_t()})
+			if (auto out {this->$decl()})
 			{
-				//|--------------<insert>--------------|
-				std::visit([&](auto&& _)
+				std::visit([&](auto&& ptr)
 				{
-					ast.block.emplace_back(std::move(_));
+					ast->body.emplace_back(std::forward<decltype(ptr)>(ptr));
 				},
-				std::move(out.value()));
-				//|------------------------------------|
+				std::move(*out)); // unwrap
 				continue;
 			}
-			if (auto out {this->expr_t()})
+			if (auto out {this->$stmt()})
 			{
-				//|--------------<insert>--------------|
-				std::visit([&](auto&& _)
+				std::visit([&](auto&& ptr)
 				{
-					ast.block.emplace_back(std::move(_));
+					ast->body.emplace_back(std::forward<decltype(ptr)>(ptr));
 				},
-				std::move(out.value()));
-				//|------------------------------------|
-
+				std::move(*out)); // unwrap
+				continue;
+			}
+			if (auto out {this->$expr()})
+			{
 				if (this->peek(atom::S_COLON))
 				{
 					this->next();
 				}
-				else throw E(u8"[parser] expects ';'");
-				// again..!
+				else throw E(u8"expects ';'");
+
+				std::visit([&](auto&& ptr)
+				{
+					ast->body.emplace_back(std::forward<decltype(ptr)>(ptr));
+				},
+				std::move(*out)); // unwrap
 				continue;
 			}
-			break;
 		}
 
 		if (this->peek(atom::R_BRACE))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects '}'");
-	
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
+		else throw E(u8"expects '}'");
+
+		return ast;
 	}
 
-	inline constexpr auto stmt_break() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_break() -> stmt
 	{
-		$break ast;
+		auto ast {std::make_unique<break_stmt>()};
 
-		ast.x = this->x;
-		ast.y = this->y;
+		ast->x = this->x;
+		ast->y = this->y;
 		
 		this->next();
 
 		if (this->peek(atom::SYMBOL))
 		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
+			ast->label = // move
+			this->peek()->data;
 
 			this->next();
-
-			//|----------<update>----------|
-			ast.label = std::move(tkn.data);
-			//|----------------------------|
 		}
+		// else throw E(u8"expects 'ƒ'");
 
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
+		return ast;
 	}
 
-	inline constexpr auto stmt_return() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_return() -> stmt
 	{
-		$return ast;
+		auto ast {std::make_unique<return_stmt>()};
 
-		ast.x = this->x;
-		ast.y = this->y;
+		ast->x = this->x;
+		ast->y = this->y;
 
 		this->next();
 
-		if (auto out {this->expr_t()})
+		if (auto out {this->$expr()})
 		{
-			//|-------<update>--------|
-			ast.value = std::move(*out);
-			//|-----------------------|
+			ast->value = std::move(*out);
 		}
+		// else throw E(u8"invalid expr");
 
 		if (this->peek(atom::S_COLON))
 		{
 			this->next();
 		}
-		else throw E(u8"[parser] expects ';'");
+		else throw E(u8"expects ';'");
 
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
+		return ast;
 	}
 
-	inline constexpr auto stmt_continue() -> decltype(this->stmt_t())
+	inline constexpr auto stmt_iterate() -> stmt
 	{
-		$continue ast;
-		
-		ast.x = this->x;
-		ast.y = this->y;
+		auto ast {std::make_unique<iterate_stmt>()};
+
+		ast->x = this->x;
+		ast->y = this->y;
 		
 		this->next();
 
 		if (this->peek(atom::SYMBOL))
 		{
-			//|----------<copy>----------|
-			const auto tkn {*this->peek()};
-			//|--------------------------|
+			ast->label = // move
+			this->peek()->data;
 
 			this->next();
-
-			//|----------<update>----------|
-			ast.label = std::move(tkn.data);
-			//|----------------------------|
 		}
+		// else throw E(u8"expects 'ƒ'");
 
-		return std::make_unique
-		<decltype(ast)>(std::move(ast));
+		return ast;
 	}
 
-	//|-------------|
-	//| expressions |
-	//|-------------|
-
-	inline constexpr auto expr_t() -> std::optional<expr> // pratt parser
+	inline constexpr auto $expr(uint8_t mbp = 0) -> std::optional<expr>
 	{
-		std::function<std::optional<expr>(uint8_t)> impl
-		{
-			[&](const uint8_t mbp) -> std::optional<expr>
-			{
-				auto lhs
-				{
-					[&] -> std::optional<expr>
-					{
-						if (auto tkn {this->peek()})
-						{
-							// handle prefix
-							if (is_l(*tkn))
-							{
-								$unary ast;
-								
-								ast.x = this->x;
-								ast.y = this->y;
-
-								this->next();
-
-								//|--------------<catch>--------------|
-								std::optional rhs {impl(69).or_else([&]
-									-> decltype(this->expr_t())
-								{throw E(u8"[parser] invalid expr");})};
-								//|-----------------------------------|
-
-								ast.opr = to_l(*tkn);
-								ast.rhs = std::move(*rhs);
-
-								return std::make_unique
-								<decltype(ast)>(std::move(ast));
-							}
-							// handle primary
-							if (auto out {this->expr_group()})
-							{
-								return std::move(out);
-							}
-							if (auto out {this->expr_symbol()})
-							{
-								return std::move(out);
-							}
-							if (auto out {this->expr_literal()})
-							{
-								return std::move(out);
-							}
-							// invalid expr
-							return std::nullopt;
-						}
-						// error or eof
-						return std::nullopt;
-					}
-					()
-				};
-
-				if (lhs != std::nullopt)
-				{
-					while (auto tkn {this->peek()})
-					{
-						// handle infix
-						if (is_i(*tkn))
-						{
-							auto [lbp, rbp]
-							{
-								[&]() -> std::array<uint8_t, 2>
-								{
-									switch (tkn->type)
-									{
-										case atom::ASSIGN:
-										case atom::ADD_EQ:
-										case atom::SUB_EQ:
-										case atom::MUL_EQ:
-										case atom::DIV_EQ:
-										case atom::MOD_EQ:
-										case atom::POW_EQ:
-										{
-											return {1, 2};
-										}
-										case atom::NIL:
-										{
-											return {3, 4};
-										}
-										case atom::B_OR:
-										case atom::L_OR:
-										{
-											return {5, 6};
-										}
-										case atom::B_AND:
-										case atom::L_AND:
-										{
-											return {7, 8};
-										}
-										case atom::EQ:
-										case atom::NE:
-										{
-											return {9, 10};
-										}
-										case atom::LT:
-										case atom::GT:
-										case atom::LTE:
-										case atom::GTE:
-										{
-											return {11, 12};
-										}
-										case atom::SHL:
-										case atom::SHR:
-										{
-											return {13, 14};
-										}
-										case atom::ADD:
-										case atom::SUB:
-										{
-											return {15, 16};
-										}
-										case atom::MUL:
-										case atom::DIV:
-										case atom::MOD:
-										{
-											return {17, 18};
-										}
-										case atom::POW:
-										{
-											return {19, 18};
-										}
-										default:
-										{
-											assert(!"[ERROR]");
-											std::unreachable();
-										}
-									}
-								}
-								()
-							};
-							if (lbp < mbp)
-							{
-								break;
-							}
-
-							$binary ast;
-
-							ast.x = this->x;
-							ast.y = this->y;
-							
-							this->next();
-
-							//|--------------<catch>--------------|
-							std::optional rhs {impl(rbp).or_else([&]
-								-> decltype(this->expr_t())
-							{throw E(u8"[parser] invalid expr");})};
-							//|-----------------------------------|
-
-							ast.opr = to_i(*tkn);
-							ast.lhs = std::move(*lhs);
-							ast.rhs = std::move(*rhs);
-
-							lhs = std::make_unique
-							<decltype(ast)>(std::move(ast));
-							continue;
-						}
-
-						// handle postfix
-						if (is_r(*tkn))
-						{
-							$access ast;
-
-							ast.x = this->x;
-							ast.y = this->y;
-							
-							this->next();
-
-							if (this->peek(atom::SYMBOL))
-							{
-								//|----------<copy>----------|
-								const auto tkn {*this->peek()};
-								//|--------------------------|
-
-								this->next();
-
-								//|----------<update>----------|
-								ast.name = std::move(tkn.data);
-								//|----------------------------|
-							}
-							else throw E(u8"[parser] expects 'ƒ'");
-
-							ast.type = to_r(*tkn);
-							ast.expr = std::move(*lhs);
-							
-							lhs = std::make_unique
-							<decltype(ast)>(std::move(ast));
-							continue;
-						}
-
-						// handle function
-						if (tkn == atom::L_PAREN)
-						{
-							$call ast;
-
-							ast.x = this->x;
-							ast.y = this->y;
-
-							this->next();
-
-							//|--------<update>--------|
-							ast.self = std::move(*lhs);
-							//|------------------------|
-
-							start:
-							if (auto out {this->expr_t()})
-							{
-								//|--------------<insert>--------------|
-								ast.args.emplace_back(std::move(*out));
-								//|------------------------------------|
-
-								if (this->peek(atom::COMMA))
-								{
-									this->next();
-									goto start;
-								}
-								// else throw u8"[parser] expects ','";
-							}
-
-							if (this->peek(atom::R_PAREN))
-							{
-								this->next();
-							}
-							else throw E(u8"[parser] expects ')'");
-
-							lhs = std::make_unique
-							<decltype(ast)>(std::move(ast));
-							continue;
-						}
-						break;
-					}
-				}
-				return lhs;
-			}
-		};
 		try
 		{
-			return impl(0);
+			expr lhs;
+
+			if (auto tkn {this->peek()})
+			{
+				// null denoation
+				if (auto power {parser::get_prefix_binding_power(tkn->type)})
+				{
+					auto [     rbp] {*power};
+
+					auto ast {std::make_unique<prefix_expr>()};
+
+					ast->x = this->x;
+					ast->y = this->y;
+
+					this->next();
+
+					if (auto out {this->$expr()})
+					{
+						switch (tkn->type)
+						{
+							#define macro($K, V$) \
+							case atom::$K:        \
+							{                     \
+							    ast->op = op::$K; \
+							    break;            \
+							}                     \
+
+							operators(macro)
+							#undef macro
+
+							default:
+							{
+								assert(!"<ERROR>");
+								std::unreachable();
+							}
+						}
+						ast->rhs = std::move(*out);
+					}
+					else throw E(u8"invalid expr");
+
+					lhs = std::move(ast);
+				}
+				else
+				{
+					// handle primary
+					if (auto out {this->expr_group()})
+					{
+						lhs = std::move(*out);
+						goto LED;
+					}
+					if (auto out {this->expr_symbol()})
+					{
+						lhs = std::move(*out);
+						goto LED;
+					}
+					if (auto out {this->expr_literal()})
+					{
+						lhs = std::move(*out);
+						goto LED;
+					}
+					return std::nullopt;
+				}
+
+				LED:
+				// left denotation
+				while (auto tkn {this->peek()})
+				{
+					if (auto power {parser::get_infix_binding_power(tkn->type)})
+					{
+						auto [lbp, rbp] {*power};
+						if (rbp < mbp) break;
+
+						auto ast {std::make_unique<binary_expr>()};
+
+						ast->x = this->x;
+						ast->y = this->y;
+
+						this->next();
+
+						if (auto out {this->$expr()})
+						{
+							switch (tkn->type)
+							{
+								#define macro($K, V$) \
+								case atom::$K:        \
+								{                     \
+									ast->op = op::$K; \
+									break;            \
+								}                     \
+
+								operators(macro)
+								#undef macro
+
+								default:
+								{
+									assert(!"<ERROR>");
+									std::unreachable();
+								}
+							}
+							ast->lhs = std::move(lhs);
+							ast->rhs = std::move(*out);
+						}
+						else throw E(u8"invalid expr");
+
+						lhs = std::move(ast);
+						continue;
+					}
+					if (auto power {parser::get_suffix_binding_power(tkn->type)})
+					{
+						auto [     rbp] {*power};
+						if (rbp < mbp) break;
+
+						// handle suffix
+						if (auto out {this->expr_access()})
+						{
+							lhs = std::move(*out);
+							continue;
+						}
+						if (auto out {this->expr_invoke()})
+						{
+							lhs = std::move(*out);
+							continue;
+						}
+						throw E(u8"parselet ???");
+					}
+					break;
+				}
+			}
+			return lhs;
 		}
 		catch (error<A, B>& out)
 		{
-			//|----------------<insert>----------------|
-			this->exe.issue.emplace_back(std::move(out));
-			//|----------------------------------------|
-			this->sync(); return this->expr_t();
+			// diagnostics
+			this->exe.lint
+			.emplace_back
+				(out);
+			// recovery
+			this->sync();
 		}
-		assert(false && "-Wreturn-type");
+		return this->$expr();
 	}
 
-	inline constexpr auto expr_group() -> decltype(this->expr_t())
+	//|-----------------------|
+	//| primary expr parselet |
+	//|-----------------------|
+
+	inline constexpr auto expr_literal() -> std::optional<expr>
 	{
-		if (auto tkn {this->peek()})
+		if (this->peek(atom::TRUE))
 		{
-			switch (tkn->type)
+			auto ast {std::make_unique<literal_expr>()};
+
+			ast->x = this->x;
+			ast->y = this->y;
+
+			ast->self = // move
+			this->peek()->data;
+
+			this->next();
+
+			ast->type = ty::BOOL;
+
+			return ast;
+		}
+		if (this->peek(atom::FALSE))
+		{
+			auto ast {std::make_unique<literal_expr>()};
+
+			ast->x = this->x;
+			ast->y = this->y;
+
+			ast->self = // move
+			this->peek()->data;
+
+			this->next();
+
+			ast->type = ty::BOOL;
+
+			return ast;
+		}
+		if (this->peek(atom::CODE))
+		{
+			auto ast {std::make_unique<literal_expr>()};
+
+			ast->x = this->x;
+			ast->y = this->y;
+
+			ast->self = // move
+			this->peek()->data;
+
+			this->next();
+
+			ast->type = ty::CODE;
+
+			return ast;
+		}
+		if (this->peek(atom::TEXT))
+		{
+			auto ast {std::make_unique<literal_expr>()};
+
+			ast->x = this->x;
+			ast->y = this->y;
+
+			ast->self = // move
+			this->peek()->data;
+
+			this->next();
+
+			ast->type = ty::TEXT;
+
+			return ast;
+		}
+		if (this->peek(atom::INT))
+		{
+			auto ast {std::make_unique<literal_expr>()};
+
+			ast->x = this->x;
+			ast->y = this->y;
+
+			ast->self = // move
+			this->peek()->data;
+
+			this->next();
+
+			ast->type = ty::I32;
+
+			return ast;
+		}
+		if (this->peek(atom::DEC))
+		{
+			auto ast {std::make_unique<literal_expr>()};
+
+			ast->x = this->x;
+			ast->y = this->y;
+
+			ast->self = // move
+			this->peek()->data;
+
+			this->next();
+
+			ast->type = ty::F32;
+
+			return ast;
+		}
+		return std::nullopt;
+	}
+
+	inline constexpr auto expr_symbol() -> std::optional<expr>
+	{
+		if (this->peek(atom::SYMBOL))
+		{
+			auto ast {std::make_unique<symbol_expr>()};
+
+			ast->x = this->x;
+			ast->y = this->y;
+
+			ast->self = // move
+			this->peek()->data;
+
+			this->next();
+
+			return ast;
+		}
+		return std::nullopt;
+	}
+
+	inline constexpr auto expr_group() -> std::optional<expr>
+	{
+		if (this->peek(atom::L_PAREN))
+		{
+			auto ast {std::make_unique<group_expr>()};
+
+			ast->x = this->x;
+			ast->y = this->y;
+
+			this->next();
+
+			if (auto out {this->$expr()})
 			{
-				case atom::L_PAREN:
-				{
-					$group ast;
+				ast->self = std::move(*out);
+			}
+			else throw E(u8"invalid expr");
 
-					ast.x = this->x;
-					ast.y = this->y;
-					
-					this->next();
+			if (this->peek(atom::R_PAREN))
+			{
+				this->next();
+			}
+			else throw E(u8"expects ')'");
 
-					//|--------------<catch>--------------|
-					ast.expr = *this->expr_t().or_else([&]
-						-> decltype(this->expr_t())
-					{throw E(u8"[parser] invalid expr");});
-					//|-----------------------------------|
+			return ast;
+		}
+		return std::nullopt;
+	}
 
-					if (this->peek(atom::R_PAREN))
-					{
-						this->next();
-					}
-					else throw E(u8"[parser] expects ')'");
+	//|----------------------|
+	//| suffix expr parselet |
+	//|----------------------|
 
-					return std::make_unique
-					<decltype(ast)>(std::move(ast));
-				}
+	inline constexpr auto expr_access() -> std::optional<expr>
+	{
+		return std::nullopt;
+	}
+
+	inline constexpr auto expr_invoke() -> std::optional<expr>
+	{
+		return std::nullopt;
+	}
+
+	//|---------------------|
+	//| binding power table |
+	//|---------------------|
+
+	static constexpr auto get_prefix_binding_power(const atom type) -> std::optional<std::array<uint8_t, 1>>
+	{
+		switch (type)
+		{
+			case atom::POINT:
+			case atom::DEREF:
+			case atom::L_NOT:
+			case atom::B_NOT:
+			// prefix ver.
+			case atom::ADD:
+			case atom::SUB:
+			{
+				return {{69}};
 			}
 		}
 		return std::nullopt;
 	}
 
-	inline constexpr auto expr_symbol() -> decltype(this->expr_t())
+	static constexpr auto get_infix_binding_power(const atom type) -> std::optional<std::array<uint8_t, 2>>
 	{
-		if (auto tkn {this->peek()})
+		switch (type)
 		{
-			switch (tkn->type)
+			case atom::ASSIGN:
+			case atom::ADD_EQ:
+			case atom::SUB_EQ:
+			case atom::MUL_EQ:
+			case atom::DIV_EQ:
+			case atom::MOD_EQ:
+			case atom::POW_EQ:
 			{
-				case atom::SYMBOL:
-				{
-					$symbol node;
-
-					node.x = this->x;
-					node.y = this->y;
-					
-					this->next();
-					
-					//|----------<update>----------|
-					node.name = std::move(tkn->data);
-					//|----------------------------|
-
-					return std::make_unique
-					<decltype(node)>(std::move(node));
-				}
+				return {{1, 2}};
+			}
+			case atom::NIL:
+			{
+				return {{3, 4}};
+			}
+			case atom::B_OR:
+			case atom::L_OR:
+			{
+				return {{5, 6}};
+			}
+			case atom::B_AND:
+			case atom::L_AND:
+			{
+				return {{7, 8}};
+			}
+			case atom::EQ:
+			case atom::NE:
+			{
+				return {{9, 10}};
+			}
+			case atom::LT:
+			case atom::GT:
+			case atom::LTE:
+			case atom::GTE:
+			{
+				return {{11, 12}};
+			}
+			case atom::SHL:
+			case atom::SHR:
+			{
+				return {{13, 14}};
+			}
+			case atom::ADD:
+			case atom::SUB:
+			{
+				return {{15, 16}};
+			}
+			case atom::MUL:
+			case atom::DIV:
+			case atom::MOD:
+			{
+				return {{17, 18}};
+			}
+			case atom::POW:
+			{
+				return {{19, 18}};
 			}
 		}
 		return std::nullopt;
 	}
 
-	inline constexpr auto expr_literal() -> decltype(this->expr_t())
+	static constexpr auto get_suffix_binding_power(const atom type) -> std::optional<std::array<uint8_t, 1>>
 	{
-		if (auto tkn {this->peek()})
+		switch (type)
 		{
-			switch (tkn->type)
+			// expr_access
+			case atom::ACCESS:
+			// expr_invoke
+			case atom::L_PAREN:
 			{
-				case atom::TRUE:
-				case atom::FALSE:
-				{
-					$literal ast;
-
-					ast.x = this->x;
-					ast.y = this->y;
-					
-					this->next();
-
-					//|----------<update>----------|
-					ast.type = type::BOOL;
-					ast.data = std::move(tkn->data);
-					//|----------------------------|
-
-					return std::make_unique
-					<decltype(ast)>(std::move(ast));
-				}
-				case atom::CODE:
-				{
-					$literal ast;
-
-					ast.x = this->x;
-					ast.y = this->y;
-					
-					this->next();
-
-					//|----------<update>----------|
-					ast.type = type::CODE;
-					ast.data = std::move(tkn->data);
-					//|----------------------------|
-
-					return std::make_unique
-					<decltype(ast)>(std::move(ast));
-				}
-				case atom::TEXT:
-				{
-					$literal ast;
-
-					ast.x = this->x;
-					ast.y = this->y;
-					
-					this->next();
-
-					//|----------<update>----------|
-					ast.type = type::TEXT;
-					ast.data = std::move(tkn->data);
-					//|----------------------------|
-
-					return std::make_unique
-					<decltype(ast)>(std::move(ast));
-				}
-				case atom::DEC:
-				{
-					$literal ast;
-
-					ast.x = this->x;
-					ast.y = this->y;
-					
-					this->next();
-
-					//|----------<update>----------|
-					ast.type = type::F32;
-					ast.data = std::move(tkn->data);
-					//|----------------------------|
-
-					return std::make_unique
-					<decltype(ast)>(std::move(ast));
-				}
-				case atom::INT:
-				case atom::BIN:
-				case atom::OCT:
-				case atom::HEX:
-				{
-					$literal ast;
-
-					ast.x = this->x;
-					ast.y = this->y;
-					
-					this->next();
-
-					//|----------<update>----------|
-					ast.type = type::I32;
-					ast.data = std::move(tkn->data);
-					//|----------------------------|
-
-					return std::make_unique
-					<decltype(ast)>(std::move(ast));
-				}
+				return {{69}};
 			}
 		}
 		return std::nullopt;

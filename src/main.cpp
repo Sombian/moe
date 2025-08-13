@@ -5,6 +5,9 @@
 #include "lang/lexer.hpp"
 #include "lang/parser.hpp"
 
+#include "lang/backend/analyzer.hpp"
+#include "lang/backend/compiler.hpp"
+
 auto main() -> int
 {
 	utf8 path {u8"./tests/main.moe"};
@@ -37,11 +40,17 @@ auto main() -> int
 			>
 			parser {&lexer};
 
-			//|----<fontend>----|
-			//| lexer -> parser |
-			//|-----------------|
+			//|---------------------|
+			//| frontend -> backend |
+			//|---------------------|
 
-			parser.pull().compile();
+			auto exe {parser.pull()};
+
+			for (auto& _ : exe.lint)
+			{
+				std::cout << _ << '\n';
+			}
+			compiler().compile(exe);
 		},
 		io.value());
 	}

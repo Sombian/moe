@@ -23,21 +23,24 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 #-----------------#
 
 if (MSVC)
-	add_link_options(/fsanitize=address /utf-8)
-	add_link_options(/fsanitize=address /utf-8)
-elseif (NOT MINGW)
-	check_cxx_compiler_flag("-fsanitize=address" ASAN_AD)
+	add_compile_options(/fsanitize=address /utf-8)
+else()
+	add_compile_options(-g -c -fno-rtti -Wno-switch)
 
-	if (ASAN_AD)
-		add_link_options(-fsanitize=address)
-		add_compile_options(-fsanitize=address)
-	endif()
+	if (NOT MINGW)
+		check_cxx_compiler_flag("-fsanitize=address" ASAN_AD)
 
-	check_cxx_compiler_flag("-fsanitize=undefined" ASAN_UB)
+		if (ASAN_AD)
+			add_link_options(-fsanitize=address)
+			add_compile_options(-fsanitize=address)
+		endif()
 
-	if (ASAN_UB)
-		add_link_options(-fsanitize=undefined)
-		add_compile_options(-fsanitize=undefined)
+		check_cxx_compiler_flag("-fsanitize=undefined" ASAN_UB)
+
+		if (ASAN_UB)
+			add_link_options(-fsanitize=undefined)
+			add_compile_options(-fsanitize=undefined)
+		endif()
 	endif()
 endif()
 
@@ -72,29 +75,10 @@ target_include_directories(tools
 #-----------#
 
 set_property(TARGET moe PROPERTY
-DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 set_property(TARGET tools PROPERTY
-DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-
-#------------#
-# setup LLVM #
-#------------#
-
-if (NOT MSVC)
-	# https://llvm.org/docs/CMake.html
-	find_package(LLVM REQUIRED CONFIG)
-	add_definitions(${LLVM_DEFINITIONS})
-	include_directories(${LLVM_INCLUDE_DIRS})
-
-	target_link_libraries(moe
-		LLVMCore LLVMSupport LLVMIRReader
-	)
-
-	target_link_libraries(tools
-		LLVMCore LLVMSupport LLVMIRReader
-	)
-endif()
+DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 #--------------#
 # auto codegen #

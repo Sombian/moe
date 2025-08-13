@@ -12,7 +12,7 @@ namespace utils
 	{
 		enum prefix : uint8_t
 		{
-			NIL = 0 | 0x0, // '?' -> substr(0)
+			NIL = 0 | 0x0, // '�' -> substr(0)
 			POS = 1 | 0x1, // '+' -> substr(1)
 			NEG = 2 | 0x1, // '-' -> substr(1)
 		};
@@ -105,8 +105,7 @@ namespace utils
 
 	inline constexpr auto stof(const model::text auto& str) -> double
 	{
-		auto it {str.begin()};
-		auto ie {str.end()};
+		auto it {str.begin()}; auto ie {str.end()};
 
 		double out {0};
 

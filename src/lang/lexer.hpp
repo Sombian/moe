@@ -19,8 +19,8 @@
 
 template
 <
-	model::text A,
-	model::text B
+	class A,
+	class B
 >
 class lexer
 {
@@ -248,11 +248,11 @@ private:
 
 		if (len != 1)
 		{
-			return E(u8"[lexer] code length must be 1");
+			return E(u8"code length must be 1");
 		}
 		if (!this->out)
 		{
-			return E(u8"[lexer] incomplete code literal");
+			return E(u8"incomplete code literal");
 		}
 		return T(atom::CODE);
 	}
@@ -268,7 +268,7 @@ private:
 
 		if (!this->out)
 		{
-			return E(u8"[lexer] incomplete string literal");
+			return E(u8"incomplete string literal");
 		}
 		return T(atom::TEXT);
 	}
@@ -303,7 +303,7 @@ private:
 
 		if (this->ptr - &this->it == 2)
 		{
-			return E(u8"[lexer] incomplete bin literal");
+			return E(u8"incomplete bin literal");
 		}
 		return T(atom::BIN);
 	}
@@ -340,7 +340,7 @@ private:
 
 		if (this->ptr - &this->it == 2)
 		{
-			return E(u8"[lexer] incomplete oct literal");
+			return E(u8"incomplete oct literal");
 		}
 		return T(atom::OCT);
 	}
@@ -386,7 +386,7 @@ private:
 
 		if (this->ptr - &this->it == 2)
 		{
-			return E(u8"[lexer] incomplete hex literal");
+			return E(u8"incomplete hex literal");
 		}
 		return T(atom::HEX);
 	}
@@ -459,14 +459,12 @@ private:
 
 	inline constexpr auto scan_sym() -> decltype(this->pull())
 	{
-		#define macro(K, V) { V, atom::K },
+		#define macro($K, $V) { $V, atom::$K },
 		
 		static const tst<atom> TBL
 		{
 			delimeters(macro)
-			operator_l(macro)
-			operator_i(macro)
-			operator_r(macro)
+			operators(macro)
 			keywords(macro)
 			special(macro)
 		};
@@ -482,7 +480,7 @@ private:
 		// infinite loop fix
 		if (tkn_l == 0 && sym_l == 0)
 		{
-			return E(u8"[lexer] expects XID_Start");
+			return E(u8"expects XID_Start");
 		}
 
 		// skip unnecessary iteration

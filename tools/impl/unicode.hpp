@@ -35,133 +35,6 @@ namespace // private
 
 namespace // private
 {
-	inline constexpr auto UnicodeData(const model::text auto& name) -> std::set<uint32_t>
-	{
-		static auto UnicodeData // cache the file
-		{fs::open(u8"tools/data/UnicodeData.txt")};
-
-		std::set<uint32_t> result;
-
-		if (UnicodeData)
-		{
-			std::visit([&](auto&& file)
-			{
-				// TODO
-			},
-			*UnicodeData);
-		}
-		return result;
-	}
-
-	template<size_t N>
-	// converting constructor
-	inline constexpr auto UnicodeData(const char8_t (&str)[N]) -> auto
-	{
-		return UnicodeData(utf8 {str});
-	}
-
-	template<size_t N>
-	// converting constructor
-	inline constexpr auto UnicodeData(const char16_t (&str)[N]) -> auto
-	{
-		return UnicodeData(utf16 {str});
-	}
-
-	template<size_t N>
-	// converting constructor
-	inline constexpr auto UnicodeData(const char32_t (&str)[N]) -> auto
-	{
-		return UnicodeData(utf32 {str});
-	}
-}
-
-namespace // private
-{
-	inline constexpr auto CaseFolding(const model::text auto& name) -> std::set<uint32_t>
-	{
-		static auto CaseFolding // cache the file
-		{fs::open(u8"tools/data/CaseFolding.txt")};
-
-		std::set<uint32_t> result;
-
-		if (CaseFolding)
-		{
-			std::visit([&](auto&& file)
-			{
-				// TODO
-			},
-			*CaseFolding);
-		}
-		return result;
-	}
-
-	template<size_t N>
-	// converting constructor
-	inline constexpr auto CaseFolding(const char8_t (&str)[N]) -> auto
-	{
-		return CaseFolding(utf8 {str});
-	}
-
-	template<size_t N>
-	// converting constructor
-	inline constexpr auto CaseFolding(const char16_t (&str)[N]) -> auto
-	{
-		return CaseFolding(utf16 {str});
-	}
-
-	template<size_t N>
-	// converting constructor
-	inline constexpr auto CaseFolding(const char32_t (&str)[N]) -> auto
-	{
-		return CaseFolding(utf32 {str});
-	}
-}
-
-namespace // private
-{
-	inline constexpr auto CompositionExclusions(const model::text auto& name) -> std::set<uint32_t>
-	{
-		static auto CompositionExclusions // cache the file
-		{fs::open(u8"tools/data/CompositionExclusions.txt")};
-
-		std::set<uint32_t> result;
-
-		if (CompositionExclusions)
-		{
-			std::visit([&](auto&& file)
-			{
-				// TODO
-
-			},
-			*CompositionExclusions);
-		}
-		return result;
-	}
-
-	template<size_t N>
-	// converting constructor
-	inline constexpr auto CompositionExclusions(const char8_t (&str)[N]) -> auto
-	{
-		return CompositionExclusions(utf8 {str});
-	}
-
-	template<size_t N>
-	// converting constructor
-	inline constexpr auto CompositionExclusions(const char16_t (&str)[N]) -> auto
-	{
-		return CompositionExclusions(utf16 {str});
-	}
-
-	template<size_t N>
-	// converting constructor
-	inline constexpr auto CompositionExclusions(const char32_t (&str)[N]) -> auto
-	{
-		return CompositionExclusions(utf32 {str});
-	}
-}
-
-namespace // private
-{
 	inline constexpr auto DerivedCoreProperties(const model::text auto& name) -> std::set<uint32_t>
 	{
 		static auto DerivedCoreProperties // cache the file
@@ -353,13 +226,13 @@ namespace setup
 		//| step 2. build schemes |
 		//|-----------------------|
 
-		for (auto i {0}; i <= LIMIT; ++i)
+		for (size_t i {0}; i <= LIMIT; ++i)
 		{
 			block block {};
 
 			const auto PAGE {i * BLOCK};
 
-			for (auto j {0}; j < BLOCK; ++j)
+			for (size_t j {0}; j < BLOCK; ++j)
 			{
 				const size_t code {PAGE + j};
 

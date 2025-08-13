@@ -1,7 +1,5 @@
 #pragma once
 
-#include <tuple>
-#include <cstddef>
 #include <utility>
 
 namespace trait
@@ -12,19 +10,6 @@ namespace trait
 	>
 	struct visitable
 	{
-		template
-		<
-			class V
-		>
-		requires requires(V&& impl, T& crtp)
-		{
-			std::forward<V>(impl)(static_cast<T&>(crtp));
-		}
-		inline constexpr auto accept(V&& impl)
-		{
-			std::forward<V>(impl)(static_cast<T&>(*this));
-		}
-
 		template
 		<
 			class V
@@ -40,39 +25,12 @@ namespace trait
 	};
 }
 
-//|----------|
-//| overload |
-//|----------|
-
-template
-<
-	class... L
->
-struct visitor : L...
-{
-	using L::operator()...;
-
-	inline constexpr auto operator()(auto&& _) const
-	{
-		static_assert(false, "missing handle");
-	}
-};
-
-template
-<
-	class... L
->
-visitor(L...) -> visitor<L...>;
-
-//|-----------|
-//| fix-point |
-//|-----------|
-
 template
 <
 	class L
 >
-struct recurse
+// anchor
+struct fix
 {
 	L f;
 
@@ -80,9 +38,9 @@ struct recurse
 	<
 		class... X
 	>
-	inline constexpr auto operator()(X&&... _) const
+	inline constexpr auto operator()(X&&... x) const -> decltype(auto)
 	{
-		return f(*this, std::forward<X>(_)...);
+		return f(*this, std::forward<X>(x)...);
 	}
 };
 
@@ -90,117 +48,42 @@ template
 <
 	class... L
 >
-recurse(L...) -> recurse<L...>;
-
-//|-----------------|
-//| helper function |
-//|-----------------|
+fix(L...) -> fix<L...>;
 
 template
 <
-	class    V,
 	class... L
 >
-requires requires(V&& target)
+// visitor
+struct visit : L...
 {
-	[]<class... L2>(visitor<L2...>&){}(target);
-}
-inline constexpr auto overrides(V&& target, L&&... lambda)
-{
-	auto handles {std::make_tuple(std::forward<L>(lambda)...)};
+	using L::operator()...;
 
-	return [target, handles = std::move(handles)](auto&&... args) -> void
+	template
+	<
+		class... X
+	>
+	inline constexpr auto operator()(X&&... x) const -> decltype(auto)
 	{
-		auto match // dispatcher
-		{
-			[&]<size_t N = 0>(auto& impl)
-			{
-				if constexpr (N < sizeof...(L))
-				{
-					//|-------------<nth lambda>-------------|
-					const auto& handle {std::get<N>(handles)};
-					//|--------------------------------------|
-
-					if constexpr (requires { handle(args...); })
-					{
-						// invoke the handler with current set of args
-						return handle(std::forward<decltype(args)>(args)...);
-					}
-					else
-					{
-						return impl.template operator()<N + 1>(impl);
-					}
-				}
-				else
-				{
-					if constexpr (requires { target(args...); })
-					{
-						// if no override matches, fallback to base
-						return target(std::forward<decltype(args)>(args)...);
-					}
-					else
-					{
-						static_assert(false, "missing base handle");
-					}
-				}
-			}
-		};
-		return match.template operator()<0>(match);
-	};
-}
+		// static_assert(sizeof...(X) == 0);
+	}
+};
 
 template
 <
-	class    V,
 	class... L
 >
-requires requires(V&& target)
-{
-	[]<class L2>(recurse<L2>&){}(target);
-}
-inline constexpr auto overrides(V&& target, L&&... lambda)
-{
-	auto handles {std::make_tuple(std::forward<L>(lambda)...)};
+visit(L...) -> visit<L...>;
 
-	return recurse
+template
+<
+	class    T,
+	class... L
+>
+inline constexpr auto visitor(L&&... l)
+{
+	return [impl = visit<L...>{std::forward<L>(l)...}](auto&&... arg) -> T
 	{
-		[target, handles = std::move(handles)](auto& self, auto&&... args) -> void
-		{
-			auto match // dispatcher
-			{
-				[&]<size_t N = 0>(auto& impl)
-				{
-					if constexpr (N < sizeof...(L))
-					{
-						//|-------------<nth lambda>-------------|
-						const auto& handle {std::get<N>(handles)};
-						//|--------------------------------------|
-
-						if constexpr (requires { handle(self, args...); })
-						{
-							// invoke the handler with current set of args
-							return handle(self, std::forward<decltype(args)>(args)...);
-						}
-						else
-						{
-							return impl.template operator()<N + 1>(impl);
-						}
-					}
-					else
-					{
-						if constexpr (requires { target.f(self, args...); })
-						{
-							// if no override matches, fallback to base
-							return target.f(self, std::forward<decltype(args)>(args)...);
-						}
-						else
-						{
-							static_assert(false, "missing proper handle");
-						}
-					}
-				}
-			};
-			return match.template operator()<0>(match);
-		}
+		return impl(std::forward<decltype(arg)>(arg)...); // lambda wrapper
 	};
 }

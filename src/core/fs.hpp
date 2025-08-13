@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bit>
+#include <utility>
 #include <cassert>
 #include <cstdint>
 #include <variant>
@@ -170,7 +171,7 @@ namespace fs
 						{
 							if (ifs.read(reinterpret_cast<char*>(&code), sizeof(unit)); code != '\n')
 							{
-								assert(!"[ERROR]");
+								assert(!"<ERROR>");
 								std::unreachable();
 							}
 						}
@@ -194,7 +195,7 @@ namespace fs
 						{
 							if (ifs.read(reinterpret_cast<char*>(&code), sizeof(unit)); (code = std::byteswap(code)) != '\n')
 							{
-								assert(!"[ERROR]");
+								assert(!"<ERROR>");
 								std::unreachable();
 							}
 						}

@@ -7,18 +7,15 @@ namespace trait
 	template<class T>
 	concept rule_of_5 =
 	(
-		// construtor
 		std::is_copy_constructible_v<T>
 		&&
 		std::is_move_constructible_v<T>
 		&&
-		// destructor
-		std::is_destructible_v<T>
-		&&
-		// assignment
 		std::is_copy_assignable_v<T>
 		&&
 		std::is_move_assignable_v<T>
+		&&
+		std::is_destructible_v<T>
 	);
 }
 
@@ -26,19 +23,19 @@ namespace trait
 //| chore methods |
 //|---------------|
 
-#define COPY_CALL($type) friend constexpr void copy(const $type& from, $type& dest) noexcept
-#define SWAP_CALL($type) friend constexpr void swap($type& from, $type& dest) noexcept
+#define COPY_CALL(T) friend constexpr void copy(const T& from, T& dest) noexcept
+#define SWAP_CALL(T) friend constexpr void swap(T& from, T& dest) noexcept
 
 //|-------------|
 //| constructor |
 //|-------------|
 
-#define COPY_CONSTRUCTOR($type) constexpr $type(const $type& other) noexcept
-#define MOVE_CONSTRUCTOR($type) constexpr $type($type&& other) noexcept
+#define COPY_CONSTRUCTOR(T) constexpr T(const T& other) noexcept
+#define MOVE_CONSTRUCTOR(T) constexpr T(T&& other) noexcept
 
 //|------------|
 //| assignment |
 //|------------|
 
-#define COPY_ASSIGNMENT($type) inline constexpr auto operator=(const $type& rhs) noexcept -> $type&
-#define MOVE_ASSIGNMENT($type) inline constexpr auto operator=($type&& rhs) noexcept -> $type&
+#define COPY_ASSIGNMENT(T) inline constexpr auto operator=(const T& rhs) noexcept -> T&
+#define MOVE_ASSIGNMENT(T) inline constexpr auto operator=(T&& rhs) noexcept -> T&
