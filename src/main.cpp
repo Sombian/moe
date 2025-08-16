@@ -1,4 +1,5 @@
 #include <variant>
+#include <iostream>
 
 #include "core/fs.hpp"
 

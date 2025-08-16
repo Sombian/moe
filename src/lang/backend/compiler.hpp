@@ -96,12 +96,12 @@ class compiler
 
 		inline constexpr auto align() const -> size_t override
 		{
-			
+			return 69;
 		};
 		
 		inline constexpr auto bytes() const -> size_t override
 		{
-			
+			return 69;
 		};
 	};
 
@@ -119,12 +119,12 @@ class compiler
 
 		inline constexpr auto align() const -> size_t override
 		{
-			
+			return 69;
 		};
 
 		inline constexpr auto bytes() const -> size_t override
 		{
-			
+			return 69;
 		};
 	};
 
@@ -189,18 +189,18 @@ public:
 	>
 	inline constexpr auto compile(program<A, B>& exe)
 	{
-		              /**\--------------------\**/
-		#define local /**/ this->scope.back() /**/
-		              /**\--------------------\**/
+		              /**\-----------------------------\**/
+		#define ENTER /**/ this->scope.emplace_back(); /**/
+		#define LEAVE /**/   this->scope.pop_back();   /**/
+		              /**\-----------------------------\**/
 
 		utf8 _init_;
 		utf8 _data_;
 		utf8 _text_;
 
-		              /**\-----------------------------\**/
-		#define ENTER /**/ this->scope.emplace_back(); /**/
-		#define LEAVE /**/   this->scope.pop_back();   /**/
-		              /**\-----------------------------\**/
+		              /**\--------------------\**/
+		#define local /**/ this->scope.back() /**/
+		              /**\--------------------\**/
 
 		ENTER
 		{
@@ -290,7 +290,7 @@ public:
 			{
 				std::visit(fix{visitor<void>
 				(
-					// notice: scan top-level models only
+					// notice: scan top-level models only for now
 					[&](auto& self, std::unique_ptr<model_decl>& decl)
 					{
 						local.typing[decl->name] = std::make_unique<type_model>([&]
@@ -307,7 +307,7 @@ public:
 								impl[i] = local.typing[decl->body[i].type].get();
 								// also get the raw ptr out of std::unique_ptr
 							} 
-							return impl; // RVO so we dont need to std::move
+							return impl; // RVO -> so we dont need to std::move
 						}
 						());
 					}
@@ -317,66 +317,49 @@ public:
 
 			//|-----------------|
 			//| STEP 2. codegen |
-			//|-----------------
+			//|-----------------|
 
 			for (auto& _ : exe.body)
 			{
 				std::visit(fix{visitor<void>
 				(
+					// variant::decl
 					[&](auto& self, std::unique_ptr<var_decl>& decl)
 					{
 
 					},
 					[&](auto& self, std::unique_ptr<fun_decl>& decl)
 					{
-						ENTER
-						{
-							for (auto& node : decl->body)
-							{
-								std::visit(self, node);
-							}
-						}
-						LEAVE
+
 					},
+					[&](auto& self, std::unique_ptr<model_decl>& decl)
+					{
+
+					},
+					[&](auto& self, std::unique_ptr<trait_decl>& decl)
+					{
+
+					},
+					// variant::stmt
 					[&](auto& self, std::unique_ptr<if_stmt>& stmt)
 					{
-						ENTER
-						{
 
-						}
-						LEAVE
 					},
 					[&](auto& self, std::unique_ptr<for_stmt>& stmt)
 					{
-						ENTER
-						{
-							
-						}
-						LEAVE
+
 					},
 					[&](auto& self, std::unique_ptr<match_stmt>& stmt)
 					{
-						ENTER
-						{
 
-						}
-						LEAVE
 					},
 					[&](auto& self, std::unique_ptr<while_stmt>& stmt)
 					{
-						ENTER
-						{
 
-						}
-						LEAVE
 					},
 					[&](auto& self, std::unique_ptr<block_stmt>& stmt)
 					{
-						ENTER
-						{
 
-						}
-						LEAVE
 					},
 					[&](auto& self, std::unique_ptr<break_stmt>& stmt)
 					{
@@ -390,12 +373,14 @@ public:
 					{
 
 					},
+					// variant::expr
 					[&](auto&& self, std::unique_ptr<prefix_expr>& expr)
 					{
 
 					},
 					[&](auto& self, std::unique_ptr<binary_expr>& expr)
 					{
+						
 					},
 					[&](auto& self, std::unique_ptr<suffix_expr>& expr)
 					{
@@ -411,17 +396,15 @@ public:
 					},
 					[&](auto& self, std::unique_ptr<literal_expr>& expr)
 					{
-						_text_ += u8"\tMOV rax, %s\n"_utf | expr->self;
+
 					},
 					[&](auto& self, std::unique_ptr<symbol_expr>& expr)
 					{
-						const auto* var {this->resolve_var(expr->self)};
 
-						_text_ += u8"\tMOV rax, %s\n"_utf | var->deref();
 					},
 					[&](auto& self, std::unique_ptr<group_expr>& expr)
 					{
-						std::visit(self, expr->self);
+
 					}
 				)},
 				_);
@@ -547,7 +530,7 @@ private:
 			{
 				switch (expr->type)
 				{
-					case ty::I8: return this->resolve_type(u8"i8");
+					case ty::I8:  return this->resolve_type(u8"i8" );
 					case ty::I16: return this->resolve_type(u8"i16");
 					case ty::I32: return this->resolve_type(u8"i32");
 					case ty::I64: return this->resolve_type(u8"i64");
@@ -555,7 +538,7 @@ private:
 					case ty::F32: return this->resolve_type(u8"f32");
 					case ty::F64: return this->resolve_type(u8"f64");
 
-					case ty::U8: return this->resolve_type(u8"u8");
+					case ty::U8:  return this->resolve_type(u8"u8") ;
 					case ty::U16: return this->resolve_type(u8"u16");
 					case ty::U32: return this->resolve_type(u8"u32");
 					case ty::U64: return this->resolve_type(u8"u64");

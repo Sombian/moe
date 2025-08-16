@@ -132,7 +132,7 @@ struct program
 };
 
 struct var_decl : public span,
-public trait::visitable<var_decl>
+public visitable<var_decl>
 {
 	only(bool) only;
 	only(utf8) name;
@@ -141,7 +141,7 @@ public trait::visitable<var_decl>
 };
 
 struct fun_decl : public span,
-public trait::visitable<fun_decl>
+public visitable<fun_decl>
 {
 	struct data
 	{
@@ -156,7 +156,7 @@ public trait::visitable<fun_decl>
 };
 
 struct model_decl : public span,
-public trait::visitable<model_decl>
+public visitable<model_decl>
 {
 	struct data
 	{
@@ -168,7 +168,7 @@ public trait::visitable<model_decl>
 };
 
 struct trait_decl : public span,
-public trait::visitable<trait_decl>
+public visitable<trait_decl>
 {
 	struct data
 	{
@@ -182,7 +182,7 @@ public trait::visitable<trait_decl>
 };
 
 struct if_stmt : public span,
-public trait::visitable<if_stmt>
+public visitable<if_stmt>
 {
 	struct flow
 	{
@@ -193,7 +193,7 @@ public trait::visitable<if_stmt>
 };
 
 struct for_stmt : public span,
-public trait::visitable<for_stmt>
+public visitable<for_stmt>
 {
 	only(expr) init;
 	only(expr) _if_;
@@ -202,7 +202,7 @@ public trait::visitable<for_stmt>
 };
 
 struct match_stmt : public span,
-public trait::visitable<match_stmt>
+public visitable<match_stmt>
 {
 	struct flow
 	{
@@ -214,45 +214,45 @@ public trait::visitable<match_stmt>
 };
 
 struct while_stmt : public span,
-public trait::visitable<while_stmt>
+public visitable<while_stmt>
 {
 	only(expr) _if_;
 	only(stmt) body;
 };
 
 struct block_stmt : public span,
-public trait::visitable<block_stmt>
+public visitable<block_stmt>
 {
 	many(node) body;
 };
 
 struct break_stmt : public span,
-public trait::visitable<break_stmt>
+public visitable<break_stmt>
 {
 	only(utf8) label;
 };
 
 struct return_stmt : public span,
-public trait::visitable<return_stmt>
+public visitable<return_stmt>
 {
 	only(expr) value;
 };
 
 struct iterate_stmt : public span,
-public trait::visitable<iterate_stmt>
+public visitable<iterate_stmt>
 {
 	only(utf8) label;
 };
 
 struct prefix_expr : public span,
-public trait::visitable<prefix_expr>
+public visitable<prefix_expr>
 {
 	only(op) op;
 	only(expr) rhs;
 };
 
 struct binary_expr : public span,
-public trait::visitable<binary_expr>
+public visitable<binary_expr>
 {
 	only(expr) lhs;
 	only(op) op;
@@ -260,41 +260,41 @@ public trait::visitable<binary_expr>
 };
 
 struct suffix_expr : public span,
-public trait::visitable<suffix_expr>
+public visitable<suffix_expr>
 {
 	only(expr) lhs;
 	only(op) oper;
 };
 
 struct access_expr : public span,
-public trait::visitable<access_expr>
+public visitable<access_expr>
 {
 	only(expr) lhs;
 	only(utf8) name;
 };
 
 struct invoke_expr : public span,
-public trait::visitable<invoke_expr>
+public visitable<invoke_expr>
 {
 	only(expr) lhs;
 	many(expr) args;
 };
 
 struct literal_expr : public span,
-public trait::visitable<literal_expr>
+public visitable<literal_expr>
 {
 	only(ty) type;
 	only(utf8) self;
 };
 
 struct symbol_expr : public span,
-public trait::visitable<symbol_expr>
+public visitable<symbol_expr>
 {
 	only(utf8) self;
 };
 
 struct group_expr : public span,
-public trait::visitable<group_expr>
+public visitable<group_expr>
 {
 	only(expr) self;
 };

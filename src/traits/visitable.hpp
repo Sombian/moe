@@ -2,28 +2,25 @@
 
 #include <utility>
 
-namespace trait
+template
+<
+	class T
+>
+struct visitable
 {
 	template
 	<
-		class T
+		class V
 	>
-	struct visitable
+	requires requires(V&& impl, T&& crtp)
 	{
-		template
-		<
-			class V
-		>
-		requires requires(V&& impl, const T& crtp)
-		{
-			std::forward<V>(impl)(static_cast<const T&>(crtp));
-		}
-		inline constexpr auto accept(const V&& impl) const
-		{
-			std::forward<V>(impl)(static_cast<const T&>(*this));
-		}
-	};
-}
+		std::forward<V>(impl)(crtp);
+	}
+	inline constexpr auto accept(V&& impl)
+	{
+		std::forward<V>(impl)(*this);
+	}
+};
 
 template
 <
