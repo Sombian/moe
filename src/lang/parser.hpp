@@ -37,7 +37,7 @@ class parser
 	uint16_t x {0};
 	uint16_t y {0};
 
-	program<A, B> exe;
+	AST<A, B> exe;
 
 	//|---------<buffer>---------|
 	decltype(lexer->pull()) buffer;
@@ -164,7 +164,7 @@ public:
 		return *this->lexer;
 	}
 
-	inline constexpr auto pull() -> program<A, B>
+	inline constexpr auto pull() -> AST<A, B>
 	{
 		while (this->peek())
 		{

@@ -123,7 +123,7 @@ template
 	class A,
 	class B
 >
-struct program
+struct AST
 {
 	typedef error<A, B> segf;
 

@@ -1594,7 +1594,8 @@ public:
 			return *this;
 		}
 	
-		template<std::integral I>
+		template<class I> requires
+		(std::is_integral_v<I> || std::is_floating_point_v<I>)
 		inline constexpr auto operator|(const I rhs) -> format&
 		{
 			if (!this->full())
@@ -2900,13 +2901,15 @@ public:
 		return format {lhs} | rhs;
 	}
 
-	template<std::integral I>
+	template<class I> requires
+	(std::is_integral_v<I> || std::is_floating_point_v<I>)
 	friend constexpr auto operator|(const text<T>& lhs, const I rhs) -> format
 	{
 		return format {lhs} | reinterpret_cast<const T*>(std::to_string(rhs).c_str());
 	}
 
-	template<std::integral I>
+	template<class I> requires
+	(std::is_integral_v<I> || std::is_floating_point_v<I>)
 	friend constexpr auto operator|(const slice& lhs, const I rhs) -> format
 	{
 		return format {lhs} | reinterpret_cast<const T*>(std::to_string(rhs).c_str());
