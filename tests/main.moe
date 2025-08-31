@@ -1,6 +1,3 @@
-let foo: i32 = 6;
-let bar: i32 = 9;
-
 model cat
 {
 	lorem: i32;
@@ -9,9 +6,9 @@ model cat
 
 fun! main(): i32
 {
-	// shadowing
 	let foo: i32 = 6;
 	let bar: i32 = 9;
 
-	let var: i32 = foo + bar;
+	let lorem: i32 = 6 * (foo + bar) * 9;
+	let ipsum: i32 = 6 * (  lorem  ) * 9;
 }

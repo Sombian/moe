@@ -25,7 +25,7 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 if (MSVC)
 	add_compile_options(/fsanitize=address /utf-8)
 else()
-	add_compile_options(-o -g -pipe -Wall -Wextra)
+	add_compile_options(-g -flto -pipe -pedantic)
 
 	if (NOT MINGW)
 		check_cxx_compiler_flag("-fsanitize=address" ASAN_AD)

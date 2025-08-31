@@ -45,11 +45,11 @@ namespace utils
 	//| string to integer |
 	//|-------------------|
 
-	inline constexpr auto stoi(const model::text auto& str, const uint8_t radix = 10) -> int64_t
+	inline constexpr auto stoi(const model::text auto& str, const uint8_t radix = 10) -> long
 	{
 		assert(2 <= radix && radix <= 36);
 
-		int64_t out {0};
+		long out {0};
 
 		const auto pre
 		{

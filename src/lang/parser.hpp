@@ -192,12 +192,11 @@ public:
 			}
 			catch (error<A, B>& out)
 			{
-				// diagnostics
-				this->exe.lint
-				.emplace_back
-					(out);
 				// recovery
 				this->sync();
+				// diagnostics
+				this->exe.lint
+				.emplace_back(out);
 			}
 		}
 		return std::move(this->exe);
@@ -269,12 +268,11 @@ private:
 		}
 		catch (error<A, B>& out)
 		{
-			// diagnostics
-			this->exe.lint
-			.emplace_back
-				(out);
 			// recovery
 			this->sync();
+			// diagnostics
+			this->exe.lint
+			.emplace_back(out);
 		}
 		return this->$decl();
 	}
@@ -625,12 +623,11 @@ private:
 		}
 		catch (error<A, B>& out)
 		{
-			// diagnostics
-			this->exe.lint
-			.emplace_back
-				(out);
 			// recovery
 			this->sync();
+			// diagnostics
+			this->exe.lint
+			.emplace_back(out);
 		}
 		return this->$stmt();
 	}
@@ -1130,12 +1127,11 @@ private:
 		}
 		catch (error<A, B>& out)
 		{
-			// diagnostics
-			this->exe.lint
-			.emplace_back
-				(out);
 			// recovery
 			this->sync();
+			// diagnostics
+			this->exe.lint
+			.emplace_back(out);
 		}
 		return this->$expr();
 	}

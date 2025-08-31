@@ -175,7 +175,7 @@ public:
 							return this->scan_hex();
 						}
 					}
-					goto number;
+					[[fallthrough]];
 				}
 				case '1':
 				case '2':
@@ -521,7 +521,7 @@ private:
 			}
 			case utils::ordering::GREATER:
 			{
-				return T(view.value().value_or(atom::SYMBOL));
+				return T(*view.value()); // <- always deref
 			}
 		}
 		assert(false && "-Wreturn-type");
