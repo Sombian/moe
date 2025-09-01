@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <utility>
 #include <fstream>
 
@@ -212,8 +213,8 @@ public:
 			local.typing[u8"i64"] = std::make_unique<prime_t>(&I64, 8 * 8);
 
 			// fundamental type (floating)
-			local.typing[u8"f32"] = std::make_unique<prime_t>(&F32, 2 * 8);
-			local.typing[u8"f64"] = std::make_unique<prime_t>(&F64, 4 * 8);
+			local.typing[u8"f32"] = std::make_unique<prime_t>(&F32, 4 * 8);
+			local.typing[u8"f64"] = std::make_unique<prime_t>(&F64, 8 * 8);
 
 			// fundamental type (unsigned)
 			local.typing[u8"u8" ] = std::make_unique<prime_t>(&U64, 1 * 8);
@@ -284,10 +285,18 @@ public:
 								{
 									auto r1 {this->cg(decl->init.value())};
 
-									//|-------------------------------------------------------------------------------------------|
-									this->program += u8"\t%s %s, %s\n"_utf | t1->ins->mov | local.memory[decl->name]->deref() | r1;
-									//|-------------------------------------------------------------------------------------------|
-
+									if (t1->ins == &I64 || t1->ins == &U64)
+									{
+										//|------------------------------------------------------------------------------------------------------------------------|
+										this->program += u8"\t%s %s, %s\n"_utf | t1->ins->mov | local.memory[decl->name]->deref() | this->view_gpr(r1, t1->bytes());
+										//|------------------------------------------------------------------------------------------------------------------------|
+									}
+									if (t1->ins == &F32 || t1->ins == &F64)
+									{
+										//|------------------------------------------------------------------------------------------------------------------------|
+										this->program += u8"\t%s %s, %s\n"_utf | t1->ins->mov | local.memory[decl->name]->deref() | this->view_fpr(r1, t1->bytes());
+										//|------------------------------------------------------------------------------------------------------------------------|
+									}
 									r1.release(); // discard the register
 								}
 							}
@@ -439,22 +448,27 @@ private:
 		}
 		if constexpr (std::is_same_v<T, std::unique_ptr<binary_expr>>)
 		{
-			auto t1 {dynamic_cast<prime_t*>(this->infer_type(e->lhs))};
-			auto t2 {dynamic_cast<prime_t*>(this->infer_type(e->rhs))};
+			auto* t1 {dynamic_cast<prime_t*>(this->infer_type(e->lhs))};
+			auto* t2 {dynamic_cast<prime_t*>(this->infer_type(e->rhs))};
 
 			if (t1 && t2)
 			{
+				auto* common {this->promote(t1, t2)};
+
 				auto r1 {this->cg(e->lhs)};
 				auto r2 {this->cg(e->rhs)};
 
+				r1 = this->convert(common, r1, t1);
+				r2 = this->convert(common, r2, t2);
+
 				switch (e->op)
 				{
-					case op::ADD: return this->cg_add(t1->ins, r1, t2->ins, r2);
-					case op::SUB: return this->cg_sub(t1->ins, r1, t2->ins, r2);
-					case op::MUL: return this->cg_mul(t1->ins, r1, t2->ins, r2);
-					case op::DIV: return this->cg_div(t1->ins, r1, t2->ins, r2);
-					case op::MOD: return this->cg_mod(t1->ins, r1, t2->ins, r2);
-					case op::POW: return this->cg_pow(t1->ins, r1, t2->ins, r2);
+					case op::ADD: return this->cg_add(common, r1, r2);
+					case op::SUB: return this->cg_sub(common, r1, r2);
+					case op::MUL: return this->cg_mul(common, r1, r2);
+					case op::DIV: return this->cg_div(common, r1, r2);
+					case op::MOD: return this->cg_mod(common, r1, r2);
+					case op::POW: return this->cg_pow(common, r1, r2);
 				}
 			}
 		}
@@ -526,6 +540,57 @@ private:
 		assert(!"<ERROR>");
 		std::unreachable();
 		return {nullptr, 0};
+	}
+
+	inline constexpr auto promote(const prime_t* lhs, const prime_t* rhs) -> const ins_t*
+	{
+		if (lhs->ins == &F64 || rhs->ins == &F64) return &F64;
+		if (lhs->ins == &F32 || rhs->ins == &F32) return &F32;
+		if (lhs->ins == &U64 || rhs->ins == &U64) return &U64;
+		                                          return &I64;
+	}
+
+	inline constexpr auto convert(const ins_t* target, reg_t src, const prime_t* from) -> reg_t
+	{
+		// int → f64 conversion
+		if (target == &F64 && (from->ins == &I64 || from->ins == &U64))
+		{
+			auto r1 {this->pull_fpr()};
+
+			this->program += u8"\tcvtsi2sd %s, %s\n"_utf | r1 | src;
+
+			src.release(); return r1;
+		}
+		// int → f32 conversion
+		if (target == &F32 && (from->ins == &I64 || from->ins == &U64))
+		{
+			auto r1 {this->pull_fpr()};
+
+			this->program += u8"\tcvtsi2ss %s, %s\n"_utf | r1 | src;
+
+			src.release(); return r1;
+		}
+		// f32 → f64 promotion
+		if (target == &F64 && (from->ins == &F32 /* f64 exclusive */))
+		{
+			auto r1 {this->pull_fpr()};
+
+			this->program += u8"\tcvtss2sd %s, %s\n"_utf | r1 | src;
+
+			src.release(); return r1;
+		}
+
+		// f64 → f32 demotion
+		if (target == &F32 && (from->ins == &F64 /* f32 exclusive */))
+		{
+			auto r1 {this->pull_fpr()};
+
+			this->program += u8"\tcvtsd2ss %s, %s\n"_utf | r1 | src;
+
+			src.release(); return r1;
+		}
+
+		return src;
 	}
 
 	std::pair<utf8, bool> GPR[4]
@@ -660,135 +725,140 @@ private:
 		std::unreachable();
 	}
 
+	inline constexpr auto view_gpr(const reg_t& rg, size_t bytes) -> utf8
+	{
+		//┌────────┬────────┬─────────────────┬───────────────────────────────────────┐
+		//│ 8 bits │ 8 bits │     16 bits     │                 32 bits               │
+		//├────────┴────────┴─────────────────┴───────────────────────────────────────┤
+		//│                                  rax                                      │
+		//├───────────────────────────────────┬───────────────────────────────────────┤
+		//│                eax                │                                       │
+		//├─────────────────┬─────────────────┘                                       │
+		//│       ax        │                                                         │
+		//├────────┬────────┤                                                         │
+		//│   al   │   ah   │                                                         │
+		//└────────┴────────┴─────────────────────────────────────────────────────────┘
+
+		auto full {rg.bank[rg.slot].first};
+
+		if (bytes == 1)
+		{
+			if (full == u8"rax") return u8"al";
+			if (full == u8"rbx") return u8"bl";
+			if (full == u8"rcx") return u8"cl";
+			if (full == u8"rdx") return u8"dl";
+		}
+		if (bytes == 2)
+		{
+			if (full == u8"rax") return u8"ax";
+			if (full == u8"rbx") return u8"bx";
+			if (full == u8"rcx") return u8"cx";
+			if (full == u8"rdx") return u8"dx";
+		}
+		if (bytes == 4)
+		{
+			if (full == u8"rax") return u8"eax";
+			if (full == u8"rbx") return u8"ebx";
+			if (full == u8"rcx") return u8"ecx";
+			if (full == u8"rdx") return u8"edx";
+		}
+		return full;
+	}
+	
+	inline constexpr auto view_fpr(const reg_t& rx, size_t bytes) -> utf8	
+	{
+		//┌──────────┬──────────┬───────────────────────┐
+		//│ 128 bits │ 128 bits │       256 bits        │
+		//├──────────┴──────────┴───────────────────────┤
+		//│                    zmm                      │
+		//├─────────────────────┬───────────────────────┤
+		//│         ymm         │                       │
+		//├──────────┬──────────┘                       │
+		//│   xmm    │                                  │
+		//└──────────┴──────────────────────────────────┘
+
+		auto full {rx.bank[rx.slot].first};
+
+		if (bytes == 4)
+		{
+			if (full == u8"xmm0") return u8"xmm0";
+			if (full == u8"xmm1") return u8"xmm1";
+			if (full == u8"xmm2") return u8"xmm2";
+			if (full == u8"xmm3") return u8"xmm3";
+		}
+		if (bytes == 8)
+		{
+			if (full == u8"xmm0") return u8"xmm0";
+			if (full == u8"xmm1") return u8"xmm1";
+			if (full == u8"xmm2") return u8"xmm2";
+			if (full == u8"xmm3") return u8"xmm3";
+		}
+		return full;
+	}
+
 	//|-----------------|
 	//| asm::arithmetic |
 	//|-----------------|
 
-	// add r1, r2 => r2 += r1
-	inline constexpr auto cg_add(const ins_t* i1, reg_t& r1, const ins_t* i2, reg_t& r2) -> reg_t
+	// add r1, r2 => r1 += r2
+	inline /*Ი︵𐑼*/ auto cg_add(const ins_t* in, const reg_t& r1, const reg_t& r2) -> reg_t
 	{
-		if (i1 == i2)
-		{
-			//|-------------------------------------------------------|
-			this->program += u8"\t%s %s, %s\n"_utf | i1->add | r1 | r2;
-			//|-------------------------------------------------------|
+		//|-------------------------------------------------------|
+		this->program += u8"\t%s %s, %s\n"_utf | in->add | r1 | r2;
+		//|-------------------------------------------------------|
 
-			if (i1 == &I64 || i1 == &U64)
-			{
-				this->free_gpr(r2);
-			}
-			if (i1 == &F32 || i1 == &F64)
-			{
-				this->free_fpr(r2);
-			}
-			return r1;
-		}
+		r2.release(); return r1;
+	}
+
+	// sub r1, r2 => r1 -= r2
+	inline /*Ი︵𐑼*/ auto cg_sub(const ins_t* in, const reg_t& r1, const reg_t& r2) -> reg_t
+	{
+		//|-------------------------------------------------------|
+		this->program += u8"\t%s %s, %s\n"_utf | in->sub | r1 | r2;
+		//|-------------------------------------------------------|
+
+		r2.release(); return r1;
+	}
+
+	// mul r1, r2 => r1 *= r2
+	inline /*Ი︵𐑼*/ auto cg_mul(const ins_t* in, const reg_t& r1, const reg_t& r2) -> reg_t
+	{
+		//|-------------------------------------------------------|
+		this->program += u8"\t%s %s, %s\n"_utf | in->mul | r1 | r2;
+		//|-------------------------------------------------------|
+
+		r2.release(); return r1;
+	}
+
+	inline /*Ი︵𐑼*/ auto cg_div(const ins_t* in, const reg_t& r1, const reg_t& r2) -> reg_t
+	{
 		assert(!"<ERROR>");
 		std::unreachable();
 		return {nullptr, 0};
 	}
 
-	// sub r1, r2 => r2 -= r1
-	inline constexpr auto cg_sub(const ins_t* i1, reg_t& r1, const ins_t* i2, reg_t& r2) -> reg_t
+	inline /*Ი︵𐑼*/ auto cg_mod(const ins_t* in, const reg_t& r1, const reg_t& r2) -> reg_t
 	{
-		if (i1 == i2)
-		{
-			//|-------------------------------------------------------|
-			this->program += u8"\t%s %s, %s\n"_utf | i1->sub | r1 | r2;
-			//|-------------------------------------------------------|
-
-			if (i1 == &I64 || i1 == &U64)
-			{
-				this->free_gpr(r2);
-			}
-			if (i1 == &F32 || i1 == &F64)
-			{
-				this->free_gpr(r2);
-			}
-			return r1;
-		}
 		assert(!"<ERROR>");
 		std::unreachable();
 		return {nullptr, 0};
 	}
 
-	// mul r1, r2 => r2 *= r1
-	inline constexpr auto cg_mul(const ins_t* i1, reg_t& r1, const ins_t* i2, reg_t& r2) -> reg_t
+	inline /*Ი︵𐑼*/ auto cg_pow(const ins_t* in, const reg_t& r1, const reg_t& r2) -> reg_t
 	{
-		if (i1 == i2)
-		{
-			//|-------------------------------------------------------|
-			this->program += u8"\t%s %s, %s\n"_utf | i1->mul | r1 | r2;
-			//|-------------------------------------------------------|
-
-			if (i1 == &I64 || i1 == &U64)
-			{
-				this->free_gpr(r2);
-			}
-			if (i1 == &F32 || i1 == &F64)
-			{
-				this->free_gpr(r2);
-			}
-			return r1;
-		}
 		assert(!"<ERROR>");
 		std::unreachable();
 		return {nullptr, 0};
 	}
 
-	inline constexpr auto cg_div(const ins_t* i1, reg_t& r1, const ins_t* i2, reg_t& r2) -> reg_t
+	inline constexpr auto cg_load(int raw) -> reg_t
 	{
-		if (i1 == i2)
-		{
-			if (i1 == &I64 || i1 == &U64)
-			{
-				// TODO
-			}
-			if (i1 == &F32 || i1 == &F64)
-			{
-				// TODO
-			}
-		}
-		assert(!"<ERROR>");
-		std::unreachable();
-		return {nullptr, 0};
-	}
+		auto r1 {this->pull_gpr()};
 
-	inline constexpr auto cg_mod(const ins_t* i1, reg_t& r1, const ins_t* i2, reg_t& r2) -> reg_t
-	{
-		if (i1 == i2)
-		{
-			if (i1 == &I64 || i1 == &U64)
-			{
-				// TODO
-			}
-			if (i1 == &F32 || i1 == &F64)
-			{
-				// TODO
-			}
-		}
-		assert(!"<ERROR>");
-		std::unreachable();
-		return {nullptr, 0};
-	}
+		this->program += u8"\tmov %s, %s\n"_utf | r1 | raw;
 
-	inline constexpr auto cg_pow(const ins_t* i1, reg_t& r1, const ins_t* i2, reg_t& r2) -> reg_t
-	{
-		if (i1 == i2)
-		{
-			if (i1 == &I64 || i1 == &U64)
-			{
-				// TODO
-			}
-			if (i1 == &F32 || i1 == &F64)
-			{
-				// TODO
-			}
-		}
-		assert(!"<ERROR>");
-		std::unreachable();
-		return {nullptr, 0};
-	}
+		return r1; // allocation..!
+	}	
 
 	inline constexpr auto cg_load(long raw) -> reg_t
 	{
@@ -801,20 +871,32 @@ private:
 
 	inline constexpr auto cg_load(float raw) -> reg_t
 	{
-		auto r1 {this->pull_fpr()};
+		auto rg {this->pull_gpr()};
+		auto rx {this->pull_fpr()};
 
-		this->program += u8"\tmovss %s, %s\n"_utf | r1 | raw;
+		uint32_t bits {0};
+		std::memcpy(&bits, &raw, sizeof(raw));
+		static_assert(sizeof(bits) == sizeof(raw));
 
-		return r1; // allocation..!
+		this->program += u8"\tmov %s, %s\n"_utf | this->view_gpr(rg, 4) | bits;
+		this->program += u8"\tmovd %s, %s\n"_utf | rx | this->view_gpr(rg, 4);
+
+		return rx; // allocation..!
 	}
 
 	inline constexpr auto cg_load(double raw) -> reg_t
 	{
-		auto r1 {this->pull_fpr()};
+		auto rg {this->pull_gpr()};
+		auto rx {this->pull_fpr()};
 
-		this->program += u8"\tmovsd %s, %s\n"_utf | r1 | raw;
+		uint64_t bits {0};
+		std::memcpy(&bits, &raw, sizeof(raw));
+		static_assert(sizeof(bits) == sizeof(raw));
 
-		return r1; // allocation..!
+		this->program += u8"\tmov %s, %s\n"_utf | this->view_gpr(rg, 8) | bits;
+		this->program += u8"\tmovq %s, %s\n"_utf | rx | this->view_gpr(rg, 8);
+
+		return rx; // allocation..!
 	}
 
 	//|-----------------|
