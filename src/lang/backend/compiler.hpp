@@ -421,7 +421,7 @@ public:
 				ofs << "default rel"   << '\n';
 				ofs <<                    '\n';
 				ofs << "section .text" << '\n';
-				ofs << "global _start" << '\n';
+				ofs << "global main"   << '\n';
 				ofs <<  this->program  << '\n';
 			}
 		}
@@ -667,30 +667,6 @@ private:
 		FPR[3].second = true;
 	}
 
-	// free a GPR at given index
-	inline constexpr void free_gpr(reg_t& r1)
-	{
-		if (r1.is_free())
-		{
-			// double free
-			assert(!"<ERROR>");
-			std::unreachable();
-		}
-		r1.bank[r1.slot].second = true;
-	}
-
-	// free a FPR at given index
-	inline constexpr void free_fpr(reg_t& r1)
-	{
-		if (r1.is_free())
-		{
-			// double free
-			assert(!"<ERROR>");
-			std::unreachable();
-		}
-		r1.bank[r1.slot].second = true;
-	}
-
 	// returns an index to the available GPR
 	inline constexpr auto pull_gpr() -> reg_t
 	{
@@ -851,7 +827,7 @@ private:
 		return {nullptr, 0};
 	}
 
-	inline constexpr auto cg_load(int raw) -> reg_t
+	inline /*Ი︵𐑼*/ auto cg_load(int raw) -> reg_t
 	{
 		auto r1 {this->pull_gpr()};
 
@@ -860,7 +836,7 @@ private:
 		return r1; // allocation..!
 	}	
 
-	inline constexpr auto cg_load(long raw) -> reg_t
+	inline /*Ი︵𐑼*/ auto cg_load(long raw) -> reg_t
 	{
 		auto r1 {this->pull_gpr()};
 
@@ -869,7 +845,7 @@ private:
 		return r1; // allocation..!
 	}
 
-	inline constexpr auto cg_load(float raw) -> reg_t
+	inline /*Ი︵𐑼*/ auto cg_load(float raw) -> reg_t
 	{
 		auto rg {this->pull_gpr()};
 		auto rx {this->pull_fpr()};
@@ -884,7 +860,7 @@ private:
 		return rx; // allocation..!
 	}
 
-	inline constexpr auto cg_load(double raw) -> reg_t
+	inline /*Ი︵𐑼*/ auto cg_load(double raw) -> reg_t
 	{
 		auto rg {this->pull_gpr()};
 		auto rx {this->pull_fpr()};
