@@ -2101,9 +2101,9 @@ public:
 
 	inline constexpr auto find(const text<T>& str, const size_t offset = 0) const -> size_t
 	{
-		const T* END {&this->c_str()[this->size()]};
-		const T* ptr {&this->c_str()[0x0000000000]};
-
+		const T* ptr {&this->c_str()[0]};
+		const T* END {&ptr[this->size()]};
+		
 		size_t nth {0};
 		
 		// skip offset
@@ -2159,19 +2159,19 @@ public:
 	template<size_t N>
 	inline constexpr auto find(const T (&str)[N], const size_t offset = 0) const -> size_t
 	{
-		const T* END {&this->c_str()[this->size()]};
-		const T* ptr {&this->c_str()[0x0000000000]};
-
+		const T* ptr {&this->c_str()[0]};
+		const T* END {&ptr[this->size()]};
+		
 		size_t nth {0};
-
+		
 		// skip offset
 		for (; nth < offset; ++nth)
 		{
 			ptr += codec::next(ptr);
 		}
-
+		
 		auto out {U'\0'};
-
+		
 		// whilst remaining
 		while (ptr < END)
 		{
@@ -2216,17 +2216,17 @@ public:
 
 	inline constexpr auto find(const char32_t code, const size_t offset = 0) const -> size_t
 	{
-		const T* END {&this->c_str()[this->size()]};
-		const T* ptr {&this->c_str()[0x0000000000]};
-
+		const T* ptr {&this->c_str()[0]};
+		const T* END {&ptr[this->size()]};
+		
 		size_t nth {0};
-
+		
 		// skip offset
 		for (; nth < offset; ++nth)
 		{
 			ptr += codec::next(ptr);
 		}
-
+		
 		auto out {U'\0'};
 
 		// whilst remaining
