@@ -110,9 +110,9 @@ macro(IMPL, u8"impl")         \
 /*| define |*/                \
 /*|--------|*/                \
 macro(LET, u8"let")           \
-macro(LET$, u8"let!")         \
+macro(LET_, u8"let!")         \
 macro(FUN, u8"fun")           \
-macro(FUN$, u8"fun!")         \
+macro(FUN_, u8"fun!")         \
 /*|--------|*/                \
 /*| branch |*/                \
 /*|--------|*/                \
@@ -183,7 +183,7 @@ macro(CODE, nullptr)    \
 macro(TEXT, nullptr)    \
 
 enum class atom : uint8_t
-#define macro($K, $V) $K,
+#define macro(K, V) K,
 {
 	delimeters(macro)
 	operators(macro)
@@ -196,13 +196,13 @@ auto operator<<(std::ostream& os, const atom data) -> std::ostream&
 {
 	switch (data)
 	{
-		#define macro($K, $V) \
-		/*|----------------|*/\
-		case atom::$K:        \
-		{                     \
-			return os << #$K; \
-		}                     \
-		/*|----------------|*/\
+		#define macro(K, V) \
+		/*|--------------|*/\
+		case atom::K:       \
+		{                   \
+			return os << #K;\
+		}                   \
+		/*|--------------|*/\
 
 		delimeters(macro)
 		operators(macro)

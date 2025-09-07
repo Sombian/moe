@@ -4,13 +4,13 @@
 
 template
 <
-	class T
+	typename T
 >
 struct visitable
 {
 	template
 	<
-		class V
+		typename V
 	>
 	requires requires(V&& impl, T&& crtp)
 	{
@@ -24,7 +24,7 @@ struct visitable
 
 template
 <
-	class L
+	typename L
 >
 // anchor
 struct fix
@@ -33,7 +33,7 @@ struct fix
 
 	template
 	<
-		class... X
+		typename... X
 	>
 	inline constexpr auto operator()(X&&... x) const -> decltype(auto)
 	{
@@ -43,13 +43,13 @@ struct fix
 
 template
 <
-	class... L
+	typename... L
 >
 fix(L...) -> fix<L...>;
 
 template
 <
-	class... L
+	typename... L
 >
 // visitor
 struct visit : L...
@@ -58,7 +58,7 @@ struct visit : L...
 
 	template
 	<
-		class... X
+		typename... X
 	>
 	inline constexpr auto operator()(X&&... x) const -> decltype(auto)
 	{
@@ -68,14 +68,14 @@ struct visit : L...
 
 template
 <
-	class... L
+	typename... L
 >
 visit(L...) -> visit<L...>;
 
 template
 <
-	class    T,
-	class... L
+	typename    T,
+	typename... L
 >
 inline constexpr auto visitor(L&&... l)
 {

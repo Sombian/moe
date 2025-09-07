@@ -3,6 +3,7 @@
 #include <bit>
 #include <utility>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <variant>
 #include <fstream>
@@ -24,9 +25,20 @@ namespace fs
 		A path;
 		B data;
 
-		auto lines() -> auto
+		inline constexpr auto lines() -> auto
 		{
-			return this->data.split(U'\n');
+			if constexpr (std::is_same_v<B, utf8>)
+			{
+				return this->data.split(u8'\n');
+			}
+			if constexpr (std::is_same_v<B, utf16>)
+			{
+				return this->data.split(U'\n');
+			}
+			if constexpr (std::is_same_v<B, utf32>)
+			{
+				return this->data.split(U'\n');
+			}
 		}
 	};
 
@@ -160,7 +172,7 @@ namespace fs
 
 			static const auto write_native
 			{
-				[&]<class unit>(text<unit>& str)
+				[&]<typename unit>(text<unit>& str)
 				{
 					auto size {0};
 					unit code {0};
@@ -184,7 +196,7 @@ namespace fs
 
 			static const auto write_foreign
 			{
-				[&]<class unit>(text<unit>& str)
+				[&]<typename unit>(text<unit>& str)
 				{
 					auto size {0};
 					unit code {0};

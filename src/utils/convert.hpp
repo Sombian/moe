@@ -3,6 +3,7 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <type_traits>
 
 #include "models/str.hpp"
 
@@ -41,9 +42,9 @@ namespace utils
 		};
 	}
 
-	//|-------------------|
-	//| string to integer |
-	//|-------------------|
+	//|------------------|
+	//| string to number |
+	//|------------------|
 
 	inline constexpr auto stoi(const model::text auto& str, const uint8_t radix = 10) -> long
 	{
@@ -107,6 +108,7 @@ namespace utils
 	{
 		auto it {str.begin()}; auto ie {str.end()};
 
+		double nth {0};
 		double out {0};
 
 		const auto pre
@@ -115,24 +117,20 @@ namespace utils
 			{
 				switch (str[0])
 				{
-					case '+': { ++it; return prefix::POS; };
-					case '-': { ++it; return prefix::NEG; };
+					case '+': { ++it; return prefix::POS; }
+					case '-': { ++it; return prefix::NEG; }
 					default : {       return prefix::NIL; }
 				}
 			}
 			()
 		};
 
-		for (double nth {0}; it != ie; ++it)
+		for (; it != ie; ++it)
 		{
 			const auto code {*it};
 			
-			if (code == '.')
+			if (code == '.' && nth == 0)
 			{
-				if (nth != 0)
-				{
-					break;
-				}
 				nth += 10;
 				continue;
 			}

@@ -2,7 +2,7 @@ bits 64
 default rel
 
 section .text
-global _start
+global main
 main:
 	;-------------;
 	sub rsp, 0x8  ;

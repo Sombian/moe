@@ -19,8 +19,8 @@
 
 template
 <
-	class A,
-	class B
+	typename A,
+	typename B
 >
 class lexer
 {
@@ -459,7 +459,7 @@ private:
 
 	inline constexpr auto scan_sym() -> decltype(this->pull())
 	{
-		#define macro($K, $V) { $V, atom::$K },
+		#define macro(K, V) { V, atom::K },
 		
 		static const tst<atom> TBL
 		{

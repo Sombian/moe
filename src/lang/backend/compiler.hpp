@@ -186,8 +186,8 @@ public:
 
 	template
 	<
-		class A,
-		class B
+		typename A,
+		typename B
 	>
 	inline constexpr auto compile(AST<A, B>& exe)
 	{
@@ -434,7 +434,7 @@ public:
 
 private:
 
-	template<class T>
+	template<typename T>
 	// codegen an expression
 	inline constexpr auto cg(T& e) -> reg_t
 	{
@@ -513,23 +513,23 @@ private:
 			{
 				if (t1->ins == &I64 || t1->ins == &U64)
 				{
-					auto r1 {this->pull_gpr()};
+					auto rg {this->pull_gpr()};
 
 					//|----------------------------------------------------------------------|
-					this->program += u8"\t%s %s, %s\n"_utf | t1->ins->mov | r1 | var->deref();
+					this->program += u8"\t%s %s, %s\n"_utf | t1->ins->mov | rg | var->deref();
 					//|----------------------------------------------------------------------|
 
-					return r1; // allocation..!
+					return rg; // allocation..!
 				}
 				if (t1->ins == &F32 || t1->ins == &F64)
 				{
-					auto r1 {this->pull_fpr()};
+					auto rx {this->pull_fpr()};
 
 					//|----------------------------------------------------------------------|
-					this->program += u8"\t%s %s, %s\n"_utf | t1->ins->mov | r1 | var->deref();
+					this->program += u8"\t%s %s, %s\n"_utf | t1->ins->mov | rx | var->deref();
 					//|----------------------------------------------------------------------|
 
-					return r1; // allocation..!
+					return rx; // allocation..!
 				}
 			}
 		}
@@ -741,7 +741,7 @@ private:
 		return full;
 	}
 	
-	inline constexpr auto view_fpr(const reg_t& rx, size_t bytes) -> utf8	
+	inline constexpr auto view_fpr(const reg_t& rx, size_t bytes) -> utf8
 	{
 		//┌──────────┬──────────┬───────────────────────┐
 		//│ 128 bits │ 128 bits │       256 bits        │
@@ -783,7 +783,8 @@ private:
 		this->program += u8"\t%s %s, %s\n"_utf | in->add | r1 | r2;
 		//|-------------------------------------------------------|
 
-		r2.release(); return r1;
+		r2.release();
+		return r1;
 	}
 
 	// sub r1, r2 => r1 -= r2
@@ -793,7 +794,8 @@ private:
 		this->program += u8"\t%s %s, %s\n"_utf | in->sub | r1 | r2;
 		//|-------------------------------------------------------|
 
-		r2.release(); return r1;
+		r2.release();
+		return r1;
 	}
 
 	// mul r1, r2 => r1 *= r2
@@ -803,7 +805,8 @@ private:
 		this->program += u8"\t%s %s, %s\n"_utf | in->mul | r1 | r2;
 		//|-------------------------------------------------------|
 
-		r2.release(); return r1;
+		r2.release();
+		return r1;
 	}
 
 	inline /*Ი︵𐑼*/ auto cg_div(const ins_t* in, const reg_t& r1, const reg_t& r2) -> reg_t

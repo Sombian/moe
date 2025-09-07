@@ -46,7 +46,7 @@ enum class ty : uint8_t
 	NONE,
 };
 
-#define macro($K, $V) $K,
+#define macro(K, V) K,
 enum class op : uint8_t
 {
 	operators(macro)
@@ -120,8 +120,8 @@ using node = std::variant
 
 template
 <
-	class A,
-	class B
+	typename A,
+	typename B
 >
 struct AST
 {

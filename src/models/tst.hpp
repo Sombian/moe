@@ -24,7 +24,7 @@
 
 template
 <
-	class T
+	typename T
 >
 class tst
 {
@@ -148,7 +148,7 @@ class tst
 
 	template
 	<
-		class S
+		typename S
 	>
 	requires
 	(
@@ -248,7 +248,7 @@ class tst
 
 	template
 	<
-		class       S,
+		typename    S,
 		model::text X
 	>
 	requires

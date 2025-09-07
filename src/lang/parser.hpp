@@ -19,8 +19,8 @@
 
 template
 <
-	class A,
-	class B
+	typename A,
+	typename B
 >
 class parser
 {
@@ -170,7 +170,7 @@ public:
 		{
 			try
 			{
-				if (auto out {this->$decl()})
+				if (auto out {this->_decl()})
 				{
 					std::visit([&](auto&& ptr)
 					{
@@ -179,7 +179,7 @@ public:
 					std::move(*out)); // unwrap
 					continue;
 				}
-				if (auto out {this->$stmt()})
+				if (auto out {this->_stmt()})
 				{
 					std::visit([&](auto&& ptr)
 					{
@@ -230,7 +230,7 @@ private:
 		return;
 	}
 
-	inline constexpr auto $decl() -> std::optional<decl>
+	inline constexpr auto _decl() -> std::optional<decl>
 	{
 		try
 		{
@@ -242,7 +242,7 @@ private:
 					{
 						return this->decl_var(false);
 					}
-					case atom::LET$:
+					case atom::LET_:
 					{
 						return this->decl_var(true);
 					}
@@ -250,7 +250,7 @@ private:
 					{
 						return this->decl_fun(false);
 					}
-					case atom::FUN$:
+					case atom::FUN_:
 					{
 						return this->decl_fun(true);
 					}
@@ -274,7 +274,7 @@ private:
 			this->exe.lint
 			.emplace_back(out);
 		}
-		return this->$decl();
+		return this->_decl();
 	}
 
 	inline constexpr auto decl_var(const bool only) -> decl
@@ -316,7 +316,7 @@ private:
 		{
 			this->next();
 
-			if (auto out {this->$expr()})
+			if (auto out {this->_expr()})
 			{
 				ast->init = std::move(out);
 			}
@@ -424,7 +424,7 @@ private:
 
 		while (true)
 		{
-			if (auto out {this->$decl()})
+			if (auto out {this->_decl()})
 			{
 				std::visit([&](auto&& ptr)
 				{
@@ -433,7 +433,7 @@ private:
 				std::move(*out)); // unwrap
 				continue;
 			}
-			if (auto out {this->$stmt()})
+			if (auto out {this->_stmt()})
 			{
 				std::visit([&](auto&& ptr)
 				{
@@ -442,7 +442,7 @@ private:
 				std::move(*out)); // unwrap
 				continue;
 			}
-			if (auto out {this->$expr()})
+			if (auto out {this->_expr()})
 			{
 				if (this->peek(atom::S_COLON))
 				{
@@ -577,7 +577,7 @@ private:
 		return ast;
 	}
 
-	inline constexpr auto $stmt() -> std::optional<stmt>
+	inline constexpr auto _stmt() -> std::optional<stmt>
 	{
 		try
 		{
@@ -629,7 +629,7 @@ private:
 			this->exe.lint
 			.emplace_back(out);
 		}
-		return this->$stmt();
+		return this->_stmt();
 	}
 
 	inline constexpr auto stmt_if() -> stmt
@@ -651,7 +651,7 @@ private:
 		}
 		else throw E(u8"expects '('");
 
-		if (auto out {this->$expr()})
+		if (auto out {this->_expr()})
 		{
 			data._if_ = std::move(*out);
 		}
@@ -664,7 +664,7 @@ private:
 		else throw E(u8"expects ')'");
 
 		_else_:
-		if (auto out {this->$stmt()})
+		if (auto out {this->_stmt()})
 		{
 			data.then = std::move(*out);
 		}
@@ -702,7 +702,7 @@ private:
 		}
 		else throw E(u8"expects '('");
 
-		if (auto out {this->$expr()})
+		if (auto out {this->_expr()})
 		{
 			ast->init = std::move(*out);
 		}
@@ -714,7 +714,7 @@ private:
 		}
 		else throw E(u8"expects ';'");
 
-		if (auto out {this->$expr()})
+		if (auto out {this->_expr()})
 		{
 			ast->_if_ = std::move(*out);
 		}
@@ -726,7 +726,7 @@ private:
 		}
 		else throw E(u8"expects ';'");
 
-		if (auto out {this->$expr()})
+		if (auto out {this->_expr()})
 		{
 			ast->task = std::move(*out);
 		}
@@ -738,7 +738,7 @@ private:
 		}
 		else throw E(u8"expects ')'");
 
-		if (auto out {this->$stmt()})
+		if (auto out {this->_stmt()})
 		{
 			ast->body = std::move(*out);
 		}
@@ -762,7 +762,7 @@ private:
 		}
 		else throw E(u8"expects '('");
 
-		if (auto out {this->$expr()})
+		if (auto out {this->_expr()})
 		{
 			ast->data = std::move(*out);
 		}
@@ -784,7 +784,7 @@ private:
 		// fresh construct
 		match_stmt::flow data;
 
-		if (auto out {this->$expr()})
+		if (auto out {this->_expr()})
 		{
 			data._if_ = std::move(*out);
 		}
@@ -798,7 +798,7 @@ private:
 
 		_else_:
 
-		if (auto out {this->$stmt()})
+		if (auto out {this->_stmt()})
 		{
 			data.then = std::move(*out);
 		}
@@ -843,7 +843,7 @@ private:
 		}
 		else throw E(u8"expects '('");
 
-		if (auto out {this->$expr()})
+		if (auto out {this->_expr()})
 		{
 			ast->_if_ = std::move(*out);
 		}
@@ -855,7 +855,7 @@ private:
 		}
 		else throw E(u8"expects ')'");
 
-		if (auto out {this->$stmt()})
+		if (auto out {this->_stmt()})
 		{
 			ast->body = std::move(*out);
 		}
@@ -881,7 +881,7 @@ private:
 
 		while (true)
 		{
-			if (auto out {this->$decl()})
+			if (auto out {this->_decl()})
 			{
 				std::visit([&](auto&& ptr)
 				{
@@ -890,7 +890,7 @@ private:
 				std::move(*out)); // unwrap
 				continue;
 			}
-			if (auto out {this->$stmt()})
+			if (auto out {this->_stmt()})
 			{
 				std::visit([&](auto&& ptr)
 				{
@@ -899,7 +899,7 @@ private:
 				std::move(*out)); // unwrap
 				continue;
 			}
-			if (auto out {this->$expr()})
+			if (auto out {this->_expr()})
 			{
 				if (this->peek(atom::S_COLON))
 				{
@@ -955,7 +955,7 @@ private:
 
 		this->next();
 
-		if (auto out {this->$expr()})
+		if (auto out {this->_expr()})
 		{
 			ast->value = std::move(*out);
 		}
@@ -991,7 +991,7 @@ private:
 		return ast;
 	}
 
-	inline constexpr auto $expr(uint8_t mbp = 0) -> std::optional<expr>
+	inline constexpr auto _expr(uint8_t mbp = 0) -> std::optional<expr>
 	{
 		try
 		{
@@ -1011,16 +1011,16 @@ private:
 
 					this->next();
 
-					if (auto out {this->$expr()})
+					if (auto out {this->_expr()})
 					{
 						switch (tkn->type)
 						{
-							#define macro($K, V$) \
-							case atom::$K:        \
-							{                     \
-							    ast->op = op::$K; \
-							    break;            \
-							}                     \
+							#define macro(K, V) \
+							case atom::K:       \
+							{                   \
+							    ast->op = op::K;\
+							    break;          \
+							}                   \
 
 							operators(macro)
 							#undef macro
@@ -1074,16 +1074,16 @@ private:
 
 						this->next();
 
-						if (auto out {this->$expr()})
+						if (auto out {this->_expr()})
 						{
 							switch (tkn->type)
 							{
-								#define macro($K, V$) \
-								case atom::$K:        \
-								{                     \
-									ast->op = op::$K; \
-									break;            \
-								}                     \
+								#define macro(K, V) \
+								case atom::K:       \
+								{                   \
+									ast->op = op::K;\
+									break;          \
+								}                   \
 
 								operators(macro)
 								#undef macro
@@ -1133,7 +1133,7 @@ private:
 			this->exe.lint
 			.emplace_back(out);
 		}
-		return this->$expr();
+		return this->_expr();
 	}
 
 	//|-----------------------|
@@ -1271,7 +1271,7 @@ private:
 
 			this->next();
 
-			if (auto out {this->$expr()})
+			if (auto out {this->_expr()})
 			{
 				ast->self = std::move(*out);
 			}
